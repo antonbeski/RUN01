@@ -1,0 +1,366 @@
+/* ============================================================
+   PyRunner — Dark IDE Theme
+   Palette: #0D0F14 bg | #1A1D27 surface | #7C5CFC violet
+             #38BDF8 cyan | #E8E6F0 text | #F472B6 pink-err
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0D0F14;
+  --surface:   #1A1D27;
+  --surface2:  #222535;
+  --border:    #2A2D3E;
+  --violet:    #7C5CFC;
+  --violet-dim:#4B3599;
+  --cyan:      #38BDF8;
+  --green:     #4ADE80;
+  --red:       #F472B6;
+  --yellow:    #FBBF24;
+  --text:      #E8E6F0;
+  --text-muted:#6B7094;
+  --text-dim:  #3D4163;
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --nav-h:     52px;
+  --radius:    6px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+.nav {
+  height: var(--nav-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  position: relative;
+  z-index: 10;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  font-size: 18px;
+  color: var(--violet);
+  line-height: 1;
+  filter: drop-shadow(0 0 8px var(--violet));
+}
+
+.brand-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.brand-accent { color: var(--violet); }
+
+.brand-tagline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.nav-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.status-dot.loading  { background: var(--yellow); box-shadow: 0 0 0 3px rgba(251,191,36,.2); }
+.status-dot.ready    { background: var(--green);  box-shadow: 0 0 0 3px rgba(74,222,128,.2); }
+.status-dot.running  { background: var(--cyan);   box-shadow: 0 0 0 3px rgba(56,189,248,.2); animation: pulse 1s ease-in-out infinite; }
+.status-dot.error    { background: var(--red);    box-shadow: 0 0 0 3px rgba(244,114,182,.2); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.status-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 130px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.btn-run {
+  background: var(--violet);
+  color: #fff;
+  border-color: var(--violet);
+  padding: 5px 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 0 0 0 rgba(124,92,252,0);
+  transition: background 0.15s, box-shadow 0.2s;
+}
+.btn-run:hover:not(:disabled) {
+  background: #8f6dff;
+  box-shadow: 0 0 16px rgba(124,92,252,.45);
+}
+.btn-run:active:not(:disabled) { background: var(--violet-dim); }
+
+.run-icon { font-size: 10px; }
+.btn-run kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(255,255,255,.12);
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0;
+}
+
+/* ── WORKSPACE ───────────────────────────────────────────── */
+.workspace {
+  display: flex;
+  height: calc(100vh - var(--nav-h));
+  overflow: hidden;
+}
+
+/* ── PANES ───────────────────────────────────────────────── */
+.pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.pane-editor { flex: 1 1 55%; }
+.pane-output { flex: 1 1 45%; border-left: 1px solid var(--border); }
+
+.pane-header {
+  height: 36px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pane-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.pill {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+}
+.pill-py  { background: rgba(124,92,252,.2); color: var(--violet); }
+.pill-out { background: rgba(56,189,248,.15); color: var(--cyan); }
+
+.editor-meta,
+.output-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ── EDITOR MOUNT ────────────────────────────────────────── */
+.editor-mount {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── RESIZE HANDLE ───────────────────────────────────────── */
+.resize-handle {
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 5;
+}
+.resize-handle:hover,
+.resize-handle.dragging { background: var(--violet); }
+
+/* ── OUTPUT MOUNT ────────────────────────────────────────── */
+.output-mount {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  background: var(--bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.output-mount::-webkit-scrollbar { width: 6px; }
+.output-mount::-webkit-scrollbar-track { background: transparent; }
+.output-mount::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Welcome state */
+.output-welcome {
+  color: var(--text-dim);
+  padding: 8px 0;
+}
+
+.welcome-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prompt-caret {
+  color: var(--violet);
+  animation: blink 1.2s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Output entries */
+.out-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  display: block;
+}
+
+.out-line.err {
+  color: var(--red);
+}
+
+.out-line.sys {
+  color: var(--text-dim);
+}
+
+.out-block {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.out-block:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.out-run-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.out-run-num {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.out-run-time {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.out-success-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green);
+  background: rgba(74,222,128,.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.out-error-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--red);
+  background: rgba(244,114,182,.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* Empty output */
+.out-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── SCROLLBAR global ────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
