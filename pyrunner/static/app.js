@@ -1,10 +1,10 @@
 /* ============================================================
-   PyRunner — app.js
+   Run01 — app.js
    Monaco editor + Pyodide Python execution, fully client-side
    ============================================================ */
 
 // ── Starter code ──────────────────────────────────────────
-const STARTER_CODE = `# Welcome to PyRunner 🐍
+const STARTER_CODE = `# Welcome to Run01 🐍
 # Python runs entirely in your browser via Pyodide + WebAssembly
 # Press ▶ Run or Cmd/Ctrl + Enter to execute
 
@@ -132,18 +132,22 @@ require(['vs/editor/editor.main'], function () {
 (async function initPyodide() {
   setStatus('loading', 'Loading Pyodide…');
   try {
-    pyodide = await loadPyodide();
+    // Explicit indexURL to avoid loader resolution issues
+    pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
     setStatus('ready', 'Ready');
     btnRun.disabled = false;
     clearOutput();
     appendWelcome();
   } catch (err) {
     setStatus('error', 'Failed to load Pyodide');
-    appendToOutput(`Error loading Pyodide: ${err.message}`, 'err');
+    const msg = err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
+    appendToOutput(`Error loading Pyodide: ${msg}`, 'err');
+    // Also log to console for Vercel logs
+    console.error('Pyodide load error:', err);
   }
 })();
 
-// ── Run code ──────────────────────────────────────────────
+// ── Run code ─────────────────────────────────────────────
 async function runCode() {
   if (!pyodide || isRunning) return;
 
@@ -195,7 +199,7 @@ async function runCode() {
     await pyodide.runPythonAsync(code);
     success = true;
   } catch (err) {
-    stderrBuf += err.message;
+    stderrBuf += err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
   }
 
   const elapsed = ((performance.now() - startTime) / 1000).toFixed(3);
@@ -257,7 +261,7 @@ function appendWelcome() {
     <div class="output-welcome">
       <div class="welcome-prompt">
         <span class="prompt-caret">❯</span>
-        Pyodide ready — press <strong style="color:var(--violet)">▶ Run</strong> or <kbd style="font-family:var(--font-mono);font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;">⌘↵</kbd> to execute
+        Run01 ready — press <strong style="color:var(--violet)">▶ Run</strong> or <kbd style="font-family:var(--font-mono);font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:4px">⌘↵</kbd> to execute the code.
       </div>
     </div>
   `;
