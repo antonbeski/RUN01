@@ -3,91 +3,211 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Run01 — Browser-based Python IDE. NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, Yahoo Finance. Also runs C++, C#, and Rust." />
   <title>Run01 — Browser Python IDE</title>
+
+  <!-- ── Preconnect / DNS-prefetch for all CDN hosts ───────────────
+       Browser opens TCP connections before scripts request resources,
+       shaving 100-300 ms off every first-time CDN request.          -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net"  crossorigin />
+  <link rel="preconnect" href="https://cdn.plot.ly"       crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="dns-prefetch" href="https://emkc.org" />
+
+  <!-- ── Preload: tell browser to fetch critical scripts immediately ─ -->
+  <link rel="preload"
+        href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"
+        as="script" crossorigin />
+  <link rel="preload"
+        href="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"
+        as="script" crossorigin />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+
+  <!-- App styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+  <!-- Monaco AMD require config — must be inline, before loader.js -->
+  <script>
+    var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } };
+  </script>
 </head>
 <body>
 
-  <!-- TOP NAV -->
-  <header class="nav">
+  <!-- ══ TOP NAV ══════════════════════════════════════════════════ -->
+  <header class="nav" role="banner">
     <div class="nav-brand">
       <span class="brand-text-run">RUN</span>
       <span class="brand-badge-01">01</span>
-      <span class="brand-tagline">Browser Python</span>
+      <span class="brand-tagline">Browser IDE</span>
     </div>
 
-    <div class="nav-status">
-      <span class="status-dot" id="statusDot"></span>
-      <span class="status-label" id="statusLabel">Loading Run01…</span>
+    <div class="nav-status" id="navStatus" role="status" aria-live="polite">
+      <span class="status-dot loading" id="statusDot"></span>
+      <span class="status-label"       id="statusLabel">Initializing…</span>
     </div>
 
     <div class="nav-actions">
-      <button class="btn btn-ghost" id="btnClear" title="Clear output">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/></svg>
+      <button class="btn btn-ghost" id="btnClear" title="Clear output  (Ctrl+L)" aria-label="Clear output">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+        </svg>
         Clear
       </button>
-      <button class="btn btn-ghost" id="btnReset" title="Reset to starter code">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/></svg>
+      <button class="btn btn-ghost" id="btnReset" title="Reset starter code (Ctrl+R)" aria-label="Reset starter code">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+        </svg>
         Reset
       </button>
-      <button class="btn btn-run" id="btnRun" disabled>
-        <span class="run-icon">▶</span>
+      <button class="btn btn-run" id="btnRun" disabled aria-label="Run code (Ctrl+Enter)">
+        <span class="run-icon" aria-hidden="true">▶</span>
         <span>Run</span>
-        <kbd>⌘↵</kbd>
+        <kbd aria-label="Ctrl Enter">⌘↵</kbd>
       </button>
     </div>
   </header>
 
-  <!-- MAIN SPLIT -->
-  <main class="workspace">
+  <!-- ══ MAIN SPLIT ════════════════════════════════════════════════ -->
+  <main class="workspace" role="main">
 
-    <!-- EDITOR PANE -->
-    <section class="pane pane-editor">
+    <!-- ── EDITOR PANE ─────────────────────────────────────────── -->
+    <section class="pane pane-editor" aria-label="Code editor">
       <div class="pane-header">
-        <span class="pane-label">
-          <span class="pill pill-py">PY</span>
-          main.py
-        </span>
-        <div class="editor-meta" id="editorMeta">ln 1, col 1</div>
+
+        <!-- Language Tabs -->
+        <nav class="lang-tabs" id="langTabs" aria-label="Language selector" role="tablist">
+          <button class="lang-tab active" data-lang="python" role="tab"
+                  aria-selected="true" aria-controls="editor" title="Python — runs in browser via Pyodide">
+            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C9.79 2 8 3.12 8 4.5v2h4v.5H5.5C4.12 7 2 8.12 2 10.5 2 12.88 4.12 14 5.5 14H7v-2c0-1.38 1.62-2.5 3-2.5h4c1.38 0 2.5-1.12 2.5-2.5V4.5C16.5 3.12 14.88 2 13.5 2H12zm-.5 1.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM17 10v2c0 1.38-1.62 2.5-3 2.5H10c-1.38 0-2.5 1.12-2.5 2.5V19.5C7.5 20.88 9.12 22 10.5 22H12c2.21 0 4-1.12 4-2.5v-2H12v-.5h6.5C19.88 17 22 15.88 22 13.5 22 11.12 19.88 10 18.5 10H17zm-4.5 9.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+            </svg>
+            Python
+          </button>
+          <button class="lang-tab" data-lang="cpp" role="tab"
+                  aria-selected="false" aria-controls="editor" title="C++ — compiled server-side via Piston API">
+            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M10.5 15.97l.41 2.44c-.26.14-.68.27-1.24.39-.57.13-1.24.2-2.01.2-2.21-.04-3.87-.7-4.98-1.96C1.56 15.77 1 14.16 1 12.21c.05-2.31.72-4.08 2-5.29C4.32 5.71 5.95 5.06 8 5c.96 0 1.77.09 2.44.27l-.28 2.47-.77-.17c-.31-.06-.68-.1-1.08-.1-1.14.03-2.01.4-2.59 1.1-.57.7-.86 1.81-.86 3.35 0 1.51.29 2.61.86 3.29.57.68 1.45 1.03 2.59 1.06l1.14-.12.55-.18zM13 10h2V8h1.5v2H18v1.5h-1.5V13H15v-1.5h-2V10zm5.5 0H20V8h1.5v2H23v1.5h-1.5V13H20v-1.5h-1.5V10z"/>
+            </svg>
+            C++
+          </button>
+          <button class="lang-tab" data-lang="csharp" role="tab"
+                  aria-selected="false" aria-controls="editor" title="C# — compiled server-side via Piston API">
+            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M11.5 15.97l.41 2.44c-.26.14-.68.27-1.24.39C11.1 18.93 10.43 19 9.66 19c-2.21-.04-3.87-.7-4.98-1.96C3.56 15.77 3 14.16 3 12.21c.05-2.31.72-4.08 2-5.29C6.32 5.71 7.95 5.06 10 5c.96 0 1.77.09 2.44.27l-.28 2.47-.77-.17c-.31-.06-.68-.1-1.08-.1-1.14.03-2.01.4-2.59 1.1-.57.7-.86 1.81-.86 3.35 0 1.51.29 2.61.86 3.29.57.68 1.45 1.03 2.59 1.06l1.14-.12.55-.18zM17 11.5h-1V9h-1.5v2.5H13V13h1.5v2.5H16V13h1V11.5zm3.5 0H19V9h-1.5v2.5H16V13h1.5v2.5H19V13h1.5V11.5z"/>
+            </svg>
+            C#
+          </button>
+          <button class="lang-tab" data-lang="rust" role="tab"
+                  aria-selected="false" aria-controls="editor" title="Rust — compiled server-side via Piston API">
+            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M23.83 11.65l-1.05-.65-.05-.42.9-.9a.22.22 0 000-.31l-.91-.91a.22.22 0 00-.31 0l-.9.9-.42-.05-.65-1.05a.22.22 0 00-.19-.11h-1.28a.22.22 0 00-.19.11l-.65 1.05-.42.05-.9-.9a.22.22 0 00-.31 0l-.91.91a.22.22 0 000 .31l.9.9-.05.42-1.05.65a.22.22 0 00-.11.19v1.28c0 .08.04.15.11.19l1.05.65.05.42-.9.9a.22.22 0 000 .31l.91.91a.22.22 0 00.31 0l.9-.9.42.05.65 1.05c.04.07.11.11.19.11h1.28c.08 0 .15-.04.19-.11l.65-1.05.42-.05.9.9a.22.22 0 00.31 0l.91-.91a.22.22 0 000-.31l-.9-.9.05-.42 1.05-.65a.22.22 0 00.11-.19V11.84a.22.22 0 00-.11-.19zM18.5 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM9.24 8.5L5.86 5.12a9.5 9.5 0 0112.61 3.38H9.24zM4.28 6.71l3.35 3.35A9.47 9.47 0 003 12a9.5 9.5 0 001.28 4.8zm.44 10.78l3.58-3.56h9.38a9.5 9.5 0 01-12.96 3.56zM20.5 15.5l-3.29-3.5H12.7l3.29 3.5H20.5z"/>
+            </svg>
+            Rust
+          </button>
+        </nav>
+
+        <div class="pane-right-meta">
+          <span class="file-label" id="fileLabelBadge">
+            <span class="pill pill-py" id="langPill">PY</span>
+            <span id="fileName">main.py</span>
+          </span>
+          <div class="editor-meta" id="editorMeta" aria-live="off">ln 1, col 1</div>
+        </div>
       </div>
-      <div id="editor" class="editor-mount"></div>
+      <div id="editor" class="editor-mount" role="textbox" aria-multiline="true" aria-label="Code editor"></div>
     </section>
 
-    <!-- RESIZE HANDLE -->
-    <div class="resize-handle" id="resizeHandle"></div>
+    <!-- ── RESIZE HANDLE ───────────────────────────────────────── -->
+    <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="vertical"
+         aria-label="Drag to resize panels" tabindex="0"></div>
 
-    <!-- OUTPUT PANE -->
-    <section class="pane pane-output">
+    <!-- ── OUTPUT PANE ─────────────────────────────────────────── -->
+    <section class="pane pane-output" aria-label="Output console">
       <div class="pane-header">
         <span class="pane-label">
           <span class="pill pill-out">OUT</span>
           console
         </span>
-        <div class="output-meta" id="outputMeta">ready</div>
+        <div class="output-meta" id="outputMeta" aria-live="polite">ready</div>
       </div>
-      <div id="output" class="output-mount">
+      <div id="output" class="output-mount" role="log" aria-live="polite" aria-label="Program output">
         <div class="output-welcome">
-          <div class="welcome-prompt"><span class="prompt-caret">❯</span> Run01 is loading…</div>
+          <div class="welcome-prompt">
+            <span class="prompt-caret" aria-hidden="true">❯</span>
+            Run01 is loading…
+          </div>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Monaco loader -->
+  <!-- ══ INIT OVERLAY (full-screen, fades out when ready) ══════════ -->
+  <div class="init-overlay" id="initOverlay" role="status" aria-label="Loading Run01">
+    <div class="init-card">
+      <div class="init-logo">
+        <span class="brand-text-run" style="font-size:34px;letter-spacing:0.16em">RUN</span>
+        <span class="brand-badge-01" style="font-size:17px;padding:5px 11px;margin-left:6px">01</span>
+      </div>
+      <p class="init-subtitle">Browser Python IDE</p>
+
+      <div class="init-progress-wrap">
+        <div class="init-progress-track">
+          <div class="init-progress-fill" id="initProgressBar" style="width:0%"></div>
+        </div>
+        <div class="init-progress-label" id="initProgressLabel">Loading Python runtime…</div>
+      </div>
+
+      <div class="init-pills">
+        <span class="init-pill" id="ip-numpy">NumPy</span>
+        <span class="init-pill" id="ip-pandas">Pandas</span>
+        <span class="init-pill" id="ip-scipy">SciPy</span>
+        <span class="init-pill" id="ip-sklearn">Sklearn</span>
+        <span class="init-pill" id="ip-sm">Statsmodels</span>
+        <span class="init-pill" id="ip-mpl">Matplotlib</span>
+        <span class="init-pill" id="ip-sns">Seaborn</span>
+        <span class="init-pill" id="ip-plotly">Plotly</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCRIPTS ════════════════════════════════════════════════════
+       Load order matters:
+         1. Monaco loader.js   (sync — small, defines require())
+         2. Pyodide + Plotly   (defer — large, download in parallel)
+         3. App logic          (defer — runs after all above)       -->
+
+  <!-- 1. Monaco AMD loader (sync, ~10 KB) -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+
+  <!-- 2a. Pyodide runtime (defer — downloaded in parallel with Plotly) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" defer></script>
+
+  <!-- 2b. Plotly.js (defer — needed for interactive chart rendering) -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" defer></script>
+
+  <!-- 3. App logic (defer — runs after pyodide.js + plotly.js are executed) -->
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+
+  <!-- ── Service Worker registration ────────────────────────────── -->
   <script>
-    var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' } };
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(reg) {
+            console.log('[SW] Registered, scope:', reg.scope);
+          })
+          .catch(function(err) {
+            console.warn('[SW] Registration failed:', err);
+          });
+      });
+    }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
-
-  <!-- Pyodide -->
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
-
-  <!-- App logic -->
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
 
 </body>
 </html>

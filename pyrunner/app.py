@@ -1,16 +1,31 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 import json
 
 # Use __name__ so Flask can locate the templates/static folders correctly.
 app = Flask(__name__)
-# Application display name
 app.name = "run01"
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
+# ── Service Worker — must be served from / scope ──────────────────────────────
+# Service Workers can only control pages within their scope. A SW at /static/sw.js
+# can only control /static/*, which excludes our root page at /. Serving it at /sw.js
+# gives it full-origin scope so it can cache Pyodide, Monaco, and Plotly CDN assets.
+@app.route("/sw.js")
+def service_worker():
+    resp = send_from_directory(app.static_folder, "sw.js")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Cache-Control"] = "no-cache"  # SW itself must not be cached
+    return resp
+
 # ── Yahoo Finance server-side proxy ───────────────────────────────────────────
+# Pyodide runs inside the browser sandbox; direct HTTP requests to Yahoo Finance
+# are blocked by CORS policy. This endpoint fetches stock data server-side
+# (no CORS restrictions) and returns clean JSON that Pyodide can consume via
+# pyodide.http.pyfetch("/api/yf/...").
 @app.route("/api/yf/<ticker>")
 def yf_proxy(ticker):
     try:
@@ -22,10 +37,20 @@ def yf_proxy(ticker):
         hist = t.history(period=period, interval=interval)
 
         if hist.empty:
-            return jsonify({"error": f"No price data found for '{ticker}'."}), 404
+            return jsonify({"error": f"No price data found for '{ticker}'. "
+                                     f"Symbol may be delisted or invalid."}), 404
 
+        # Strip timezone so strftime works across yfinance versions
+        if hist.index.tz is not None:
+            hist.index = hist.index.tz_convert(None)
+
+        hist.index.name = "Date"
         hist.index = hist.index.strftime("%Y-%m-%d")
-        records = hist.reset_index().rename(columns={"index": "Date"}).to_dict(orient="records")
+
+        # Drop non-OHLCV columns (Dividends, Stock Splits) for clean output
+        ohlcv_cols = [c for c in hist.columns if c in
+                      {"Open", "High", "Low", "Close", "Volume"}]
+        records = hist[ohlcv_cols].reset_index().to_dict(orient="records")
         return jsonify(records)
 
     except Exception as exc:
@@ -47,7 +72,7 @@ def run_code():
     try:
         from urllib.request import Request, urlopen
 
-        data = request.get_json(force=True)
+        data     = request.get_json(force=True)
         lang_key = data.get("language", "")
         piston_lang = PISTON_LANGS.get(lang_key)
 
@@ -56,8 +81,8 @@ def run_code():
 
         payload = json.dumps({
             "language": piston_lang,
-            "version": "*",
-            "files": [{"content": data.get("code", "")}],
+            "version":  "*",
+            "files":    [{"content": data.get("code", "")}],
         }).encode("utf-8")
 
         req = Request(
