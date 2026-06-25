@@ -1,6 +1,9 @@
 from flask import Flask, render_template
 
-app = Flask("run01")
+# Use __name__ so Flask can locate the templates/static folders correctly.
+app = Flask(__name__)
+# Application display name
+app.name = "run01"
 
 @app.route("/")
 def index():
