@@ -5,20 +5,15 @@
 
 // ── Starter code ──────────────────────────────────────────
 const STARTER_CODE = `# Welcome to Run01
-# Data science & finance packages are prebuilt and ready to use!
+# Data science & finance packages are prebuilt and ready!
+# NOTE: Use yf_download() instead of yf.download() — Yahoo Finance
+# blocks direct browser requests (CORS). yf_download() routes through
+# the Run01 server proxy automatically.
 
-import sys
-import numpy as np
-import pandas as pd
-import matplotlib
-import seaborn as sns
-import scipy
-import yfinance as yf
-import statsmodels
-import sklearn
-import plotly
+import sys, numpy as np, pandas as pd
+import matplotlib, seaborn as sns, scipy, statsmodels, sklearn, plotly
 
-print("Run01 Environment is Fully Loaded!")
+print("Run01 Environment Ready!")
 print(f"Python:       {sys.version.split()[0]}")
 print(f"NumPy:        {np.__version__}")
 print(f"Pandas:       {pd.__version__}")
@@ -28,9 +23,11 @@ print(f"Statsmodels:  {statsmodels.__version__}")
 print(f"Matplotlib:   {matplotlib.__version__}")
 print(f"Seaborn:      {sns.__version__}")
 print(f"Plotly:       {plotly.__version__}")
-print(f"yfinance:     {yf.__version__}")
 print()
-print("All compiler prebuilt modules are ready to use!")
+print("-- Stock data example --")
+# Fetch AAPL via the Run01 server proxy (bypasses browser CORS)
+df = await yf_download("AAPL", period="1mo")
+print(df.tail())
 `;
 
 // ── State ─────────────────────────────────────────────────
@@ -133,29 +130,54 @@ require(['vs/editor/editor.main'], function () {
 (async function initPyodide() {
   setStatus('loading', 'Initializing Pyodide core…');
   try {
-    // Explicit indexURL to avoid loader resolution issues
     pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/' });
-    
+
     setStatus('loading', 'Loading standard data libraries…');
     await pyodide.loadPackage([
-      "numpy",
-      "pandas",
-      "matplotlib",
-      "scipy",
-      "scikit-learn",
-      "statsmodels"
+      "numpy", "pandas", "matplotlib", "scipy", "scikit-learn", "statsmodels"
     ]);
-    
-    setStatus('loading', 'Installing community packages (seaborn, yfinance, plotly)…');
+
+    // micropip handles pure-Python packages not bundled with Pyodide.
+    // yfinance is pinned to 0.2.37 — last version before curl-cffi (no WASM wheel).
     await pyodide.loadPackage("micropip");
     const micropip = pyodide.pyimport("micropip");
-    
-    const pkgs = ["seaborn", "yfinance==0.2.37", "plotly"];
-    for (const pkg of pkgs) {
+
+    setStatus('loading', 'Installing seaborn, yfinance, plotly…');
+    for (const pkg of ["seaborn", "yfinance==0.2.37", "plotly"]) {
       await micropip.install(pkg, { keep_going: true });
     }
 
-    setStatus('ready', 'Ready');
+    // ── Inject yf_download proxy helper into Python namespace ──────────────
+    // Direct yfinance.download() calls from Pyodide hit Yahoo Finance
+    // directly, which the browser blocks with a CORS error.
+    // yf_download() calls our own Flask /api/yf/<ticker> endpoint instead,
+    // which fetches server-side (no CORS) and returns clean JSON.
+    await pyodide.runPythonAsync(`
+import pyodide.http, json, pandas as pd
+
+async def yf_download(ticker, period="1mo", interval="1d"):
+    """Fetch stock OHLCV data via Run01 server proxy (bypasses browser CORS).
+
+    Args:
+        ticker  : Stock symbol, e.g. 'AAPL', 'TSLA', 'MSFT'
+        period  : Data period — '1d','5d','1mo','3mo','6mo','1y','2y','5y','10y','ytd','max'
+        interval: Bar interval — '1m','2m','5m','15m','30m','60m','90m','1h','1d','5d','1wk','1mo','3mo'
+
+    Returns:
+        pandas.DataFrame with columns: Date, Open, High, Low, Close, Volume
+    """
+    url = f"/api/yf/{ticker}?period={period}&interval={interval}"
+    resp = await pyodide.http.pyfetch(url)
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.set_index("Date")
+    return df
+`);
+
+    setStatus('ready', 'Ready — all packages loaded');
     btnRun.disabled = false;
     clearOutput();
     appendWelcome();
