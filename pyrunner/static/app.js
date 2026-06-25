@@ -110,39 +110,39 @@ fig, axes = plt.subplots(2, 2, figsize=(11, 7), facecolor='#0a0a0a')
 fig.suptitle('AAPL — 3-Month Analysis', color='#e5e5e5',
              fontsize=14, fontweight='bold', y=0.99)
 
-# Panel 1 — Price + trend
+# Panel 1 — Price + trend (Standard Colors: Blue close, Orange trend)
 ax = axes[0, 0]
 ax.set_facecolor('#111')
-ax.plot(df['Close'].values, color='#e5e5e5', lw=1.5, label='Close')
-ax.plot(pred_y, '--', color='#666', lw=1, label='Trend')
+ax.plot(df['Close'].values, color='#1f77b4', lw=1.5, label='Close')
+ax.plot(pred_y, '--', color='#ff7f0e', lw=1.5, label='Trend')
 ax.set_title('Price + Linear Trend', color='#aaa', fontsize=10)
 ax.tick_params(colors='#555')
 ax.legend(fontsize=8, facecolor='#111', labelcolor='white')
 [s.set_color('#1e1e1e') for s in ax.spines.values()]
 
-# Panel 2 — Returns distribution
+# Panel 2 — Returns distribution (Standard Colors: Cyan bars, Red 0% reference)
 ax2 = axes[0, 1]
 ax2.set_facecolor('#111')
-sns.histplot(returns * 100, bins=22, ax=ax2, color='#555', edgecolor='#2a2a2a')
-ax2.axvline(x=0, color='#aaa', lw=0.8, linestyle='--', alpha=0.7)
+sns.histplot(returns * 100, bins=22, ax=ax2, color='#17becf', edgecolor='#1e1e1e')
+ax2.axvline(x=0, color='#d62728', lw=1, linestyle='--', alpha=0.9)
 ax2.set_title('Daily Returns Distribution (%)', color='#aaa', fontsize=10)
 ax2.tick_params(colors='#555')
 [s.set_color('#1e1e1e') for s in ax2.spines.values()]
 
-# Panel 3 — Rolling volatility
+# Panel 3 — Rolling volatility (Standard Colors: Purple band and line)
 ax3 = axes[1, 0]
 ax3.set_facecolor('#111')
 vol = pd.Series(returns).rolling(10).std() * np.sqrt(252) * 100
-ax3.fill_between(range(len(vol)), vol, alpha=0.35, color='#888')
-ax3.plot(vol.values, color='#ccc', lw=1)
+ax3.fill_between(range(len(vol)), vol, alpha=0.25, color='#9467bd')
+ax3.plot(vol.values, color='#9467bd', lw=1.2)
 ax3.set_title('Rolling 10-Day Annualised Vol (%)', color='#aaa', fontsize=10)
 ax3.tick_params(colors='#555')
 [s.set_color('#1e1e1e') for s in ax3.spines.values()]
 
-# Panel 4 — Volume
+# Panel 4 — Volume (Standard Colors: Green up days, Red down days)
 ax4 = axes[1, 1]
 ax4.set_facecolor('#111')
-bar_colors = ['#666' if c >= o else '#2a2a2a'
+bar_colors = ['#2ca02c' if c >= o else '#d62728'
               for c, o in zip(df['Close'], df['Open'])]
 ax4.bar(range(len(df)), df['Volume'] / 1e6, color=bar_colors, width=0.85)
 ax4.set_title('Volume (M shares)', color='#aaa', fontsize=10)
@@ -153,7 +153,7 @@ plt.tight_layout(pad=1.5)
 plt.show()   # ← captured automatically, rendered as image above ↑
 print()
 
-# ── 7. Plotly Interactive Candlestick + Volume ─────────────
+# ── 7. Plotly Interactive Candlestick + Volume (Standard Colors: Green/Red) ──
 print("▶  Rendering interactive candlestick chart (Plotly)…")
 fig2 = make_subplots(
     rows=2, cols=1, shared_xaxes=True,
@@ -166,15 +166,15 @@ fig2.add_trace(go.Candlestick(
     open=df['Open'], high=df['High'],
     low=df['Low'],   close=df['Close'],
     name='AAPL',
-    increasing=dict(line=dict(color='#d4d4d4', width=1), fillcolor='#3a3a3a'),
-    decreasing=dict(line=dict(color='#555',    width=1), fillcolor='#1a1a1a'),
+    increasing=dict(line=dict(color='#2ca02c', width=1.5), fillcolor='#2ca02c'),
+    decreasing=dict(line=dict(color='#d62728', width=1.5), fillcolor='#d62728'),
 ), row=1, col=1)
 
 fig2.add_trace(go.Bar(
     x=dates,
     y=df['Volume'] / 1e6,
     name='Vol (M)',
-    marker_color=['#555' if c >= o else '#1e1e1e'
+    marker_color=['#2ca02c' if c >= o else '#d62728'
                   for c, o in zip(df['Close'], df['Open'])],
 ), row=2, col=1)
 
@@ -197,222 +197,11 @@ print()
 elapsed = time.time() - t0
 print(f"✓ Completed in {elapsed:.2f}s")
 `,
-
-  cpp: `\
-// ╔═══════════════════════════════════════════════════════════╗
-// ║   Run01 — C++ Demo                                       ║
-// ║   Compiled server-side via Piston API (GCC)              ║
-// ╚═══════════════════════════════════════════════════════════╝
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <numeric>
-#include <cmath>
-#include <iomanip>
-#include <string>
-#include <sstream>
-
-double vMean(const std::vector<double>& v) {
-    return std::accumulate(v.begin(), v.end(), 0.0) / v.size();
-}
-double vStddev(const std::vector<double>& v, double m) {
-    double acc = 0;
-    for (double x : v) acc += (x - m) * (x - m);
-    return std::sqrt(acc / v.size());
-}
-
-int main() {
-    std::cout << std::fixed << std::setprecision(4);
-    std::cout << "Run01 — C++ " << __VERSION__ << "\\n\\n";
-
-    std::vector<double> prices = {
-        180.5, 182.3, 179.8, 184.2, 186.0, 183.4,
-        185.7, 188.1, 187.5, 190.3, 192.8, 191.0
-    };
-
-    double m    = vMean(prices);
-    double sd   = vStddev(prices, m);
-    double minP = *std::min_element(prices.begin(), prices.end());
-    double maxP = *std::max_element(prices.begin(), prices.end());
-
-    std::cout << "Prices: ";
-    for (double p : prices) std::cout << p << "  ";
-    std::cout << "\\n\\n";
-
-    std::cout << "Mean    = " << m            << "\\n";
-    std::cout << "StdDev  = " << sd           << "\\n";
-    std::cout << "Min     = " << minP         << "\\n";
-    std::cout << "Max     = " << maxP         << "\\n";
-    std::cout << "Range   = " << (maxP-minP)  << "\\n\\n";
-
-    // Daily returns
-    std::cout << "Daily returns:\\n";
-    for (size_t i = 1; i < prices.size(); i++) {
-        double ret = (prices[i] - prices[i-1]) / prices[i-1] * 100.0;
-        std::cout << "  Day " << std::setw(2) << i << ": "
-                  << std::showpos << ret << std::noshowpos << "%\\n";
-    }
-
-    // Sorted
-    std::vector<double> sorted = prices;
-    std::sort(sorted.begin(), sorted.end());
-    double median = sorted[sorted.size() / 2];
-    std::cout << "\\nMedian  = " << median << "\\n";
-
-    // Sharpe (assuming 0% risk-free)
-    std::vector<double> rets;
-    for (size_t i = 1; i < prices.size(); i++)
-        rets.push_back((prices[i] - prices[i-1]) / prices[i-1]);
-    double rMean = vMean(rets);
-    double rSd   = vStddev(rets, rMean);
-    double sharpe = (rSd > 0) ? rMean / rSd * std::sqrt(252.0) : 0;
-    std::cout << "Sharpe  = " << sharpe << " (annualised)\\n";
-
-    return 0;
-}
-`,
-
-  csharp: `\
-// ╔═══════════════════════════════════════════════════════════╗
-// ║   Run01 — C# Demo                                        ║
-// ║   Compiled server-side via Piston API (.NET)             ║
-// ╚═══════════════════════════════════════════════════════════╝
-using System;
-using System.Linq;
-using System.Collections.Generic;
-
-class Run01 {
-    static double Stddev(IEnumerable<double> vals) {
-        var list = vals.ToList();
-        double m = list.Average();
-        return Math.Sqrt(list.Select(x => Math.Pow(x - m, 2)).Average());
-    }
-
-    static void Main() {
-        Console.WriteLine($"Run01 — C# / .NET {Environment.Version}\\n");
-
-        double[] prices = {
-            180.5, 182.3, 179.8, 184.2, 186.0, 183.4,
-            185.7, 188.1, 187.5, 190.3, 192.8, 191.0
-        };
-
-        double mean   = prices.Average();
-        double stdDev = Stddev(prices);
-        double min    = prices.Min();
-        double max    = prices.Max();
-
-        Console.WriteLine($"Prices  : {string.Join("  ", prices.Select(p => $"{p:F1}"))}\\n");
-        Console.WriteLine($"Mean    = {mean:F4}");
-        Console.WriteLine($"StdDev  = {stdDev:F4}");
-        Console.WriteLine($"Min     = {min:F4}");
-        Console.WriteLine($"Max     = {max:F4}");
-        Console.WriteLine($"Range   = {max - min:F4}\\n");
-
-        // Daily returns
-        Console.WriteLine("Daily returns:");
-        for (int i = 1; i < prices.Length; i++) {
-            double ret = (prices[i] - prices[i-1]) / prices[i-1] * 100;
-            Console.WriteLine($"  Day {i,2}: {ret:+0.4f;-0.4f}%");
-        }
-
-        // LINQ analytics
-        var aboveMean = prices.Where(x => x > mean)
-                              .OrderByDescending(x => x)
-                              .ToList();
-        Console.WriteLine($"\\nAbove mean ({aboveMean.Count} vals): " +
-            string.Join(", ", aboveMean.Select(x => $"{x:F1}")));
-
-        var sorted = prices.OrderBy(x => x).ToArray();
-        double p25    = sorted[(int)(sorted.Length * 0.25)];
-        double median = sorted[sorted.Length / 2];
-        double p75    = sorted[(int)(sorted.Length * 0.75)];
-        Console.WriteLine($"P25={p25:F1}  Median={median:F1}  P75={p75:F1}");
-
-        // Daily returns stats
-        var rets = Enumerable.Range(1, prices.Length - 1)
-                             .Select(i => (prices[i] - prices[i-1]) / prices[i-1])
-                             .ToList();
-        double rMean = rets.Average();
-        double rSd   = Stddev(rets);
-        double sharpe = rSd > 0 ? rMean / rSd * Math.Sqrt(252) : 0;
-        Console.WriteLine($"\\nSharpe (ann) = {sharpe:F4}");
-    }
-}
-`,
-
-  rust: `\
-// ╔═══════════════════════════════════════════════════════════╗
-// ║   Run01 — Rust Demo                                      ║
-// ║   Compiled server-side via Piston API (rustc)            ║
-// ╚═══════════════════════════════════════════════════════════╝
-fn mean(data: &[f64]) -> f64 {
-    data.iter().sum::<f64>() / data.len() as f64
-}
-fn stddev(data: &[f64], m: f64) -> f64 {
-    let var = data.iter().map(|x| (x - m).powi(2)).sum::<f64>() / data.len() as f64;
-    var.sqrt()
-}
-fn median(data: &mut Vec<f64>) -> f64 {
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    data[data.len() / 2]
-}
-
-fn main() {
-    println!("Run01 — Rust\\n");
-
-    let prices: Vec<f64> = vec![
-        180.5, 182.3, 179.8, 184.2, 186.0, 183.4,
-        185.7, 188.1, 187.5, 190.3, 192.8, 191.0,
-    ];
-
-    let m   = mean(&prices);
-    let sd  = stddev(&prices, m);
-    let min = prices.iter().cloned().fold(f64::INFINITY,     f64::min);
-    let max = prices.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-
-    println!("Prices  : {:?}\\n", prices);
-    println!("Mean    = {:.4}", m);
-    println!("StdDev  = {:.4}", sd);
-    println!("Min     = {:.4}", min);
-    println!("Max     = {:.4}", max);
-    println!("Range   = {:.4}\\n", max - min);
-
-    // Daily returns
-    println!("Daily returns:");
-    for i in 1..prices.len() {
-        let ret = (prices[i] - prices[i-1]) / prices[i-1] * 100.0;
-        let sign = if ret >= 0.0 { "+" } else { "" };
-        println!("  Day {:2}: {}{:.4}%", i, sign, ret);
-    }
-
-    // Functional: above-mean values
-    let above: Vec<f64> = prices.iter().filter(|&&x| x > m).cloned().collect();
-    println!("\\nAbove mean ({} vals): {:?}", above.len(), above);
-
-    // Percentiles
-    let mut sorted = prices.clone();
-    let med = median(&mut sorted);
-    println!("Median  = {:.4}", med);
-    println!("Sorted  : {:?}", sorted);
-
-    // Sharpe ratio
-    let rets: Vec<f64> = (1..prices.len())
-        .map(|i| (prices[i] - prices[i-1]) / prices[i-1])
-        .collect();
-    let rm = mean(&rets);
-    let rs = stddev(&rets, rm);
-    let sharpe = if rs > 0.0 { rm / rs * 252_f64.sqrt() } else { 0.0 };
-    println!("\\nSharpe (ann) = {:.4}", sharpe);
-}
-`,
 };
 
 // ── Language metadata ──────────────────────────────────────
 const LANG_META = {
-  python: { label: 'Python', file: 'main.py',  pill: 'PY',   pillClass: 'pill-py',  monaco: 'python' },
-  cpp:    { label: 'C++',    file: 'main.cpp', pill: 'C++',  pillClass: 'pill-cpp', monaco: 'cpp'    },
-  csharp: { label: 'C#',     file: 'main.cs',  pill: 'C#',   pillClass: 'pill-cs',  monaco: 'csharp' },
-  rust:   { label: 'Rust',   file: 'main.rs',  pill: 'RS',   pillClass: 'pill-rs',  monaco: 'rust'   },
+  python: { label: 'Python', file: 'main.py',  pill: 'PY',   pillClass: 'pill-py',  monaco: 'python' }
 };
 
 // ── Python helpers injected into Pyodide ───────────────────
@@ -527,34 +316,24 @@ const monacoReady = new Promise((resolve) => {
     monaco.editor.defineTheme('run01', {
       base: 'vs-dark',
       inherit: true,
-      rules: [
-        { token: 'comment',        foreground: '4a4a4a', fontStyle: 'italic' },
-        { token: 'keyword',        foreground: 'FFFFFF', fontStyle: 'bold'   },
-        { token: 'string',         foreground: '9a9a9a'                      },
-        { token: 'number',         foreground: 'E0E0E0'                      },
-        { token: 'identifier',     foreground: 'D0D0D0'                      },
-        { token: 'type.identifier',foreground: 'FFFFFF', fontStyle: 'bold'   },
-        { token: 'delimiter',      foreground: '606060'                      },
-        { token: 'operator',       foreground: 'FFFFFF'                      },
-        { token: 'comment.line',   foreground: '3e3e3e', fontStyle: 'italic' },
-      ],
+      rules: [], // Empty rules to inherit standard VS Code dark syntax coloring
       colors: {
         'editor.background':              '#00000000',
-        'editor.foreground':              '#D0D0D0',
+        'editor.foreground':              '#D4D4D4',
         'editor.lineHighlightBackground': '#ffffff08',
         'editor.selectionBackground':     '#ffffff18',
         'editor.inactiveSelectionBackground': '#ffffff0c',
-        'editorLineNumber.foreground':    '#444444',
-        'editorLineNumber.activeForeground': '#909090',
-        'editorCursor.foreground':        '#FFFFFF',
+        'editorLineNumber.foreground':    '#858585',
+        'editorLineNumber.activeForeground': '#C6C6C6',
+        'editorCursor.foreground':        '#AEAFAD',
         'editorIndentGuide.background1': '#1e1e1e',
         'editorIndentGuide.activeBackground1': '#333333',
-        'editorWidget.background':        '#0d0d0d',
-        'editorWidget.border':            '#222222',
-        'input.background':               '#050505',
-        'input.foreground':               '#F0F0F2',
-        'scrollbarSlider.background':     '#ffffff0c',
-        'scrollbarSlider.hoverBackground':'#ffffff18',
+        'editorWidget.background':        '#1e1e1e',
+        'editorWidget.border':            '#454545',
+        'input.background':               '#3c3c3c',
+        'input.foreground':               '#cccccc',
+        'scrollbarSlider.background':     '#79797933',
+        'scrollbarSlider.hoverBackground':'#79797955',
       },
     });
 
@@ -592,7 +371,7 @@ const monacoReady = new Promise((resolve) => {
     // Cmd/Ctrl+Enter → Run
     monacoEditor.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      () => { if (!isRunning && (pyodide || currentLang !== 'python')) triggerRun(); }
+      () => { if (!isRunning && pyodide) triggerRun(); }
     );
 
     resolve();
@@ -653,8 +432,23 @@ const pyodideReady = initPyodide().catch((err) => {
   appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
 });
 
-// ── Wait for BOTH Monaco + Pyodide, then unlock UI ────────
-Promise.all([monacoReady, pyodideReady]).then(() => {
+// ── Plotly.js initialisation check ────────────────────────
+const plotlyReady = new Promise((resolve) => {
+  if (typeof Plotly !== 'undefined') {
+    resolve();
+  } else {
+    const script = document.querySelector('script[src*="plotly.min.js"]');
+    if (script) {
+      script.addEventListener('load', () => resolve());
+      script.addEventListener('error', () => resolve());
+    } else {
+      resolve();
+    }
+  }
+});
+
+// ── Wait for Monaco + Pyodide + Plotly.js, then unlock UI ──
+Promise.all([monacoReady, pyodideReady, plotlyReady]).then(() => {
   setStatus('ready', 'Ready — all packages loaded');
   btnRun.disabled = false;
   hideOverlay();
@@ -664,48 +458,16 @@ Promise.all([monacoReady, pyodideReady]).then(() => {
   console.error('Startup error:', err);
 });
 
-// ── Language tabs ─────────────────────────────────────────
+// ── Language tabs (Simplified, Python only) ───────────────
 langTabsEl.addEventListener('click', (e) => {
-  const tab = e.target.closest('[data-lang]');
-  if (!tab) return;
-
-  const lang = tab.dataset.lang;
-  if (lang === currentLang) return;
-
-  // Update active tab
-  langTabsEl.querySelectorAll('.lang-tab').forEach((t) => {
-    t.classList.toggle('active', t === tab);
-    t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
-  });
-
-  // Save current code for this language
-  STARTER_CODES[currentLang] = monacoEditor.getValue();
-
-  currentLang = lang;
-  const meta = LANG_META[lang];
-
-  // Switch Monaco language + content
-  monaco.editor.setModelLanguage(monacoEditor.getModel(), meta.monaco);
-  monacoEditor.setValue(STARTER_CODES[lang]);
-
-  // Update pill + filename
-  langPillEl.textContent = meta.pill;
-  langPillEl.className   = `pill ${meta.pillClass}`;
-  fileNameEl.textContent = meta.file;
-
-  // Enable run if Pyodide loaded (Python) or always (compiled langs)
-  btnRun.disabled = (lang === 'python' && !pyodide);
+  // Python is only language now, clicking it returns early.
 });
 
 // ── Trigger run ───────────────────────────────────────────
 function triggerRun() {
   if (isRunning) return;
-  if (currentLang === 'python') {
-    if (!pyodide) return;
-    runPython();
-  } else {
-    runCompiled();
-  }
+  if (!pyodide) return;
+  runPython();
 }
 
 // ── Run: Python (Pyodide, client-side) ───────────────────
@@ -744,63 +506,6 @@ async function runPython() {
   isRunning = false;
   btnRun.disabled = false;
   setStatus(success ? 'ready' : 'error', success ? `Done in ${block.elapsed()}s` : 'Error');
-}
-
-// ── Run: Compiled (C++ / C# / Rust via Piston API) ───────
-async function runCompiled() {
-  if (isRunning) return;
-
-  const code = monacoEditor.getValue();
-  if (!code.trim()) return;
-
-  isRunning = true;
-  runCount++;
-  btnRun.disabled = true;
-  setStatus('compiling', `Compiling ${LANG_META[currentLang].label}…`);
-  outputMeta.textContent = 'compiling…';
-
-  const block = startOutputBlock();
-  processOutput(`⚙  Compiling ${LANG_META[currentLang].label} via Piston API…`, false, block);
-
-  let success = false;
-  try {
-    const resp = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ language: currentLang, code }),
-    });
-
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} from /api/run`);
-    const result = await resp.json();
-
-    if (result.error) {
-      processOutput(result.error, true, block);
-    } else {
-      // Show compile errors/warnings if any
-      const compileErr = result?.compile?.stderr ?? '';
-      if (compileErr.trim()) {
-        processOutput('── Compiler output ──', false, block);
-        processOutput(compileErr.trim(), true, block);
-      }
-      // Show stdout
-      const stdout = result?.run?.stdout ?? result?.run?.output ?? '';
-      const stderr = result?.run?.stderr ?? '';
-      if (stdout.trim()) processOutput(stdout.trimEnd(), false, block);
-      if (stderr.trim()) processOutput(stderr.trimEnd(), true, block);
-
-      // Check exit code
-      const code0 = result?.run?.code ?? 0;
-      success = (code0 === 0 && !result.error);
-    }
-  } catch (err) {
-    processOutput(`⚠ Request failed: ${err.message ?? err}`, true, block);
-  }
-
-  finishOutputBlock(block, success);
-  isRunning = false;
-  btnRun.disabled = false;
-  setStatus(success ? 'ready' : 'error',
-    success ? `Done in ${block.elapsed()}s` : 'Build error');
 }
 
 // ── Output block management ───────────────────────────────
@@ -990,7 +695,7 @@ btnRun.addEventListener('click', () => {
 
 btnClear.addEventListener('click', () => {
   clearOutput();
-  if (pyodide || currentLang !== 'python') appendWelcome();
+  if (pyodide) appendWelcome();
   setStatus('ready', 'Ready');
 });
 

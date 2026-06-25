@@ -94,37 +94,11 @@ body::after {
   align-items: center;
   flex-shrink: 0;
   user-select: none;
-}
-
-.brand-text-run {
-  font-weight: 200;
-  font-size: 18px;
-  letter-spacing: 0.16em;
-  color: var(--text);
-  text-shadow: 0 0 12px rgba(255,255,255,0.1);
-}
-
-.brand-badge-01 {
-  font-weight: 800;
-  font-size: 10px;
-  background: var(--white);
-  color: var(--black);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  margin-left: 5px;
-  letter-spacing: 0;
-  box-shadow: 0 2px 12px rgba(255,255,255,0.2);
-}
-
-.brand-tagline {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-left: 14px;
-  border-left: 1px solid var(--glass-border);
-  padding-left: 14px;
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--white);
 }
 
 /* ── NAV STATUS ─────────────────────────────────────────── */
@@ -453,9 +427,9 @@ body::after {
   display: block;
 }
 .out-line.err {
-  color: #ccc;
-  background: rgba(255,255,255,0.03);
-  border-left: 2px solid var(--text-dim);
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.06);
+  border-left: 2px solid #ef4444;
   padding: 8px 12px;
   margin: 6px 0;
   border-radius: var(--radius-sm);
@@ -478,18 +452,17 @@ body::after {
 
 .out-success-badge {
   font-size: 9px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--white);
-  border: 1px solid rgba(255,255,255,0.22);
-  background: rgba(255,255,255,0.05);
+  letter-spacing: 0.06em; color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.08);
   padding: 2px 7px; border-radius: 4px;
 }
 .out-error-badge {
   font-size: 9px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--text-muted);
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(0,0,0,0.2);
+  letter-spacing: 0.06em; color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
   padding: 2px 7px; border-radius: 4px;
-  text-decoration: underline;
 }
 .out-lang-badge {
   font-size: 9px; font-weight: 600; text-transform: uppercase;
@@ -574,6 +547,12 @@ body::after {
   display: flex;
   align-items: center;
   user-select: none;
+  font-family: 'Pixelify Sans', sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--white);
+  margin-bottom: 6px;
 }
 
 .init-subtitle {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Run01 — Browser-based Python IDE. NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, Yahoo Finance. Also runs C++, C#, and Rust." />
+  <meta name="description" content="Run01 — Browser-based Python IDE. NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, Yahoo Finance." />
   <title>Run01 — Browser Python IDE</title>
 
   <!-- ── Preconnect / DNS-prefetch for all CDN hosts ───────────────
@@ -22,9 +22,12 @@
   <link rel="preload"
         href="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"
         as="script" crossorigin />
+  <link rel="preload"
+        href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
+        as="script" crossorigin />
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
 
   <!-- App styles -->
@@ -39,11 +42,7 @@
 
   <!-- ══ TOP NAV ══════════════════════════════════════════════════ -->
   <header class="nav" role="banner">
-    <div class="nav-brand">
-      <span class="brand-text-run">RUN</span>
-      <span class="brand-badge-01">01</span>
-      <span class="brand-tagline">Browser IDE</span>
-    </div>
+    <div class="nav-brand">Run01</div>
 
     <div class="nav-status" id="navStatus" role="status" aria-live="polite">
       <span class="status-dot loading" id="statusDot"></span>
@@ -88,27 +87,6 @@
             </svg>
             Python
           </button>
-          <button class="lang-tab" data-lang="cpp" role="tab"
-                  aria-selected="false" aria-controls="editor" title="C++ — compiled server-side via Piston API">
-            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M10.5 15.97l.41 2.44c-.26.14-.68.27-1.24.39-.57.13-1.24.2-2.01.2-2.21-.04-3.87-.7-4.98-1.96C1.56 15.77 1 14.16 1 12.21c.05-2.31.72-4.08 2-5.29C4.32 5.71 5.95 5.06 8 5c.96 0 1.77.09 2.44.27l-.28 2.47-.77-.17c-.31-.06-.68-.1-1.08-.1-1.14.03-2.01.4-2.59 1.1-.57.7-.86 1.81-.86 3.35 0 1.51.29 2.61.86 3.29.57.68 1.45 1.03 2.59 1.06l1.14-.12.55-.18zM13 10h2V8h1.5v2H18v1.5h-1.5V13H15v-1.5h-2V10zm5.5 0H20V8h1.5v2H23v1.5h-1.5V13H20v-1.5h-1.5V10z"/>
-            </svg>
-            C++
-          </button>
-          <button class="lang-tab" data-lang="csharp" role="tab"
-                  aria-selected="false" aria-controls="editor" title="C# — compiled server-side via Piston API">
-            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M11.5 15.97l.41 2.44c-.26.14-.68.27-1.24.39C11.1 18.93 10.43 19 9.66 19c-2.21-.04-3.87-.7-4.98-1.96C3.56 15.77 3 14.16 3 12.21c.05-2.31.72-4.08 2-5.29C6.32 5.71 7.95 5.06 10 5c.96 0 1.77.09 2.44.27l-.28 2.47-.77-.17c-.31-.06-.68-.1-1.08-.1-1.14.03-2.01.4-2.59 1.1-.57.7-.86 1.81-.86 3.35 0 1.51.29 2.61.86 3.29.57.68 1.45 1.03 2.59 1.06l1.14-.12.55-.18zM17 11.5h-1V9h-1.5v2.5H13V13h1.5v2.5H16V13h1V11.5zm3.5 0H19V9h-1.5v2.5H16V13h1.5v2.5H19V13h1.5V11.5z"/>
-            </svg>
-            C#
-          </button>
-          <button class="lang-tab" data-lang="rust" role="tab"
-                  aria-selected="false" aria-controls="editor" title="Rust — compiled server-side via Piston API">
-            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M23.83 11.65l-1.05-.65-.05-.42.9-.9a.22.22 0 000-.31l-.91-.91a.22.22 0 00-.31 0l-.9.9-.42-.05-.65-1.05a.22.22 0 00-.19-.11h-1.28a.22.22 0 00-.19.11l-.65 1.05-.42.05-.9-.9a.22.22 0 00-.31 0l-.91.91a.22.22 0 000 .31l.9.9-.05.42-1.05.65a.22.22 0 00-.11.19v1.28c0 .08.04.15.11.19l1.05.65.05.42-.9.9a.22.22 0 000 .31l.91.91a.22.22 0 00.31 0l.9-.9.42.05.65 1.05c.04.07.11.11.19.11h1.28c.08 0 .15-.04.19-.11l.65-1.05.42-.05.9.9a.22.22 0 00.31 0l.91-.91a.22.22 0 000-.31l-.9-.9.05-.42 1.05-.65a.22.22 0 00.11-.19V11.84a.22.22 0 00-.11-.19zM18.5 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM9.24 8.5L5.86 5.12a9.5 9.5 0 0112.61 3.38H9.24zM4.28 6.71l3.35 3.35A9.47 9.47 0 003 12a9.5 9.5 0 001.28 4.8zm.44 10.78l3.58-3.56h9.38a9.5 9.5 0 01-12.96 3.56zM20.5 15.5l-3.29-3.5H12.7l3.29 3.5H20.5z"/>
-            </svg>
-            Rust
-          </button>
         </nav>
 
         <div class="pane-right-meta">
@@ -150,10 +128,7 @@
   <!-- ══ INIT OVERLAY (full-screen, fades out when ready) ══════════ -->
   <div class="init-overlay" id="initOverlay" role="status" aria-label="Loading Run01">
     <div class="init-card">
-      <div class="init-logo">
-        <span class="brand-text-run" style="font-size:34px;letter-spacing:0.16em">RUN</span>
-        <span class="brand-badge-01" style="font-size:17px;padding:5px 11px;margin-left:6px">01</span>
-      </div>
+      <div class="init-logo">Run01</div>
       <p class="init-subtitle">Browser Python IDE</p>
 
       <div class="init-progress-wrap">
@@ -189,7 +164,7 @@
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" defer></script>
 
   <!-- 2b. Plotly.js (defer — needed for interactive chart rendering) -->
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" crossorigin defer></script>
 
   <!-- 3. App logic (defer — runs after pyodide.js + plotly.js are executed) -->
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
