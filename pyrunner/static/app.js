@@ -311,71 +311,88 @@ function hideOverlay() {
 // ── Monaco initialisation ─────────────────────────────────
 // Started immediately (parallel with Pyodide init below)
 const monacoReady = new Promise((resolve) => {
-  require(['vs/editor/editor.main'], function () {
-
-    monaco.editor.defineTheme('run01', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [], // Empty rules to inherit standard VS Code dark syntax coloring
-      colors: {
-        'editor.background':              '#00000000',
-        'editor.foreground':              '#D4D4D4',
-        'editor.lineHighlightBackground': '#ffffff08',
-        'editor.selectionBackground':     '#ffffff18',
-        'editor.inactiveSelectionBackground': '#ffffff0c',
-        'editorLineNumber.foreground':    '#858585',
-        'editorLineNumber.activeForeground': '#C6C6C6',
-        'editorCursor.foreground':        '#AEAFAD',
-        'editorIndentGuide.background1': '#1e1e1e',
-        'editorIndentGuide.activeBackground1': '#333333',
-        'editorWidget.background':        '#1e1e1e',
-        'editorWidget.border':            '#454545',
-        'input.background':               '#3c3c3c',
-        'input.foreground':               '#cccccc',
-        'scrollbarSlider.background':     '#79797933',
-        'scrollbarSlider.hoverBackground':'#79797955',
-      },
-    });
-
-    monacoEditor = monaco.editor.create(document.getElementById('editor'), {
-      value:            STARTER_CODES.python,
-      language:         'python',
-      theme:            'run01',
-      fontSize:         13.5,
-      fontFamily:       "'JetBrains Mono', 'Fira Code', monospace",
-      fontLigatures:    true,
-      lineHeight:       22,
-      minimap:          { enabled: false },
-      scrollBeyondLastLine: false,
-      wordWrap:         'on',
-      automaticLayout:  true,
-      padding:          { top: 18, bottom: 18 },
-      renderLineHighlight: 'gutter',
-      cursorBlinking:   'phase',
-      cursorSmoothCaretAnimation: 'on',
-      smoothScrolling:  true,
-      tabSize:          4,
-      insertSpaces:     true,
-      folding:          true,
-      suggest:          { preview: true },
-      quickSuggestions: true,
-      bracketPairColorization: { enabled: false },
-    });
-
-    // Show cursor position
-    monacoEditor.onDidChangeCursorPosition((e) => {
-      const p = e.position;
-      editorMeta.textContent = `ln ${p.lineNumber}, col ${p.column}`;
-    });
-
-    // Cmd/Ctrl+Enter → Run
-    monacoEditor.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      () => { if (!isRunning && pyodide) triggerRun(); }
-    );
-
+  // 5-second timeout safety guard
+  const timeout = setTimeout(() => {
+    console.warn('[Monaco] Loading timed out (5s)');
     resolve();
-  });
+  }, 5000);
+
+  if (typeof require !== 'undefined') {
+    require(['vs/editor/editor.main'], function () {
+      clearTimeout(timeout);
+
+      monaco.editor.defineTheme('run01', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [], // Empty rules to inherit standard VS Code dark syntax coloring
+        colors: {
+          'editor.background':              '#00000000',
+          'editor.foreground':              '#D4D4D4',
+          'editor.lineHighlightBackground': '#ffffff08',
+          'editor.selectionBackground':     '#ffffff18',
+          'editor.inactiveSelectionBackground': '#ffffff0c',
+          'editorLineNumber.foreground':    '#858585',
+          'editorLineNumber.activeForeground': '#C6C6C6',
+          'editorCursor.foreground':        '#AEAFAD',
+          'editorIndentGuide.background1': '#1e1e1e',
+          'editorIndentGuide.activeBackground1': '#333333',
+          'editorWidget.background':        '#1e1e1e',
+          'editorWidget.border':            '#454545',
+          'input.background':               '#3c3c3c',
+          'input.foreground':               '#cccccc',
+          'scrollbarSlider.background':     '#79797933',
+          'scrollbarSlider.hoverBackground':'#79797955',
+        },
+      });
+
+      monacoEditor = monaco.editor.create(document.getElementById('editor'), {
+        value:            STARTER_CODES.python,
+        language:         'python',
+        theme:            'run01',
+        fontSize:         13.5,
+        fontFamily:       "'JetBrains Mono', 'Fira Code', monospace",
+        fontLigatures:    true,
+        lineHeight:       22,
+        minimap:          { enabled: false },
+        scrollBeyondLastLine: false,
+        wordWrap:         'on',
+        automaticLayout:  true,
+        padding:          { top: 18, bottom: 18 },
+        renderLineHighlight: 'gutter',
+        cursorBlinking:   'phase',
+        cursorSmoothCaretAnimation: 'on',
+        smoothScrolling:  true,
+        tabSize:          4,
+        insertSpaces:     true,
+        folding:          true,
+        suggest:          { preview: true },
+        quickSuggestions: true,
+        bracketPairColorization: { enabled: false },
+      });
+
+      // Show cursor position
+      monacoEditor.onDidChangeCursorPosition((e) => {
+        const p = e.position;
+        editorMeta.textContent = `ln ${p.lineNumber}, col ${p.column}`;
+      });
+
+      // Cmd/Ctrl+Enter → Run
+      monacoEditor.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+        () => { if (!isRunning && pyodide) triggerRun(); }
+      );
+
+      resolve();
+    }, function (err) {
+      clearTimeout(timeout);
+      console.error('[Monaco] Load failed:', err);
+      resolve();
+    });
+  } else {
+    clearTimeout(timeout);
+    console.error('[Monaco] AMD require is not defined');
+    resolve();
+  }
 });
 
 // ── Pyodide initialisation ────────────────────────────────
@@ -432,23 +449,8 @@ const pyodideReady = initPyodide().catch((err) => {
   appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
 });
 
-// ── Plotly.js initialisation check ────────────────────────
-const plotlyReady = new Promise((resolve) => {
-  if (typeof Plotly !== 'undefined') {
-    resolve();
-  } else {
-    const script = document.querySelector('script[src*="plotly.min.js"]');
-    if (script) {
-      script.addEventListener('load', () => resolve());
-      script.addEventListener('error', () => resolve());
-    } else {
-      resolve();
-    }
-  }
-});
-
-// ── Wait for Monaco + Pyodide + Plotly.js, then unlock UI ──
-Promise.all([monacoReady, pyodideReady, plotlyReady]).then(() => {
+// ── Wait for Monaco + Pyodide, then unlock UI ────────────────
+Promise.all([monacoReady, pyodideReady]).then(() => {
   setStatus('ready', 'Ready — all packages loaded');
   btnRun.disabled = false;
   hideOverlay();
@@ -456,6 +458,8 @@ Promise.all([monacoReady, pyodideReady, plotlyReady]).then(() => {
   appendWelcome();
 }).catch((err) => {
   console.error('Startup error:', err);
+  hideOverlay();
+  setStatus('error', 'Startup failed — check console');
 });
 
 // ── Language tabs (Simplified, Python only) ───────────────

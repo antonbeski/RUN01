@@ -94,7 +94,7 @@ body::after {
   align-items: center;
   flex-shrink: 0;
   user-select: none;
-  font-family: 'Google Sans Code', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -547,7 +547,7 @@ body::after {
   display: flex;
   align-items: center;
   user-select: none;
-  font-family: 'Google Sans Code', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 42px;
   font-weight: 700;
   letter-spacing: 0.04em;

@@ -26,8 +26,7 @@
         href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
         as="script" crossorigin />
 
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Google+Sans+Code:wght@400..700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
         rel="stylesheet" />
 
   <!-- App styles -->
@@ -158,10 +157,10 @@
          3. App logic          (defer — runs after all above)       -->
 
   <!-- 1. Monaco AMD loader (sync, ~10 KB) -->
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js" crossorigin></script>
 
   <!-- 2a. Pyodide runtime (defer — downloaded in parallel with Plotly) -->
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" crossorigin defer></script>
 
   <!-- 2b. Plotly.js (defer — needed for interactive chart rendering) -->
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" crossorigin defer></script>
