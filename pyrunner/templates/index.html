@@ -6,33 +6,32 @@
   <meta name="description" content="Run01 — Browser-based Python IDE. NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, Yahoo Finance." />
   <title>Run01 — Browser Python IDE</title>
 
-  <!-- ── Preconnect / DNS-prefetch for all CDN hosts ───────────────
-       Browser opens TCP connections before scripts request resources,
-       shaving 100-300 ms off every first-time CDN request.          -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net"  crossorigin />
-  <link rel="preconnect" href="https://cdn.plot.ly"       crossorigin />
+  <!-- ── Preconnect / DNS-prefetch ─────────────────────────────────────── -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net"     crossorigin />
+  <link rel="preconnect" href="https://cdn.plot.ly"          crossorigin />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="dns-prefetch" href="https://emkc.org" />
+  <link rel="preconnect" href="https://fonts.gstatic.com"    crossorigin />
+  <link rel="dns-prefetch" href="https://unpkg.com" />
 
-  <!-- ── Preload: tell browser to fetch critical scripts immediately ─ -->
+  <!-- ── Preload critical assets ───────────────────────────────────────── -->
   <link rel="preload"
         href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"
         as="script" crossorigin />
   <link rel="preload"
         href="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"
         as="script" crossorigin />
+  <!-- Preload Plotly so the browser fetches it immediately alongside everything else -->
   <link rel="preload"
         href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
         as="script" crossorigin />
 
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
 
-  <!-- App styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 
-  <!-- Monaco AMD require config — must be inline, before loader.js -->
+  <!-- Monaco AMD require config -->
   <script>
     var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } };
   </script>
@@ -41,7 +40,7 @@
 
   <!-- ══ TOP NAV ══════════════════════════════════════════════════ -->
   <header class="nav" role="banner">
-    <div class="nav-brand">Run01</div>
+    <div class="nav-brand" aria-label="Run01">RUN01</div>
 
     <div class="nav-status" id="navStatus" role="status" aria-live="polite">
       <span class="status-dot loading" id="statusDot"></span>
@@ -49,19 +48,67 @@
     </div>
 
     <div class="nav-actions">
-      <button class="btn btn-ghost" id="btnClear" title="Clear output  (Ctrl+L)" aria-label="Clear output">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-          <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+
+      <!-- Download output button -->
+      <button class="btn btn-ghost" id="btnDownload"
+              title="Download output  (Ctrl+D)"
+              aria-label="Download output as text file">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Clear
+        Download
       </button>
-      <button class="btn btn-ghost" id="btnReset" title="Reset starter code (Ctrl+R)" aria-label="Reset starter code">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+
+      <!-- Reset button -->
+      <button class="btn btn-ghost" id="btnReset"
+              title="Reset starter code (Ctrl+R)"
+              aria-label="Reset starter code">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
         </svg>
         Reset
       </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
+      <!-- Theme toggle -->
+      <button class="btn btn-icon btn-theme" id="btnTheme"
+              title="Toggle light / dark mode"
+              aria-label="Toggle light/dark theme">
+        <!-- Moon (dark mode) -->
+        <svg class="icon-dark" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+        <!-- Sun (light mode) -->
+        <svg class="icon-light" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
+      <!-- Run -->
       <button class="btn btn-run" id="btnRun" disabled aria-label="Run code (Ctrl+Enter)">
         <span class="run-icon" aria-hidden="true">▶</span>
         <span>Run</span>
@@ -73,11 +120,8 @@
   <!-- ══ MAIN SPLIT ════════════════════════════════════════════════ -->
   <main class="workspace" role="main">
 
-    <!-- ── EDITOR PANE ─────────────────────────────────────────── -->
     <section class="pane pane-editor" aria-label="Code editor">
       <div class="pane-header">
-
-        <!-- Language Tabs -->
         <nav class="lang-tabs" id="langTabs" aria-label="Language selector" role="tablist">
           <button class="lang-tab active" data-lang="python" role="tab"
                   aria-selected="true" aria-controls="editor" title="Python — runs in browser via Pyodide">
@@ -99,11 +143,9 @@
       <div id="editor" class="editor-mount" role="textbox" aria-multiline="true" aria-label="Code editor"></div>
     </section>
 
-    <!-- ── RESIZE HANDLE ───────────────────────────────────────── -->
     <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="vertical"
          aria-label="Drag to resize panels" tabindex="0"></div>
 
-    <!-- ── OUTPUT PANE ─────────────────────────────────────────── -->
     <section class="pane pane-output" aria-label="Output console">
       <div class="pane-header">
         <span class="pane-label">
@@ -124,10 +166,10 @@
 
   </main>
 
-  <!-- ══ INIT OVERLAY (full-screen, fades out when ready) ══════════ -->
+  <!-- ══ INIT OVERLAY ══════════════════════════════════════════════ -->
   <div class="init-overlay" id="initOverlay" role="status" aria-label="Loading Run01">
     <div class="init-card">
-      <div class="init-logo">Run01</div>
+      <div class="init-logo">RUN01</div>
       <p class="init-subtitle">Browser Python IDE</p>
 
       <div class="init-progress-wrap">
@@ -151,34 +193,40 @@
   </div>
 
   <!-- ══ SCRIPTS ════════════════════════════════════════════════════
-       Load order matters:
-         1. Monaco loader.js   (sync — small, defines require())
-         2. Pyodide + Plotly   (defer — large, download in parallel)
-         3. App logic          (defer — runs after all above)       -->
+       Load order:
+         1. Plotly       — SYNC, small dist-min build (~1.2 MB gz), must be
+                           available before any Python code runs fig.show()
+         2. Monaco loader— sync AMD shim (~10 KB)
+         3. Pyodide      — defer (large WASM, parallel download)
+         4. App logic    — defer (runs after all above)              -->
 
-  <!-- 1. Monaco AMD loader (sync, ~10 KB) -->
+  <!-- 1. Plotly — synchronous so window.Plotly is guaranteed before app.js runs -->
+  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
+          crossorigin
+          onerror="
+            /* CDN 1 failed → fallback to unpkg immediately */
+            var s=document.createElement('script');
+            s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';
+            s.crossOrigin='anonymous';
+            document.head.appendChild(s);
+          "></script>
+
+  <!-- 2. Monaco AMD loader (sync, ~10 KB) -->
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js" crossorigin></script>
 
-  <!-- 2a. Pyodide runtime (defer — downloaded in parallel with Plotly) -->
+  <!-- 3. Pyodide runtime (defer — large, downloads in parallel) -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" crossorigin defer></script>
 
-  <!-- 2b. Plotly.js (defer — needed for interactive chart rendering) -->
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" crossorigin defer></script>
-
-  <!-- 3. App logic (defer — runs after pyodide.js + plotly.js are executed) -->
+  <!-- 4. App logic (defer — runs after pyodide.js is executed) -->
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 
-  <!-- ── Service Worker registration ────────────────────────────── -->
+  <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js')
-          .then(function(reg) {
-            console.log('[SW] Registered, scope:', reg.scope);
-          })
-          .catch(function(err) {
-            console.warn('[SW] Registration failed:', err);
-          });
+          .then(function(reg) { console.log('[SW] Registered, scope:', reg.scope); })
+          .catch(function(err) { console.warn('[SW] Registration failed:', err); });
       });
     }
   </script>
