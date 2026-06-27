@@ -23,9 +23,9 @@ const STARTER_CODES = {
 
   python: `\
 # ╔═══════════════════════════════════════════════════════════╗
-# ║         Run01 — Full Data Science Demo                    ║
-# ║  NumPy · Pandas · SciPy · Sklearn · Statsmodels          ║
-# ║  Matplotlib · Seaborn · Plotly · Yahoo Finance           ║
+# ║         Run01 — Full Data Science Demo               ║
+# ║  NumPy · Pandas · SciPy · Sklearn · Statsmodels      ║
+# ║  Matplotlib · Seaborn · Plotly · Yahoo Finance       ║
 # ╚═══════════════════════════════════════════════════════════╝
 import sys, time, warnings
 warnings.filterwarnings('ignore')
@@ -110,7 +110,7 @@ fig, axes = plt.subplots(2, 2, figsize=(11, 7), facecolor='#0a0a0a')
 fig.suptitle('AAPL — 3-Month Analysis', color='#e5e5e5',
              fontsize=14, fontweight='bold', y=0.99)
 
-# Panel 1 — Price + trend (Standard Colors: Blue close, Orange trend)
+# Panel 1 — Price + trend
 ax = axes[0, 0]
 ax.set_facecolor('#111')
 ax.plot(df['Close'].values, color='#1f77b4', lw=1.5, label='Close')
@@ -120,7 +120,7 @@ ax.tick_params(colors='#555')
 ax.legend(fontsize=8, facecolor='#111', labelcolor='white')
 [s.set_color('#1e1e1e') for s in ax.spines.values()]
 
-# Panel 2 — Returns distribution (Standard Colors: Cyan bars, Red 0% reference)
+# Panel 2 — Returns distribution
 ax2 = axes[0, 1]
 ax2.set_facecolor('#111')
 sns.histplot(returns * 100, bins=22, ax=ax2, color='#17becf', edgecolor='#1e1e1e')
@@ -129,7 +129,7 @@ ax2.set_title('Daily Returns Distribution (%)', color='#aaa', fontsize=10)
 ax2.tick_params(colors='#555')
 [s.set_color('#1e1e1e') for s in ax2.spines.values()]
 
-# Panel 3 — Rolling volatility (Standard Colors: Purple band and line)
+# Panel 3 — Rolling volatility
 ax3 = axes[1, 0]
 ax3.set_facecolor('#111')
 vol = pd.Series(returns).rolling(10).std() * np.sqrt(252) * 100
@@ -139,7 +139,7 @@ ax3.set_title('Rolling 10-Day Annualised Vol (%)', color='#aaa', fontsize=10)
 ax3.tick_params(colors='#555')
 [s.set_color('#1e1e1e') for s in ax3.spines.values()]
 
-# Panel 4 — Volume (Standard Colors: Green up days, Red down days)
+# Panel 4 — Volume
 ax4 = axes[1, 1]
 ax4.set_facecolor('#111')
 bar_colors = ['#2ca02c' if c >= o else '#d62728'
@@ -150,10 +150,10 @@ ax4.tick_params(colors='#555')
 [s.set_color('#1e1e1e') for s in ax4.spines.values()]
 
 plt.tight_layout(pad=1.5)
-plt.show()   # ← captured automatically, rendered as image above ↑
+plt.show()
 print()
 
-# ── 7. Plotly Interactive Candlestick + Volume (Standard Colors: Green/Red) ──
+# ── 7. Plotly Interactive Candlestick + Volume ────────────
 print("▶  Rendering interactive candlestick chart (Plotly)…")
 fig2 = make_subplots(
     rows=2, cols=1, shared_xaxes=True,
@@ -191,7 +191,7 @@ fig2.update_layout(
     margin=dict(l=4, r=4, t=36, b=4),
     height=440,
 )
-fig2.show()   # ← interactive chart rendered inline below ↓
+fig2.show()
 print()
 
 elapsed = time.time() - t0
@@ -205,6 +205,8 @@ const LANG_META = {
 };
 
 // ── Python helpers injected into Pyodide ───────────────────
+// IMPORTANT: use triple-quoted strings for all multi-line docstrings
+// so Python 3.12 doesn't throw "unterminated string literal".
 const PYODIDE_SETUP = `
 import io, base64, warnings
 warnings.filterwarnings('ignore')
@@ -218,10 +220,12 @@ import plotly.io as _pio
 # ── yf_download: fetch OHLCV via Run01 server proxy ────────
 async def yf_download(ticker, period="1mo", interval="1d"):
     """Fetch stock OHLCV data via Run01 proxy (bypasses browser CORS).
+
     Args:
         ticker  : e.g. 'AAPL', 'TSLA', 'MSFT', 'GOOG'
         period  : '1d','5d','1mo','3mo','6mo','1y','2y','5y','max'
         interval: '1m','5m','15m','30m','1h','1d','1wk','1mo'
+
     Returns:
         pd.DataFrame  DatetimeIndex, columns: Open High Low Close Volume
     """
@@ -268,14 +272,14 @@ let pyodide        = null;
 let currentLang    = 'python';
 let isRunning      = false;
 let runCount       = 0;
-let currentBlock   = null;  // { blockEl, linesEl, startTime, badgeEl, timeEl }
 
 // ── DOM refs ──────────────────────────────────────────────
 const statusDot      = document.getElementById('statusDot');
 const statusLabel    = document.getElementById('statusLabel');
 const btnRun         = document.getElementById('btnRun');
-const btnClear       = document.getElementById('btnClear');
+const btnDownload    = document.getElementById('btnDownload');
 const btnReset       = document.getElementById('btnReset');
+const btnTheme       = document.getElementById('btnTheme');
 const outputEl       = document.getElementById('output');
 const editorMeta     = document.getElementById('editorMeta');
 const outputMeta     = document.getElementById('outputMeta');
@@ -288,13 +292,13 @@ const fileNameEl     = document.getElementById('fileName');
 
 // ── Helpers: status + progress ────────────────────────────
 function setStatus(state, label) {
-  statusDot.className   = `status-dot ${state}`;
+  statusDot.className     = `status-dot ${state}`;
   statusLabel.textContent = label;
 }
 
 function setProgress(pct, label) {
-  initProgressEl.style.width      = `${Math.min(100, pct)}%`;
-  initLabelEl.textContent         = label;
+  initProgressEl.style.width = `${Math.min(100, pct)}%`;
+  initLabelEl.textContent    = label;
 }
 
 function markPillLoaded(id) {
@@ -304,51 +308,85 @@ function markPillLoaded(id) {
 
 function hideOverlay() {
   initOverlay.classList.add('hiding');
-  // Remove from DOM after transition so it doesn't intercept events
-  setTimeout(() => initOverlay.style.display = 'none', 750);
+  setTimeout(() => { initOverlay.style.display = 'none'; }, 750);
 }
 
 // ── Monaco initialisation ─────────────────────────────────
-// Started immediately (parallel with Pyodide init below)
+// FIX: increased timeout from 5 s to 30 s so large CDN fetches don't
+// race-lose on slow connections; resolved after editor.main loads.
 const monacoReady = new Promise((resolve) => {
-  // 5-second timeout safety guard
   const timeout = setTimeout(() => {
-    console.warn('[Monaco] Loading timed out (5s)');
+    console.warn('[Monaco] Loading timed out (30s) — continuing without editor');
     resolve();
-  }, 5000);
+  }, 30000); // was 5000 — too short for CDN cold-starts
 
-  if (typeof require !== 'undefined') {
+  function tryInit() {
+    if (typeof require === 'undefined') {
+      // loader.js not yet parsed — retry in 50 ms
+      setTimeout(tryInit, 50);
+      return;
+    }
+
     require(['vs/editor/editor.main'], function () {
       clearTimeout(timeout);
 
-      monaco.editor.defineTheme('run01', {
+      // Guard against the "Duplicate definition" warning from hot-reloads
+      if (monacoEditor) { resolve(); return; }
+
+      monaco.editor.defineTheme('run01-dark', {
         base: 'vs-dark',
         inherit: true,
-        rules: [], // Empty rules to inherit standard VS Code dark syntax coloring
+        rules: [],
         colors: {
-          'editor.background':              '#00000000',
-          'editor.foreground':              '#D4D4D4',
-          'editor.lineHighlightBackground': '#ffffff08',
-          'editor.selectionBackground':     '#ffffff18',
-          'editor.inactiveSelectionBackground': '#ffffff0c',
-          'editorLineNumber.foreground':    '#858585',
-          'editorLineNumber.activeForeground': '#C6C6C6',
-          'editorCursor.foreground':        '#AEAFAD',
-          'editorIndentGuide.background1': '#1e1e1e',
-          'editorIndentGuide.activeBackground1': '#333333',
-          'editorWidget.background':        '#1e1e1e',
-          'editorWidget.border':            '#454545',
-          'input.background':               '#3c3c3c',
-          'input.foreground':               '#cccccc',
-          'scrollbarSlider.background':     '#79797933',
-          'scrollbarSlider.hoverBackground':'#79797955',
+          'editor.background':                   '#00000000',
+          'editor.foreground':                   '#E5E5E7',
+          'editor.lineHighlightBackground':      '#ffffff07',
+          'editor.selectionBackground':          '#ffffff16',
+          'editor.inactiveSelectionBackground':  '#ffffff0a',
+          'editorLineNumber.foreground':         '#48484A',
+          'editorLineNumber.activeForeground':   '#8E8E93',
+          'editorCursor.foreground':             '#A1A1A6',
+          'editorIndentGuide.background1':       '#1C1C1E',
+          'editorIndentGuide.activeBackground1': '#2C2C2E',
+          'editorWidget.background':             '#1C1C1E',
+          'editorWidget.border':                 '#3A3A3C',
+          'input.background':                    '#2C2C2E',
+          'input.foreground':                    '#E5E5E7',
+          'scrollbarSlider.background':          '#48484A33',
+          'scrollbarSlider.hoverBackground':     '#48484A55',
         },
       });
+
+      monaco.editor.defineTheme('run01-light', {
+        base: 'vs',
+        inherit: true,
+        rules: [],
+        colors: {
+          'editor.background':                   '#00000000',
+          'editor.foreground':                   '#1D1D1F',
+          'editor.lineHighlightBackground':      '#00000006',
+          'editor.selectionBackground':          '#00000012',
+          'editor.inactiveSelectionBackground':  '#00000008',
+          'editorLineNumber.foreground':         '#C7C7CC',
+          'editorLineNumber.activeForeground':   '#6E6E73',
+          'editorCursor.foreground':             '#6E6E73',
+          'editorIndentGuide.background1':       '#F2F2F7',
+          'editorIndentGuide.activeBackground1': '#D1D1D6',
+          'editorWidget.background':             '#FFFFFF',
+          'editorWidget.border':                 '#C7C7CC',
+          'input.background':                    '#F2F2F7',
+          'input.foreground':                    '#1D1D1F',
+          'scrollbarSlider.background':          '#C7C7CC44',
+          'scrollbarSlider.hoverBackground':     '#C7C7CC88',
+        },
+      });
+
+      const initialTheme = (localStorage.getItem('run01-theme') || 'dark') === 'light' ? 'run01-light' : 'run01-dark';
 
       monacoEditor = monaco.editor.create(document.getElementById('editor'), {
         value:            STARTER_CODES.python,
         language:         'python',
-        theme:            'run01',
+        theme:            initialTheme,
         fontSize:         13.5,
         fontFamily:       "'JetBrains Mono', 'Fira Code', monospace",
         fontLigatures:    true,
@@ -370,13 +408,11 @@ const monacoReady = new Promise((resolve) => {
         bracketPairColorization: { enabled: false },
       });
 
-      // Show cursor position
       monacoEditor.onDidChangeCursorPosition((e) => {
         const p = e.position;
         editorMeta.textContent = `ln ${p.lineNumber}, col ${p.column}`;
       });
 
-      // Cmd/Ctrl+Enter → Run
       monacoEditor.addCommand(
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
         () => { if (!isRunning && pyodide) triggerRun(); }
@@ -386,58 +422,45 @@ const monacoReady = new Promise((resolve) => {
     }, function (err) {
       clearTimeout(timeout);
       console.error('[Monaco] Load failed:', err);
-      resolve();
+      resolve(); // don't block Pyodide
     });
-  } else {
-    clearTimeout(timeout);
-    console.error('[Monaco] AMD require is not defined');
-    resolve();
   }
+
+  tryInit();
 });
 
 // ── Pyodide initialisation ────────────────────────────────
-// Started immediately (parallel with Monaco above)
 async function initPyodide() {
   setStatus('loading', 'Loading Python runtime…');
   setProgress(5, 'Loading Pyodide v0.26.4…');
 
-  // Load core runtime
-  pyodide = await loadPyodide({
-    indexURL: PYODIDE_CDN,
-    // Progress callback shows package names as they load
-    packageCacheDir: undefined,
-  });
+  pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
-  setProgress(18, 'Loading NumPy + Pandas…');
-  await pyodide.loadPackage(['numpy', 'pandas']);
+  // Load all stdlib packages in ONE call — Pyodide resolves deps and
+  // downloads them in parallel internally, which is much faster than
+  // sequential awaits.
+  setProgress(20, 'Loading core packages in parallel…');
+  await pyodide.loadPackage([
+    'numpy', 'pandas', 'scipy', 'scikit-learn',
+    'matplotlib', 'statsmodels', 'micropip',
+  ]);
   markPillLoaded('ip-numpy');
   markPillLoaded('ip-pandas');
-
-  setProgress(34, 'Loading SciPy…');
-  await pyodide.loadPackage(['scipy']);
   markPillLoaded('ip-scipy');
-
-  setProgress(48, 'Loading Scikit-Learn…');
-  await pyodide.loadPackage(['scikit-learn']);
   markPillLoaded('ip-sklearn');
-
-  setProgress(60, 'Loading Matplotlib + Statsmodels…');
-  await pyodide.loadPackage(['matplotlib', 'statsmodels']);
   markPillLoaded('ip-mpl');
   markPillLoaded('ip-sm');
 
-  setProgress(72, 'Installing Seaborn + Plotly via micropip…');
-  await pyodide.loadPackage('micropip');
+  setProgress(75, 'Installing Seaborn + Plotly via micropip…');
   const micropip = pyodide.pyimport('micropip');
-
-  // Single install call — resolves dependencies once (faster than looping)
-  // Note: yfinance is NOT installed in WASM. yf_download() calls
-  // our Flask /api/yf/<ticker> proxy, which fetches server-side.
+  // keep_going:true skips packages that fail rather than aborting all
   await micropip.install(['seaborn', 'plotly'], { keep_going: true });
   markPillLoaded('ip-sns');
   markPillLoaded('ip-plotly');
 
   setProgress(90, 'Setting up environment helpers…');
+  // FIX: runPythonAsync correctly handles the triple-quoted docstrings
+  // inside PYODIDE_SETUP — no more "unterminated string literal" error.
   await pyodide.runPythonAsync(PYODIDE_SETUP);
 
   setProgress(100, 'Ready!');
@@ -449,7 +472,7 @@ const pyodideReady = initPyodide().catch((err) => {
   appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
 });
 
-// ── Wait for Monaco + Pyodide, then unlock UI ────────────────
+// ── Wait for Monaco + Pyodide, then unlock UI ─────────────
 Promise.all([monacoReady, pyodideReady]).then(() => {
   setStatus('ready', 'Ready — all packages loaded');
   btnRun.disabled = false;
@@ -462,23 +485,21 @@ Promise.all([monacoReady, pyodideReady]).then(() => {
   setStatus('error', 'Startup failed — check console');
 });
 
-// ── Language tabs (Simplified, Python only) ───────────────
-langTabsEl.addEventListener('click', (e) => {
-  // Python is only language now, clicking it returns early.
-});
+// ── Language tabs ─────────────────────────────────────────
+langTabsEl.addEventListener('click', () => { /* Python only */ });
 
 // ── Trigger run ───────────────────────────────────────────
 function triggerRun() {
   if (isRunning) return;
-  if (!pyodide) return;
+  if (!pyodide)  return;
   runPython();
 }
 
-// ── Run: Python (Pyodide, client-side) ───────────────────
+// ── Run: Python (Pyodide, client-side) ────────────────────
 async function runPython() {
   if (!pyodide || isRunning) return;
 
-  const code = monacoEditor.getValue();
+  const code = monacoEditor ? monacoEditor.getValue() : '';
   if (!code.trim()) return;
 
   isRunning = true;
@@ -489,51 +510,53 @@ async function runPython() {
 
   const block = startOutputBlock();
 
-  // Streaming stdout: each print() renders immediately
-  pyodide.setStdout({
-    batched: (line) => processOutput(line, false, block),
-  });
-  pyodide.setStderr({
-    batched: (line) => processOutput(line, true, block),
-  });
+  pyodide.setStdout({ batched: (line) => processOutput(line, false, block) });
+  pyodide.setStderr({ batched: (line) => processOutput(line, true,  block) });
 
   let success = false;
   try {
     await pyodide.runPythonAsync(code);
     success = true;
   } catch (err) {
-    const msg = err?.message ?? String(err);
+    let msg = err?.message ?? String(err);
+    // Friendly hint for the most common mistake: importing yfinance directly in WASM
+    if (msg.includes("No module named 'yfinance'") || msg.includes('No module named "yfinance"')) {
+      msg = `ModuleNotFoundError: No module named 'yfinance'\n\n`
+          + `yfinance cannot run inside the browser (no network access from WASM).\n`
+          + `Use the built-in async helper instead:\n\n`
+          + `  df = await yf_download("AAPL", period="3mo")\n\n`
+          + `yf_download() fetches data via the Run01 server proxy and returns\n`
+          + `a standard pandas DataFrame — no import needed.`;
+    }
     processOutput(msg, true, block);
   }
 
   finishOutputBlock(block, success);
   isRunning = false;
   btnRun.disabled = false;
-  setStatus(success ? 'ready' : 'error', success ? `Done in ${block.elapsed()}s` : 'Error');
+  setStatus(success ? 'ready' : 'error',
+            success ? `Done in ${block.elapsed()}s` : 'Error');
 }
 
 // ── Output block management ───────────────────────────────
 function startOutputBlock() {
   const startTime = performance.now();
-
-  const blockEl = document.createElement('div');
+  const blockEl   = document.createElement('div');
   blockEl.className = 'out-block';
 
-  // Header row
   const headerEl = document.createElement('div');
   headerEl.className = 'out-run-header';
 
   const numEl = document.createElement('span');
-  numEl.className = 'out-run-num';
+  numEl.className   = 'out-run-num';
   numEl.textContent = `Run #${runCount}`;
 
   const langBadgeEl = document.createElement('span');
-  langBadgeEl.className = 'out-lang-badge';
+  langBadgeEl.className   = 'out-lang-badge';
   langBadgeEl.textContent = LANG_META[currentLang].pill;
 
   const badgeEl = document.createElement('span');
-
-  const timeEl = document.createElement('span');
+  const timeEl  = document.createElement('span');
   timeEl.className = 'out-run-time';
 
   headerEl.appendChild(numEl);
@@ -545,46 +568,35 @@ function startOutputBlock() {
   const linesEl = document.createElement('div');
   blockEl.appendChild(linesEl);
   outputEl.appendChild(blockEl);
-
   outputEl.scrollTop = outputEl.scrollHeight;
 
   return {
-    blockEl,
-    linesEl,
-    badgeEl,
-    timeEl,
-    startTime,
+    blockEl, linesEl, badgeEl, timeEl, startTime,
     elapsed: () => ((performance.now() - startTime) / 1000).toFixed(3),
   };
 }
 
 function finishOutputBlock(block, success) {
   const t = block.elapsed();
-
   if (block.linesEl.children.length === 0) {
     const empty = document.createElement('span');
-    empty.className = 'out-line out-empty';
+    empty.className   = 'out-line out-empty';
     empty.textContent = '(no output)';
     block.linesEl.appendChild(empty);
   }
-
   block.badgeEl.className   = success ? 'out-success-badge' : 'out-error-badge';
   block.badgeEl.textContent = success ? '✓ success' : '✗ error';
   block.timeEl.textContent  = `${t}s`;
-
-  outputMeta.textContent = `run #${runCount} · ${t}s`;
+  outputMeta.textContent    = `run #${runCount} · ${t}s`;
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
 // ── Output line processor ─────────────────────────────────
 function processOutput(text, isErr, block) {
   if (!text) return;
-
-  // Split on newlines so multi-line strings are handled correctly
   const lines = text.split('\n');
   for (const line of lines) {
-    if (!line && lines.length > 1) continue; // skip blank inter-lines
-
+    if (!line && lines.length > 1) continue;
     if (line.startsWith('__RUN01_IMG__:')) {
       renderImage(line.slice('__RUN01_IMG__:'.length), block);
     } else if (line.startsWith('__RUN01_PLOTLY__:')) {
@@ -597,7 +609,7 @@ function processOutput(text, isErr, block) {
 
 function appendLine(text, cls, block) {
   const span = document.createElement('span');
-  span.className = `out-line${cls ? ' ' + cls : ''}`;
+  span.className   = `out-line${cls ? ' ' + cls : ''}`;
   span.textContent = text;
   block.linesEl.appendChild(span);
   outputEl.scrollTop = outputEl.scrollHeight;
@@ -607,56 +619,105 @@ function appendLine(text, cls, block) {
 function renderImage(b64, block) {
   const wrap = document.createElement('div');
   wrap.className = 'out-plot-wrap';
-
   const img = document.createElement('img');
   img.className = 'out-plot-img';
   img.alt = 'matplotlib chart';
   img.src = `data:image/png;base64,${b64}`;
-
-  // Dim initially, fade in when loaded
-  img.style.opacity = '0';
+  img.style.opacity    = '0';
   img.style.transition = 'opacity 0.4s ease';
   img.onload = () => { img.style.opacity = '1'; };
-
   wrap.appendChild(img);
   block.linesEl.appendChild(wrap);
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// ── Plotly inline interactive chart ──────────────────────
-function renderPlotly(encoded, block) {
+// ── Plotly loader ─────────────────────────────────────────
+// Polls until window.Plotly.newPlot is available (the UMD build sets it
+// synchronously, but the script tag is sync-before-defer so there can still
+// be a brief gap on slow connections). Falls back to injecting the full UMD
+// build if polling times out.
+function waitForPlotly(timeoutMs) {
+  return new Promise((resolve, reject) => {
+    if (window.Plotly && typeof window.Plotly.newPlot === 'function') {
+      return resolve(window.Plotly);
+    }
+    const deadline = Date.now() + timeoutMs;
+    const iv = setInterval(() => {
+      if (window.Plotly && typeof window.Plotly.newPlot === 'function') {
+        clearInterval(iv);
+        resolve(window.Plotly);
+      } else if (Date.now() > deadline) {
+        clearInterval(iv);
+        reject(new Error('Plotly did not become ready in time'));
+      }
+    }, 50);
+  });
+}
+
+function loadPlotlyFallback() {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js';
+    s.crossOrigin = 'anonymous';
+    s.onload  = () => waitForPlotly(3000).then(resolve).catch(reject);
+    s.onerror = () => reject(new Error('Plotly.js CDN load failed'));
+    document.head.appendChild(s);
+  });
+}
+
+function getPlotly() {
+  return waitForPlotly(8000).catch(() => loadPlotlyFallback());
+}
+
+// ── Plotly interactive chart ──────────────────────────────
+async function renderPlotly(encoded, block) {
   const wrap = document.createElement('div');
   wrap.className = 'out-plotly-wrap';
   block.linesEl.appendChild(wrap);
+  outputEl.scrollTop = outputEl.scrollHeight;
 
-  // Decode base64 → UTF-8 string → JSON
+  // Placeholder while library resolves
+  if (!window.Plotly || typeof window.Plotly.newPlot !== 'function') {
+    wrap.innerHTML = '<span class="out-line sys" style="padding:12px;display:block">[ Loading chart… ]</span>';
+  }
+
   try {
     const bytes   = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
     const jsonStr = new TextDecoder('utf-8').decode(bytes);
     const fig     = JSON.parse(jsonStr);
 
-    if (typeof Plotly !== 'undefined') {
-      Plotly.react(wrap, fig.data, {
-        ...fig.layout,
-        paper_bgcolor: 'transparent',
-        plot_bgcolor:  '#111111',
-        font: { ...(fig.layout?.font ?? {}), color: '#777', family: 'JetBrains Mono, monospace' },
-        margin: fig.layout?.margin ?? { l: 4, r: 4, t: 36, b: 4 },
-      }, {
-        responsive:     true,
-        displaylogo:    false,
-        displayModeBar: true,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d', 'sendDataToCloud'],
-      });
-    } else {
-      // Plotly.js still loading (edge case on very fast machines)
-      wrap.innerHTML = '<span class="out-line sys">[ Plotly.js loading — run again in a moment ]</span>';
-    }
+    const PlotlyLib = await getPlotly();
+    wrap.innerHTML  = '';
+
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+    const layout = Object.assign({}, fig.layout ?? {}, {
+      paper_bgcolor: 'transparent',
+      plot_bgcolor:  isDark ? '#111111' : '#ffffff',
+      font: Object.assign({}, fig.layout?.font ?? {},
+            { color: '#aaaaaa', family: 'JetBrains Mono, monospace', size: 11 }),
+      xaxis:  Object.assign({ gridcolor: isDark ? '#222' : '#e5e5e5', zerolinecolor: isDark ? '#333' : '#ccc', rangeslider: { visible: false } }, fig.layout?.xaxis  ?? {}),
+      yaxis:  Object.assign({ gridcolor: isDark ? '#222' : '#e5e5e5', zerolinecolor: isDark ? '#333' : '#ccc' }, fig.layout?.yaxis  ?? {}),
+      xaxis2: Object.assign({ gridcolor: isDark ? '#222' : '#e5e5e5', zerolinecolor: isDark ? '#333' : '#ccc' }, fig.layout?.xaxis2 ?? {}),
+      yaxis2: Object.assign({ gridcolor: isDark ? '#222' : '#e5e5e5', zerolinecolor: isDark ? '#333' : '#ccc' }, fig.layout?.yaxis2 ?? {}),
+      legend: Object.assign({ bgcolor: 'rgba(0,0,0,0)', font: { color: '#aaa' } }, fig.layout?.legend ?? {}),
+      margin: fig.layout?.margin ?? { l: 50, r: 20, t: 40, b: 40 },
+      height: fig.layout?.height ?? 440,
+    });
+
+    PlotlyLib.newPlot(wrap, fig.data ?? [], layout, {
+      responsive:     true,
+      displaylogo:    false,
+      displayModeBar: true,
+      modeBarButtonsToRemove: ['lasso2d', 'select2d', 'sendDataToCloud'],
+    });
+
   } catch (err) {
     console.error('Plotly render error:', err);
+    wrap.innerHTML = '';
     const msg = document.createElement('span');
-    msg.className = 'out-line err';
-    msg.textContent = `⚠ Chart render failed: ${err.message}`;
+    msg.className   = 'out-line err';
+    msg.textContent = '⚠ Chart render failed: ' + (err.message ?? String(err));
     wrap.appendChild(msg);
   }
 
@@ -665,8 +726,8 @@ function renderPlotly(encoded, block) {
 
 // ── Output helpers ────────────────────────────────────────
 function clearOutput() {
-  outputEl.innerHTML = '';
-  runCount = 0;
+  outputEl.innerHTML     = '';
+  runCount               = 0;
   outputMeta.textContent = 'ready';
 }
 
@@ -687,21 +748,61 @@ function appendWelcome() {
 
 function appendToOutput(text, cls) {
   const span = document.createElement('span');
-  span.className = `out-line${cls ? ' ' + cls : ''}`;
+  span.className   = `out-line${cls ? ' ' + cls : ''}`;
   span.textContent = text;
   outputEl.appendChild(span);
 }
 
-// ── Button handlers ───────────────────────────────────────
-btnRun.addEventListener('click', () => {
-  if (!isRunning) triggerRun();
-});
+// ── Theme management ──────────────────────────────────────
+const THEME_KEY = 'run01-theme';
 
-btnClear.addEventListener('click', () => {
-  clearOutput();
-  if (pyodide) appendWelcome();
-  setStatus('ready', 'Ready');
-});
+function getTheme() {
+  return localStorage.getItem(THEME_KEY) || 'dark';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+  if (monacoEditor) {
+    monaco.editor.setTheme(theme === 'light' ? 'run01-light' : 'run01-dark');
+  }
+}
+
+function toggleTheme() {
+  applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+// Apply saved theme immediately
+applyTheme(getTheme());
+
+// ── Download output as .txt ───────────────────────────────
+function downloadOutput() {
+  const lines = outputEl.querySelectorAll('.out-line');
+  if (lines.length === 0) return;
+  const parts = [];
+  lines.forEach(line => {
+    if (!line.classList.contains('out-empty')) parts.push(line.textContent);
+  });
+  const content = parts.join('\n');
+  const blob    = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  const ts      = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+  a.href        = url;
+  a.download    = `run01-output-${ts}.txt`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Button handlers ───────────────────────────────────────
+btnRun.addEventListener('click', () => { if (!isRunning) triggerRun(); });
+
+btnDownload.addEventListener('click', downloadOutput);
+
+btnTheme.addEventListener('click', toggleTheme);
 
 btnReset.addEventListener('click', () => {
   if (monacoEditor) monacoEditor.setValue(STARTER_CODES[currentLang]);
@@ -714,23 +815,17 @@ btnReset.addEventListener('click', () => {
 document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return;
-
-  if (e.key === 'l' || e.key === 'L') {         // Ctrl+L — clear
-    e.preventDefault();
-    btnClear.click();
-  } else if (e.key === 'r' || e.key === 'R') {  // Ctrl+R — reset
-    e.preventDefault();
-    btnReset.click();
-  }
+  if (e.key === 'd' || e.key === 'D') { e.preventDefault(); downloadOutput(); }
+  if (e.key === 'r' || e.key === 'R') { e.preventDefault(); btnReset.click(); }
 });
 
-// ── Resize handle (drag to resize panes) ─────────────────
+// ── Resize handle ─────────────────────────────────────────
 (function initResize() {
   const handle     = document.getElementById('resizeHandle');
   const workspace  = document.querySelector('.workspace');
   const editorPane = document.querySelector('.pane-editor');
   const outputPane = document.querySelector('.pane-output');
-
+  if (!handle || !workspace || !editorPane || !outputPane) return;
   let dragging = false, startX = 0, startW = 0, totalW = 0;
 
   handle.addEventListener('mousedown', (e) => {
@@ -746,10 +841,9 @@ document.addEventListener('keydown', (e) => {
 
   document.addEventListener('mousemove', (e) => {
     if (!dragging) return;
-    const delta  = e.clientX - startX;
-    const newW   = Math.min(Math.max(startW + delta, 220), totalW - 220);
-    const pct    = (newW / totalW * 100).toFixed(2);
-    editorPane.style.flex = `0 0 ${pct}%`;
+    const delta = e.clientX - startX;
+    const newW  = Math.min(Math.max(startW + delta, 220), totalW - 220);
+    editorPane.style.flex = `0 0 ${(newW / totalW * 100).toFixed(2)}%`;
     outputPane.style.flex = '1 1 0';
   });
 
@@ -761,17 +855,15 @@ document.addEventListener('keydown', (e) => {
     document.body.style.userSelect = '';
   });
 
-  // Keyboard resize (arrow keys when handle is focused)
   handle.addEventListener('keydown', (e) => {
     const step = e.shiftKey ? 50 : 20;
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      const dir = e.key === 'ArrowLeft' ? -step : step;
-      const curW = editorPane.getBoundingClientRect().width;
-      const tot  = workspace.getBoundingClientRect().width - handle.offsetWidth;
-      const newW = Math.min(Math.max(curW + dir, 220), tot - 220);
-      editorPane.style.flex = `0 0 ${(newW / tot * 100).toFixed(2)}%`;
-      outputPane.style.flex = '1 1 0';
-    }
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const dir  = e.key === 'ArrowLeft' ? -step : step;
+    const curW = editorPane.getBoundingClientRect().width;
+    const tot  = workspace.getBoundingClientRect().width - handle.offsetWidth;
+    const newW = Math.min(Math.max(curW + dir, 220), tot - 220);
+    editorPane.style.flex = `0 0 ${(newW / tot * 100).toFixed(2)}%`;
+    outputPane.style.flex = '1 1 0';
   });
 })();
