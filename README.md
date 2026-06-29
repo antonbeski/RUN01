@@ -1,4 +1,4 @@
-# RUN01 ⬡
+# RUN01 
 
 > **A zero-install, browser-native Python IDE** — edit, execute, and visualise data science workloads entirely client-side via WebAssembly, with server-side proxies for market data and compiled languages.
 
