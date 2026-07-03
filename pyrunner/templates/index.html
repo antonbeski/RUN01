@@ -138,6 +138,9 @@
             <span id="fileName">main.py</span>
           </span>
           <div class="editor-meta" id="editorMeta" aria-live="off">ln 1, col 1</div>
+          <button class="pane-fs-btn" id="fsEditorBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
         </div>
       </div>
       <div id="editor" class="editor-mount" role="textbox" aria-multiline="true" aria-label="Code editor"></div>
@@ -152,7 +155,12 @@
           <span class="pill pill-out">OUT</span>
           console
         </span>
-        <div class="output-meta" id="outputMeta" aria-live="polite">ready</div>
+        <div class="pane-right-meta">
+          <div class="output-meta" id="outputMeta" aria-live="polite">ready</div>
+          <button class="pane-fs-btn" id="fsOutputBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
+        </div>
       </div>
       <div id="output" class="output-mount" role="log" aria-live="polite" aria-label="Program output">
         <div class="output-welcome">

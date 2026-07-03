@@ -809,6 +809,34 @@ btnReset.addEventListener('click', () => {
   setStatus('ready', 'Ready');
 });
 
+// ── Fullscreen toggle ─────────────────────────────────────
+const workspaceEl = document.querySelector('.workspace');
+const fsEditorBtn = document.getElementById('fsEditorBtn');
+const fsOutputBtn = document.getElementById('fsOutputBtn');
+const paneEditor  = document.querySelector('.pane-editor');
+const paneOutput  = document.querySelector('.pane-output');
+
+function toggleFullscreen(pane) {
+  if (workspaceEl.classList.contains('has-fullscreen')) {
+    workspaceEl.classList.remove('has-fullscreen');
+    pane.classList.remove('pane-fullscreen');
+  } else {
+    workspaceEl.classList.add('has-fullscreen');
+    pane.classList.add('pane-fullscreen');
+  }
+  // Trigger layout recalculation for Monaco
+  if (monacoEditor) {
+    setTimeout(() => monacoEditor.layout(), 50);
+  }
+}
+
+if (fsEditorBtn && paneEditor) {
+  fsEditorBtn.addEventListener('click', () => toggleFullscreen(paneEditor));
+}
+if (fsOutputBtn && paneOutput) {
+  fsOutputBtn.addEventListener('click', () => toggleFullscreen(paneOutput));
+}
+
 // ── Global keyboard shortcuts ─────────────────────────────
 document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;

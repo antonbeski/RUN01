@@ -729,3 +729,36 @@ body::after {
   color: var(--text-muted);
   box-shadow: 0 0 8px rgba(255,255,255,0.06);
 }
+
+/* -- FULLSCREEN CONTROLS ----------------------------------- */
+.pane-fs-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+.pane-fs-btn:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.08);
+}
+[data-theme="light"] .pane-fs-btn:hover {
+  background: rgba(0,0,0,0.06);
+}
+
+/* Fullscreen state */
+.workspace.has-fullscreen .pane:not(.pane-fullscreen) {
+  display: none;
+}
+.workspace.has-fullscreen .resize-handle {
+  display: none;
+}
+.workspace.has-fullscreen .pane-fullscreen {
+  flex: 1 1 100% !important;
+}
+
