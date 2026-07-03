@@ -89,11 +89,40 @@
 [data-theme="light"] .init-logo {
   color: #1D1D1F;
 }
+[data-theme="light"] .init-card {
+  background: rgba(0,0,0,0.025);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.1);
+}
+[data-theme="light"] .init-progress-track {
+  background: rgba(0,0,0,0.06);
+}
+[data-theme="light"] .init-progress-fill {
+  background: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, #000 50%, rgba(0,0,0,0.2) 100%);
+}
+[data-theme="light"] .init-pill {
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+[data-theme="light"] .init-pill.loaded {
+  background: rgba(0,0,0,0.07);
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 0 8px rgba(0,0,0,0.06);
+}
 [data-theme="light"] .out-plot-wrap {
   background: #f5f5f7;
 }
 [data-theme="light"] .out-plotly-wrap {
   background: #ffffff;
+}
+[data-theme="light"] .btn-run kbd {
+  background: rgba(255,255,255,0.2);
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+[data-theme="light"] .welcome-kbd {
+  background: rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.15);
 }
 
 /* ── BASE ───────────────────────────────────────────────── */
@@ -485,6 +514,16 @@ body::after {
 .welcome-prompt { display: flex; align-items: center; gap: 10px; }
 .prompt-caret   { color: var(--white); font-weight: 700; animation: blink 1.2s step-end infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.welcome-kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(255,255,255,0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--text);
+}
 
 /* ── OUTPUT LINES ────────────────────────────────────────── */
 .out-line {

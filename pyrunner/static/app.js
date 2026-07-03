@@ -737,9 +737,7 @@ function appendWelcome() {
       <div class="welcome-prompt">
         <span class="prompt-caret">❯</span>
         Run01 ready — press <strong style="color:var(--white)">▶ Run</strong>
-        or <kbd style="font-family:var(--font-mono);font-size:11px;
-                       background:var(--glass-bg-hover);padding:1px 5px;
-                       border-radius:4px;border:1px solid var(--glass-border)">⌘↵</kbd>
+        or <kbd class="welcome-kbd">⌘↵</kbd>
         to execute.
       </div>
     </div>
