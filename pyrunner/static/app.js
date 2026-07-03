@@ -264,7 +264,181 @@ try:
     _go.Figure.show = lambda self, *a, **kw: _plotly_capture(self, *a, **kw)
 except Exception:
     pass
+
+# ── fred_download: fetch FRED economic data via Run01 proxy ─
+async def fred_download(series_id, limit=100, sort_order="desc", observation_start="", observation_end=""):
+    """Fetch FRED economic data via Run01 proxy.
+
+    Args:
+        series_id       : e.g. 'GDP','CPIAUCSL','FEDFUNDS','UNRATE'
+        limit           : number of observations (default 100)
+        sort_order      : 'desc' (newest first) or 'asc'
+        observation_start: 'YYYY-MM-DD' start date (optional)
+        observation_end  : 'YYYY-MM-DD' end date   (optional)
+
+    Returns:
+        dict with keys: series_id, title, units, frequency, observations (DataFrame)
+    """
+    params = f"limit={limit}&sort_order={sort_order}"
+    if observation_start: params += f"&observation_start={observation_start}"
+    if observation_end:   params += f"&observation_end={observation_end}"
+    url  = f"/api/fred/{series_id}?{params}"
+    resp = await pyodide.http.pyfetch(url)
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data["observations"])
+    df["date"] = pd.to_datetime(df["date"])
+    df = df.set_index("date").sort_index()
+    return {
+        "series_id": data["series_id"],
+        "title":     data["title"],
+        "units":     data["units"],
+        "frequency": data["frequency"],
+        "df":        df,
+    }
 `;
+
+// ── Data Source Example Codes ─────────────────────────────
+const DATA_SOURCE_CODES = {
+
+yfinance: `\
+# ╔═══════════════════════════════════════════════════════════╗
+# ║          Yahoo Finance — Full Data Tour                  ║
+# ║  OHLCV · Info · Financials · Options · Holders          ║
+# ╚═══════════════════════════════════════════════════════════╝
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+ticker = "AAPL"
+
+# ── 1. OHLCV Price History ───────────────────────────────
+print(f"▶  Fetching {ticker} — 6 months of daily OHLCV…")
+df = await yf_download(ticker, period="6mo", interval="1d")
+print(f"   {len(df)} sessions  |  columns: {list(df.columns)}")
+print(df.tail(5).to_string())
+print()
+
+# ── 2. Interactive Candlestick + Volume ──────────────────
+print("▶  Rendering interactive candlestick chart…")
+dates = df.index.astype(str).tolist()
+fig = make_subplots(
+    rows=2, cols=1, shared_xaxes=True,
+    row_heights=[0.72, 0.28], vertical_spacing=0.03,
+)
+fig.add_trace(go.Candlestick(
+    x=dates, open=df["Open"], high=df["High"],
+    low=df["Low"], close=df["Close"], name=ticker,
+    increasing=dict(line=dict(color="#22c55e", width=1.5), fillcolor="#22c55e"),
+    decreasing=dict(line=dict(color="#ef4444", width=1.5), fillcolor="#ef4444"),
+), row=1, col=1)
+fig.add_trace(go.Bar(
+    x=dates, y=df["Volume"] / 1e6, name="Vol (M)",
+    marker_color=["#22c55e" if c >= o else "#ef4444"
+                  for c, o in zip(df["Close"], df["Open"])],
+), row=2, col=1)
+fig.update_layout(
+    title=dict(text=f"{ticker} — 6-Month Candlestick", font=dict(size=13)),
+    paper_bgcolor="#0a0a0a", plot_bgcolor="#111",
+    font=dict(color="#aaa", family="JetBrains Mono"),
+    xaxis=dict(rangeslider=dict(visible=False), gridcolor="#1a1a1a"),
+    yaxis=dict(gridcolor="#1a1a1a"),
+    xaxis2=dict(gridcolor="#1a1a1a"),
+    yaxis2=dict(gridcolor="#1a1a1a", title="Vol (M)"),
+    margin=dict(l=4, r=4, t=36, b=4), height=440,
+)
+fig.show()
+print()
+
+# ── 3. Returns Summary ──────────────────────────────────
+import numpy as np
+print("▶  Returns Summary…")
+returns = df["Close"].pct_change().dropna()
+print(f"   Mean daily return : {returns.mean()*100:+.4f}%")
+print(f"   Daily volatility  : {returns.std()*100:.4f}%")
+print(f"   Annualised Sharpe : {(returns.mean()/returns.std())*np.sqrt(252):.3f}")
+print(f"   Max Drawdown      : {((df['Close']/df['Close'].cummax())-1).min()*100:.2f}%")
+print()
+print("✓ Done — try changing ticker to 'TSLA', 'MSFT', 'BTC-USD', 'GC=F'")
+`,
+
+fred: `\
+# ╔═══════════════════════════════════════════════════════════╗
+# ║   FRED — Federal Reserve Economic Data Tour              ║
+# ║   GDP · CPI · Fed Funds Rate · Unemployment             ║
+# ╚═══════════════════════════════════════════════════════════╝
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# ── 1. GDP (Gross Domestic Product) ─────────────────────
+print("▶  Fetching GDP (quarterly, last 40 quarters)…")
+gdp = await fred_download("GDP", limit=40, sort_order="asc")
+print(f"   Series : {gdp['series_id']} — {gdp['title']}")
+print(f"   Units  : {gdp['units']}  |  Freq: {gdp['frequency']}")
+print(gdp['df'].tail(5).to_string())
+print()
+
+# ── 2. CPI — Consumer Price Index ───────────────────────
+print("▶  Fetching CPI (monthly, last 60 months)…")
+cpi = await fred_download("CPIAUCSL", limit=60, sort_order="asc")
+print(f"   Series : {cpi['series_id']} — {cpi['title']}")
+print(cpi['df'].tail(5).to_string())
+print()
+
+# ── 3. Fed Funds Rate ───────────────────────────────────
+print("▶  Fetching Federal Funds Rate (monthly, last 60 months)…")
+ffr = await fred_download("FEDFUNDS", limit=60, sort_order="asc")
+print(f"   Series : {ffr['series_id']} — {ffr['title']}")
+print(ffr['df'].tail(5).to_string())
+print()
+
+# ── 4. Unemployment Rate ────────────────────────────────
+print("▶  Fetching Unemployment Rate (monthly, last 60 months)…")
+unrate = await fred_download("UNRATE", limit=60, sort_order="asc")
+print(f"   Series : {unrate['series_id']} — {unrate['title']}")
+print(unrate['df'].tail(5).to_string())
+print()
+
+# ── 5. Dashboard — 4-panel economic overview ────────────
+print("▶  Rendering economic dashboard…")
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=[gdp['title'], cpi['title'], ffr['title'], unrate['title']],
+    vertical_spacing=0.15, horizontal_spacing=0.1,
+)
+fig.add_trace(go.Scatter(
+    x=gdp['df'].index.astype(str), y=gdp['df']['value'],
+    mode='lines', line=dict(color='#7aa4ff', width=2), name='GDP',
+), row=1, col=1)
+fig.add_trace(go.Scatter(
+    x=cpi['df'].index.astype(str), y=cpi['df']['value'],
+    mode='lines', line=dict(color='#50c878', width=2), name='CPI',
+), row=1, col=2)
+fig.add_trace(go.Scatter(
+    x=ffr['df'].index.astype(str), y=ffr['df']['value'],
+    mode='lines', line=dict(color='#f59e0b', width=2), name='Fed Funds',
+), row=2, col=1)
+fig.add_trace(go.Scatter(
+    x=unrate['df'].index.astype(str), y=unrate['df']['value'],
+    mode='lines', line=dict(color='#ef4444', width=2), fill='tozeroy',
+    fillcolor='rgba(239,68,68,0.08)', name='Unemployment',
+), row=2, col=2)
+fig.update_layout(
+    paper_bgcolor='#0a0a0a', plot_bgcolor='#111',
+    font=dict(color='#aaa', family='JetBrains Mono', size=10),
+    showlegend=False, height=480,
+    margin=dict(l=4, r=4, t=48, b=4),
+)
+for axis in ['xaxis','xaxis2','xaxis3','xaxis4','yaxis','yaxis2','yaxis3','yaxis4']:
+    fig.update_layout(**{axis: dict(gridcolor='#1a1a1a', showgrid=True)})
+fig.show()
+print()
+print("✓ Done — try series: 'M2SL' (Money Supply), 'T10Y2Y' (Yield Curve), 'DCOILWTICO' (Oil Price)")
+`,
+
+};
 
 // ── State ─────────────────────────────────────────────────
 let monacoEditor   = null;
@@ -808,6 +982,41 @@ btnReset.addEventListener('click', () => {
   appendWelcome();
   setStatus('ready', 'Ready');
 });
+
+// ── Data dropdown ─────────────────────────────────────────
+const btnData       = document.getElementById('btnData');
+const dataDropdown  = document.getElementById('dataDropdown');
+const dsYFinance    = document.getElementById('dsYFinance');
+const dsFRED        = document.getElementById('dsFRED');
+
+function closeDataDropdown() {
+  dataDropdown.classList.remove('open');
+  btnData.setAttribute('aria-expanded', 'false');
+}
+
+btnData.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isOpen = dataDropdown.classList.toggle('open');
+  btnData.setAttribute('aria-expanded', String(isOpen));
+});
+
+// Close when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#dataDropdownWrap')) closeDataDropdown();
+});
+
+// Load example code into editor when a source is selected
+function loadDataSource(key, label) {
+  if (!monacoEditor) return;
+  closeDataDropdown();
+  monacoEditor.setValue(DATA_SOURCE_CODES[key]);
+  // Focus editor
+  monacoEditor.focus();
+  setStatus('ready', `${label} example loaded — press ▶ Run`);
+}
+
+dsYFinance.addEventListener('click', () => loadDataSource('yfinance', 'Yahoo Finance'));
+dsFRED.addEventListener('click',     () => loadDataSource('fred',     'FRED'));
 
 // ── Fullscreen toggle ─────────────────────────────────────
 const workspaceEl = document.querySelector('.workspace');

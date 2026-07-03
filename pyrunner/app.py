@@ -56,6 +56,64 @@ def yf_proxy(ticker):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+# ── FRED (Federal Reserve) data proxy ────────────────────────────────────────
+# The FRED REST API is public but requires a free API key. We proxy it server-side
+# to avoid CORS restrictions and to keep the API key out of the browser.
+FRED_API_KEY = "9b4ac8c80fcbd92c29d2af9f88fc2ec1"   # public demo key from FRED docs
+FRED_BASE    = "https://api.stlouisfed.org/fred"
+
+@app.route("/api/fred/<series_id>")
+def fred_proxy(series_id):
+    try:
+        from urllib.request import urlopen
+        import urllib.parse
+
+        limit        = request.args.get("limit",        "100")
+        sort_order   = request.args.get("sort_order",   "desc")
+        units        = request.args.get("units",        "lin")
+        frequency    = request.args.get("frequency",    "")
+        observation_start = request.args.get("observation_start", "")
+        observation_end   = request.args.get("observation_end",   "")
+
+        params = {
+            "series_id":  series_id.upper(),
+            "api_key":    FRED_API_KEY,
+            "file_type":  "json",
+            "limit":      limit,
+            "sort_order": sort_order,
+        }
+        if units:             params["units"]             = units
+        if frequency:         params["frequency"]         = frequency
+        if observation_start: params["observation_start"] = observation_start
+        if observation_end:   params["observation_end"]   = observation_end
+
+        url = f"{FRED_BASE}/series/observations?{urllib.parse.urlencode(params)}"
+        with urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        # Also fetch series metadata (name, units, etc.)
+        meta_url = f"{FRED_BASE}/series?series_id={series_id.upper()}&api_key={FRED_API_KEY}&file_type=json"
+        with urlopen(meta_url, timeout=15) as resp2:
+            meta = json.loads(resp2.read().decode("utf-8"))
+
+        observations = data.get("observations", [])
+        series_meta  = meta.get("seriess", [{}])[0]
+
+        return jsonify({
+            "series_id":   series_id.upper(),
+            "title":       series_meta.get("title", series_id),
+            "units":       series_meta.get("units_short", ""),
+            "frequency":   series_meta.get("frequency_short", ""),
+            "observations": [
+                {"date": o["date"], "value": None if o["value"] == "." else float(o["value"])}
+                for o in observations
+                if o.get("value") is not None
+            ],
+        })
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 # ── Piston code execution proxy (C++, C#, Rust) ──────────────────────────────
 # Routes compilation requests to the Piston API (https://emkc.org) which runs
 # code server-side. This avoids needing to install gcc/mono/rustc locally and

@@ -49,6 +49,41 @@
 
     <div class="nav-actions">
 
+      <!-- Data Sources dropdown -->
+      <div class="data-dropdown-wrap" id="dataDropdownWrap">
+        <button class="btn btn-ghost" id="btnData" aria-haspopup="true" aria-expanded="false" title="Load data source example">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          Data
+          <svg class="data-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+
+        <div class="data-dropdown" id="dataDropdown" role="menu" aria-label="Data sources">
+          <div class="data-dropdown-header">Select a Data Source</div>
+
+          <!-- yFinance -->
+          <button class="data-source-item" id="dsYFinance" role="menuitem">
+            <div class="ds-icon ds-icon-yf">YF</div>
+            <div class="ds-info">
+              <div class="ds-name">Yahoo Finance</div>
+              <div class="ds-desc">Stocks · ETFs · Crypto · Forex · Options · Fundamentals</div>
+            </div>
+            <span class="ds-badge ds-badge-live">LIVE</span>
+          </button>
+
+          <!-- FRED -->
+          <button class="data-source-item" id="dsFRED" role="menuitem">
+            <div class="ds-icon ds-icon-fred">FD</div>
+            <div class="ds-info">
+              <div class="ds-name">FRED — Federal Reserve</div>
+              <div class="ds-desc">GDP · CPI · Interest Rates · Employment · 800K+ series</div>
+            </div>
+            <span class="ds-badge ds-badge-live">LIVE</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Download output button -->
       <button class="btn btn-ghost" id="btnDownload"
               title="Download output  (Ctrl+D)"
