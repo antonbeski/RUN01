@@ -405,7 +405,7 @@ print()
 print("▶  Rendering economic dashboard…")
 fig = make_subplots(
     rows=2, cols=2,
-    subplot_titles=[gdp['title'], cpi['title'], ffr['title'], unrate['title']],
+    subplot_titles=['GDP', 'CPI', 'Fed Funds', 'Unemployment'],
     vertical_spacing=0.15, horizontal_spacing=0.1,
 )
 fig.add_trace(go.Scatter(
