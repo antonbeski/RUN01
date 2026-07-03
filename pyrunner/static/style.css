@@ -437,7 +437,8 @@ body::after {
   background: #0a0a0a;
 }
 
-[data-theme="light"] .editor-mount {
+[data-theme="light"] .editor-mount,
+[data-theme="light"] .output-mount {
   background: #ffffff;
 }
 
@@ -467,7 +468,7 @@ body::after {
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.72;
-  background: rgba(0,0,0,0.12);
+  background: #0a0a0a;
   scrollbar-width: thin;
   scrollbar-color: var(--glass-border) transparent;
 }
