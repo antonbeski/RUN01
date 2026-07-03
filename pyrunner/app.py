@@ -57,16 +57,21 @@ def yf_proxy(ticker):
         return jsonify({"error": str(exc)}), 500
 
 # ── FRED (Federal Reserve) data proxy ────────────────────────────────────────
-# The FRED REST API is public but requires a free API key. We proxy it server-side
-# to avoid CORS restrictions and to keep the API key out of the browser.
-FRED_API_KEY = "9b4ac8c80fcbd92c29d2af9f88fc2ec1"   # public demo key from FRED docs
-FRED_BASE    = "https://api.stlouisfed.org/fred"
+# The FRED REST API requires a free API key. We proxy it server-side to avoid
+# CORS restrictions and keep the key out of the browser.
+FRED_BASE = "https://api.stlouisfed.org/fred"
 
 @app.route("/api/fred/<series_id>")
 def fred_proxy(series_id):
     try:
         from urllib.request import urlopen
         import urllib.parse
+        import urllib.error
+        import os
+
+        api_key = os.environ.get("FRED_API_KEY", "").strip()
+        if not api_key:
+            return jsonify({"error": "FRED_API_KEY environment variable is not set. Please add it to your deployment (e.g. Vercel) settings to use FRED data."}), 400
 
         limit        = request.args.get("limit",        "100")
         sort_order   = request.args.get("sort_order",   "desc")
@@ -77,7 +82,7 @@ def fred_proxy(series_id):
 
         params = {
             "series_id":  series_id.upper(),
-            "api_key":    FRED_API_KEY,
+            "api_key":    api_key,
             "file_type":  "json",
             "limit":      limit,
             "sort_order": sort_order,
@@ -92,7 +97,7 @@ def fred_proxy(series_id):
             data = json.loads(resp.read().decode("utf-8"))
 
         # Also fetch series metadata (name, units, etc.)
-        meta_url = f"{FRED_BASE}/series?series_id={series_id.upper()}&api_key={FRED_API_KEY}&file_type=json"
+        meta_url = f"{FRED_BASE}/series?series_id={series_id.upper()}&api_key={api_key}&file_type=json"
         with urlopen(meta_url, timeout=15) as resp2:
             meta = json.loads(resp2.read().decode("utf-8"))
 
@@ -110,6 +115,14 @@ def fred_proxy(series_id):
                 if o.get("value") is not None
             ],
         })
+
+    except urllib.error.HTTPError as exc:
+        try:
+            err_msg = json.loads(exc.read().decode('utf-8'))
+            msg = err_msg.get("error_message", str(exc))
+        except Exception:
+            msg = str(exc)
+        return jsonify({"error": f"FRED API Error ({exc.code}): {msg}"}), exc.code
 
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
