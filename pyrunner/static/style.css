@@ -441,11 +441,21 @@ body::after {
 [data-theme="light"] .ds-name { color: #1D1D1F; }
 [data-theme="light"] .ds-desc { color: #8E8E93; }
 
-/* ── WORKSPACE ───────────────────────────────────────────── */
-.workspace {
+/* ── WORKSPACE OUTER (column: editor row on top, dex panel below) ─ */
+.workspace-outer {
   display: flex;
+  flex-direction: column;
   height: calc(100vh - var(--nav-h) - 42px);
   margin: 7px 14px 14px;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── WORKSPACE (horizontal editor | output row) ─────────────── */
+.workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(30px);
