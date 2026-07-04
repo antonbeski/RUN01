@@ -153,61 +153,123 @@
   </header>
 
   <!-- ══ MAIN SPLIT ════════════════════════════════════════════════ -->
-  <main class="workspace" role="main">
+  <div class="workspace-outer" id="workspaceOuter">
 
-    <section class="pane pane-editor" aria-label="Code editor">
-      <div class="pane-header">
-        <nav class="lang-tabs" id="langTabs" aria-label="Language selector" role="tablist">
-          <button class="lang-tab active" data-lang="python" role="tab"
-                  aria-selected="true" aria-controls="editor" title="Python — runs in browser via Pyodide">
-            <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 2C9.79 2 8 3.12 8 4.5v2h4v.5H5.5C4.12 7 2 8.12 2 10.5 2 12.88 4.12 14 5.5 14H7v-2c0-1.38 1.62-2.5 3-2.5h4c1.38 0 2.5-1.12 2.5-2.5V4.5C16.5 3.12 14.88 2 13.5 2H12zm-.5 1.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM17 10v2c0 1.38-1.62 2.5-3 2.5H10c-1.38 0-2.5 1.12-2.5 2.5V19.5C7.5 20.88 9.12 22 10.5 22H12c2.21 0 4-1.12 4-2.5v-2H12v-.5h6.5C19.88 17 22 15.88 22 13.5 22 11.12 19.88 10 18.5 10H17zm-4.5 9.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
-            </svg>
-            Python
-          </button>
-        </nav>
+    <main class="workspace" role="main">
 
-        <div class="pane-right-meta">
-          <span class="file-label" id="fileLabelBadge">
-            <span class="pill pill-py" id="langPill">PY</span>
-            <span id="fileName">main.py</span>
+      <section class="pane pane-editor" aria-label="Code editor">
+        <div class="pane-header">
+          <nav class="lang-tabs" id="langTabs" aria-label="Language selector" role="tablist">
+            <button class="lang-tab active" data-lang="python" role="tab"
+                    aria-selected="true" aria-controls="editor" title="Python — runs in browser via Pyodide">
+              <svg class="lang-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2C9.79 2 8 3.12 8 4.5v2h4v.5H5.5C4.12 7 2 8.12 2 10.5 2 12.88 4.12 14 5.5 14H7v-2c0-1.38 1.62-2.5 3-2.5h4c1.38 0 2.5-1.12 2.5-2.5V4.5C16.5 3.12 14.88 2 13.5 2H12zm-.5 1.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM17 10v2c0 1.38-1.62 2.5-3 2.5H10c-1.38 0-2.5 1.12-2.5 2.5V19.5C7.5 20.88 9.12 22 10.5 22H12c2.21 0 4-1.12 4-2.5v-2H12v-.5h6.5C19.88 17 22 15.88 22 13.5 22 11.12 19.88 10 18.5 10H17zm-4.5 9.5c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+              </svg>
+              Python
+            </button>
+          </nav>
+
+          <div class="pane-right-meta">
+            <span class="file-label" id="fileLabelBadge">
+              <span class="pill pill-py" id="langPill">PY</span>
+              <span id="fileName">main.py</span>
+            </span>
+            <div class="editor-meta" id="editorMeta" aria-live="off">ln 1, col 1</div>
+            <button class="pane-fs-btn" id="fsEditorBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div id="editor" class="editor-mount" role="textbox" aria-multiline="true" aria-label="Code editor"></div>
+      </section>
+
+      <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="vertical"
+           aria-label="Drag to resize panels" tabindex="0"></div>
+
+      <section class="pane pane-output" aria-label="Output console">
+        <div class="pane-header">
+          <span class="pane-label">
+            <span class="pill pill-out">OUT</span>
+            console
           </span>
-          <div class="editor-meta" id="editorMeta" aria-live="off">ln 1, col 1</div>
-          <button class="pane-fs-btn" id="fsEditorBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          <div class="pane-right-meta">
+            <div class="output-meta" id="outputMeta" aria-live="polite">ready</div>
+            <button class="pane-fs-btn" id="fsOutputBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div id="output" class="output-mount" role="log" aria-live="polite" aria-label="Program output">
+          <div class="output-welcome">
+            <div class="welcome-prompt">
+              <span class="prompt-caret" aria-hidden="true">❯</span>
+              Run01 is loading…
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ══ DATA EXPLORER — BOTTOM PANEL ══════════════════════════════ -->
+    <div class="resize-handle-h" id="resizeHandleH" style="display:none"
+         role="separator" aria-orientation="horizontal"
+         aria-label="Drag to resize data explorer" tabindex="0"></div>
+
+    <aside class="dex-panel" id="dexPanel" role="region" aria-label="Data Explorer" style="display:none">
+
+      <!-- Header -->
+      <div class="dex-header">
+        <div class="dex-header-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          Data Explorer
+          <span class="dex-header-badge">930K+ FRED · yfinance LIVE</span>
+        </div>
+        <div class="dex-header-actions">
+          <button class="pane-fs-btn" id="fsBottomBtn" title="Toggle fullscreen" aria-label="Toggle fullscreen data explorer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+          </button>
+          <button class="dex-close-btn" id="dexCloseBtn" aria-label="Close data explorer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>
-      <div id="editor" class="editor-mount" role="textbox" aria-multiline="true" aria-label="Code editor"></div>
-    </section>
 
-    <div class="resize-handle" id="resizeHandle" role="separator" aria-orientation="vertical"
-         aria-label="Drag to resize panels" tabindex="0"></div>
-
-    <section class="pane pane-output" aria-label="Output console">
-      <div class="pane-header">
-        <span class="pane-label">
-          <span class="pill pill-out">OUT</span>
-          console
-        </span>
-        <div class="pane-right-meta">
-          <div class="output-meta" id="outputMeta" aria-live="polite">ready</div>
-          <button class="pane-fs-btn" id="fsOutputBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-          </button>
+      <!-- Toolbar: search + source tabs -->
+      <div class="dex-toolbar">
+        <div class="dex-search-wrap">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="dex-search" id="dexSearch" type="search" placeholder="Search datasets, series IDs…" autocomplete="off" spellcheck="false" />
+        </div>
+        <div class="dex-tabs" role="tablist">
+          <button class="dex-tab yf active" id="dexTabYF" role="tab" aria-selected="true" data-source="yf">YF</button>
+          <button class="dex-tab fred" id="dexTabFRED" role="tab" aria-selected="false" data-source="fred">FRED</button>
         </div>
       </div>
-      <div id="output" class="output-mount" role="log" aria-live="polite" aria-label="Program output">
-        <div class="output-welcome">
-          <div class="welcome-prompt">
-            <span class="prompt-caret" aria-hidden="true">❯</span>
-            Run01 is loading…
+
+      <!-- Body: tree + preview -->
+      <div class="dex-body">
+        <div class="dex-tree-pane" id="dexTreePane" role="tree" aria-label="Data file tree"></div>
+        <div class="dex-preview-pane" id="dexPreviewPane">
+          <div class="dex-empty-state" id="dexEmptyState">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Select a dataset from the tree<br>to preview and load it
           </div>
         </div>
       </div>
-    </section>
 
-  </main>
+      <!-- Stats bar -->
+      <div class="dex-stats">
+        <div class="dex-stats-dot"></div>
+        <span>yfinance v1.5.1 — no key required</span>
+        <span style="margin-left:auto; opacity:0.5;">FRED 930,000+ series — free API key</span>
+      </div>
+
+    </aside>
+
+  </div><!-- /.workspace-outer -->
 
   <!-- ══ INIT OVERLAY ══════════════════════════════════════════════ -->
   <div class="init-overlay" id="initOverlay" role="status" aria-label="Loading Run01">
@@ -235,86 +297,13 @@
     </div>
   </div>
 
-  <!-- ══ SCRIPTS ════════════════════════════════════════════════════
-       Load order:
-         1. Plotly       — SYNC, small dist-min build (~1.2 MB gz), must be
-                           available before any Python code runs fig.show()
-         2. Monaco loader— sync AMD shim (~10 KB)
-         3. Pyodide      — defer (large WASM, parallel download)
-         4. App logic    — defer (runs after all above)              -->
-
-  <!-- 1. Plotly — synchronous so window.Plotly is guaranteed before app.js runs -->
+  <!-- ══ SCRIPTS ════════════════════════════════════════════════════ -->
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
           crossorigin
-          onerror="
-            /* CDN 1 failed → fallback to unpkg immediately */
-            var s=document.createElement('script');
-            s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';
-            s.crossOrigin='anonymous';
-            document.head.appendChild(s);
-          "></script>
-
-  <!-- 2. Monaco AMD loader (sync, ~10 KB) -->
+          onerror="var s=document.createElement('script');s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js" crossorigin></script>
-
-  <!-- 3. Pyodide runtime (defer — large, downloads in parallel) -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" crossorigin defer></script>
-
-  <!-- 4. App logic (defer — runs after pyodide.js is executed) -->
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
-
-  <!-- ══ DATA EXPLORER PANEL ═══════════════════════════════════════ -->
-  <!-- Backdrop (click to close) -->
-  <div class="dex-backdrop" id="dexBackdrop" aria-hidden="true"></div>
-
-  <!-- Slide-in panel -->
-  <aside class="dex-panel" id="dexPanel" role="dialog" aria-modal="true" aria-label="Data Explorer">
-
-    <!-- Header -->
-    <div class="dex-header">
-      <div class="dex-header-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
-        </svg>
-        Data Explorer
-        <span class="dex-header-badge">930K+ FRED · yfinance LIVE</span>
-      </div>
-      <button class="dex-close-btn" id="dexCloseBtn" aria-label="Close data explorer">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <!-- Toolbar: search + source tabs -->
-    <div class="dex-toolbar">
-      <div class="dex-search-wrap">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="dex-search" id="dexSearch" type="search" placeholder="Search datasets, series IDs…" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="dex-tabs" role="tablist">
-        <button class="dex-tab yf active" id="dexTabYF" role="tab" aria-selected="true" data-source="yf">YF</button>
-        <button class="dex-tab fred" id="dexTabFRED" role="tab" aria-selected="false" data-source="fred">FRED</button>
-      </div>
-    </div>
-
-    <!-- Body: tree + preview -->
-    <div class="dex-body">
-      <div class="dex-tree-pane" id="dexTreePane" role="tree" aria-label="Data file tree"></div>
-      <div class="dex-preview-pane" id="dexPreviewPane">
-        <div class="dex-empty-state" id="dexEmptyState">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Select a dataset from the tree<br>to preview and load it
-        </div>
-      </div>
-    </div>
-
-    <!-- Stats bar -->
-    <div class="dex-stats">
-      <div class="dex-stats-dot"></div>
-      <span>yfinance v1.5.1 — no key required</span>
-      <span style="margin-left:auto; opacity:0.5;">FRED 930,000+ series — free API key</span>
-    </div>
-
-  </aside>
 
   <!-- Service Worker -->
   <script>

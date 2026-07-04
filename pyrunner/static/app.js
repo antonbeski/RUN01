@@ -1110,26 +1110,34 @@ btnReset.addEventListener('click', () => {
   setStatus('ready', 'Ready');
 });
 
-// ── Data Explorer sidebar ───────────────────────────────────
-const btnData       = document.getElementById('btnData');
-const dataDropdown  = document.getElementById('dataDropdown');
-const dsYFinance    = document.getElementById('dsYFinance');
-const dsFRED        = document.getElementById('dsFRED');
+// ── Data Explorer bottom panel ──────────────────────────────
+const btnData         = document.getElementById('btnData');
+const dataDropdown    = document.getElementById('dataDropdown');
+const dsYFinance      = document.getElementById('dsYFinance');
+const dsFRED          = document.getElementById('dsFRED');
 
-const dexPanel      = document.getElementById('dexPanel');
-const dexBackdrop   = document.getElementById('dexBackdrop');
-const dexCloseBtn   = document.getElementById('dexCloseBtn');
+const dexPanel        = document.getElementById('dexPanel');
+const resizeHandleH   = document.getElementById('resizeHandleH');
+const dexCloseBtn     = document.getElementById('dexCloseBtn');
+const fsBottomBtn     = document.getElementById('fsBottomBtn');
+const workspaceOuter  = document.getElementById('workspaceOuter');
+
+const DEX_DEFAULT_H = 320; // px — initial height when first opened
 
 function openDataExplorer() {
-  dexPanel.classList.add('open');
-  dexBackdrop.classList.add('open');
+  // Show the horizontal resize handle and the panel
+  resizeHandleH.style.display = 'block';
+  dexPanel.style.display      = 'flex';
+  if (!dexPanel.style.height) dexPanel.style.height = DEX_DEFAULT_H + 'px';
   closeDataDropdown();
   switchTab(activeSource);
 }
 
 function closeDataExplorer() {
-  dexPanel.classList.remove('open');
-  dexBackdrop.classList.remove('open');
+  resizeHandleH.style.display = 'none';
+  dexPanel.style.display      = 'none';
+  // Also exit bottom-fullscreen if active
+  if (workspaceOuter) workspaceOuter.classList.remove('bottom-fullscreen');
 }
 
 btnData.addEventListener('click', (e) => {
@@ -1138,7 +1146,14 @@ btnData.addEventListener('click', (e) => {
 });
 
 dexCloseBtn.addEventListener('click', closeDataExplorer);
-dexBackdrop.addEventListener('click', closeDataExplorer);
+
+// Bottom fullscreen toggle
+if (fsBottomBtn && workspaceOuter) {
+  fsBottomBtn.addEventListener('click', () => {
+    workspaceOuter.classList.toggle('bottom-fullscreen');
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+  });
+}
 
 function closeDataDropdown() {
   dataDropdown.classList.remove('open');
@@ -1815,5 +1830,51 @@ document.addEventListener('keydown', (e) => {
     const newW = Math.min(Math.max(curW + dir, 220), tot - 220);
     editorPane.style.flex = `0 0 ${(newW / tot * 100).toFixed(2)}%`;
     outputPane.style.flex = '1 1 0';
+  });
+})();
+
+// ── Horizontal resize handle (workspace | bottom data explorer) ──
+(function initResizeH() {
+  const handle = document.getElementById('resizeHandleH');
+  const outer  = document.getElementById('workspaceOuter');
+  const panel  = document.getElementById('dexPanel');
+  if (!handle || !outer || !panel) return;
+  let dragging = false, startY = 0, startH = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startY   = e.clientY;
+    startH   = panel.getBoundingClientRect().height;
+    handle.classList.add('dragging');
+    document.body.style.cursor     = 'row-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    // Dragging up = increase panel height
+    const delta  = startY - e.clientY;
+    const outerH = outer.getBoundingClientRect().height;
+    const newH   = Math.min(Math.max(startH + delta, 160), outerH - 120);
+    panel.style.height = newH + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+  });
+
+  handle.addEventListener('keydown', (e) => {
+    const step = e.shiftKey ? 40 : 15;
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const dir  = e.key === 'ArrowUp' ? step : -step;
+    const curH = panel.getBoundingClientRect().height;
+    const outH = outer.getBoundingClientRect().height;
+    panel.style.height = Math.min(Math.max(curH + dir, 160), outH - 120) + 'px';
   });
 })();

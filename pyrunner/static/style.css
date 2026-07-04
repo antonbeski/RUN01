@@ -886,44 +886,53 @@ body::after {
 }
 
 /* ══════════════════════════════════════════════════════════
-   DATA EXPLORER — full-screen slide-over panel
+   DATA EXPLORER — BOTTOM PANEL
    ══════════════════════════════════════════════════════════ */
 
-/* Backdrop overlay */
-.dex-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.28s ease;
+/* Horizontal drag handle (sits between workspace and dex-panel) */
+.resize-handle-h {
+  width: 100%;
+  height: 5px;
+  background: rgba(255,255,255,0.04);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  cursor: row-resize;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+  position: relative;
+  z-index: 12;
 }
-.dex-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
+.resize-handle-h:hover,
+.resize-handle-h.dragging {
+  background: rgba(99,102,241,0.35);
 }
 
-/* Main panel */
+/* Bottom panel — inline inside workspace-outer */
 .dex-panel {
-  position: fixed;
-  top: 0; left: 0;
-  width: min(780px, 96vw);
-  height: 100vh;
-  z-index: 310;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: rgba(10,10,12,0.98);
-  border-right: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 4px 0 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.04) inset;
-  transform: translateX(-100%);
-  transition: transform 0.30s cubic-bezier(0.4,0,0.2,1);
-  will-change: transform;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.55);
+  overflow: hidden;
+  transition: height 0.22s cubic-bezier(0.4,0,0.2,1);
+  min-height: 0;
 }
-.dex-panel.open {
-  transform: translateX(0);
+
+/* Fullscreen bottom panel — expand to cover the entire workspace-outer */
+.workspace-outer.bottom-fullscreen .workspace {
+  display: none;
+}
+.workspace-outer.bottom-fullscreen .resize-handle-h {
+  display: none !important;
+}
+.workspace-outer.bottom-fullscreen .dex-panel {
+  flex: 1 1 100%;
+  border-radius: var(--radius);
+  border-top: 1px solid rgba(255,255,255,0.10);
 }
 
 /* Panel header */
@@ -958,6 +967,14 @@ body::after {
   border: 1px solid rgba(255,255,255,0.10);
   color: var(--text-muted);
   letter-spacing: 0.05em;
+}
+
+/* Header actions group (fullscreen + close buttons) */
+.dex-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .dex-close-btn {
