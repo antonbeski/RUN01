@@ -238,6 +238,133 @@ async def yf_download(ticker, period="1mo", interval="1d"):
     df["Date"] = pd.to_datetime(df["Date"])
     return df.set_index("Date")
 
+# ── yf_info: fetch company profile metadata ──────────────────
+async def yf_info(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/info")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    return data
+
+# ── yf_actions: fetch corporate actions timeline ──────────────
+async def yf_actions(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/actions")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    return df
+
+# ── yf_dividends: fetch dividend payments ───────────────────
+async def yf_dividends(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/dividends")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    return df
+
+# ── yf_splits: fetch stock splits ───────────────────────────
+async def yf_splits(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/splits")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    return df
+
+# ── yf_financials: fetch income statement ───────────────────
+async def yf_financials(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/financials")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "index" in df.columns:
+        df = df.set_index("index")
+    return df
+
+# ── yf_balance_sheet: fetch balance sheet ───────────────────
+async def yf_balance_sheet(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/balance_sheet")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "index" in df.columns:
+        df = df.set_index("index")
+    return df
+
+# ── yf_cashflow: fetch cash flow statement ──────────────────
+async def yf_cashflow(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/cashflow")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "index" in df.columns:
+        df = df.set_index("index")
+    return df
+
+# ── yf_recommendations: fetch analyst consensus ─────────────
+async def yf_recommendations(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/recommendations")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    return df
+
+# ── yf_holders: fetch institutional holders ─────────────────
+async def yf_holders(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/holders")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    df = pd.DataFrame(data)
+    if not df.empty and "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.set_index("Date")
+    return df
+
+# ── yf_options: fetch option chain expiry list ──────────────
+async def yf_options(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/options")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    return data
+
+# ── yf_option_chain: fetch option chain details ─────────────
+async def yf_option_chain(ticker, expiry):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/options/{expiry}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    calls_df = pd.DataFrame(data["calls"])
+    puts_df = pd.DataFrame(data["puts"])
+    return {"calls": calls_df, "puts": puts_df}
+
+# ── yf_news: fetch news items ──────────────────────────────
+async def yf_news(ticker):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/news")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    return data
+
 # ── plt.show(): capture as inline PNG ──────────────────────
 def _mpl_capture(*args, **kwargs):
     buf = io.BytesIO()
@@ -983,40 +1110,628 @@ btnReset.addEventListener('click', () => {
   setStatus('ready', 'Ready');
 });
 
-// ── Data dropdown ─────────────────────────────────────────
+// ── Data Explorer sidebar ───────────────────────────────────
 const btnData       = document.getElementById('btnData');
 const dataDropdown  = document.getElementById('dataDropdown');
 const dsYFinance    = document.getElementById('dsYFinance');
 const dsFRED        = document.getElementById('dsFRED');
+
+const dexPanel      = document.getElementById('dexPanel');
+const dexBackdrop   = document.getElementById('dexBackdrop');
+const dexCloseBtn   = document.getElementById('dexCloseBtn');
+
+function openDataExplorer() {
+  dexPanel.classList.add('open');
+  dexBackdrop.classList.add('open');
+  closeDataDropdown();
+  switchTab(activeSource);
+}
+
+function closeDataExplorer() {
+  dexPanel.classList.remove('open');
+  dexBackdrop.classList.remove('open');
+}
+
+btnData.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openDataExplorer();
+});
+
+dexCloseBtn.addEventListener('click', closeDataExplorer);
+dexBackdrop.addEventListener('click', closeDataExplorer);
 
 function closeDataDropdown() {
   dataDropdown.classList.remove('open');
   btnData.setAttribute('aria-expanded', 'false');
 }
 
-btnData.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const isOpen = dataDropdown.classList.toggle('open');
-  btnData.setAttribute('aria-expanded', String(isOpen));
-});
-
-// Close when clicking outside
+// Close when clicking outside dropdown wrap
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#dataDropdownWrap')) closeDataDropdown();
 });
 
-// Load example code into editor when a source is selected
-function loadDataSource(key, label) {
-  if (!monacoEditor) return;
-  closeDataDropdown();
-  monacoEditor.setValue(DATA_SOURCE_CODES[key]);
-  // Focus editor
-  monacoEditor.focus();
-  setStatus('ready', `${label} example loaded — press ▶ Run`);
+// Dropdown click shortcuts
+dsYFinance.addEventListener('click', () => {
+  openDataExplorer();
+  switchTab('yf');
+});
+dsFRED.addEventListener('click', () => {
+  openDataExplorer();
+  switchTab('fred');
+});
+
+// ── DATA INVENTORY STRUCTURES ─────────────────────────────────
+const YF_TREE = {
+  name: "DATA/YFINANCE",
+  type: "root",
+  children: [
+    {
+      name: "TICKER",
+      type: "folder",
+      children: [
+        {
+          name: "01_price_history",
+          type: "folder",
+          children: [
+            { name: "ohlcv_1d.csv", type: "file", category: "history", params: { period: "1y", interval: "1d" }, desc: "1-day interval OHLCV price history (default, split+dividend adjusted)" },
+            { name: "ohlcv_1wk.csv", type: "file", category: "history", params: { period: "2y", interval: "1wk" }, desc: "1-week interval OHLCV price history" },
+            { name: "ohlcv_1mo.csv", type: "file", category: "history", params: { period: "5y", interval: "1mo" }, desc: "1-month interval OHLCV price history" },
+            { name: "ohlcv_3mo.csv", type: "file", category: "history", params: { period: "max", interval: "3mo" }, desc: "3-month interval OHLCV price history" },
+            { name: "ohlcv_1m.csv", type: "file", category: "history", params: { period: "7d", interval: "1m" }, desc: "1-minute intraday bars (last 7 days only)" },
+            { name: "ohlcv_5m.csv", type: "file", category: "history", params: { period: "60d", interval: "5m" }, desc: "5-minute intraday bars (last 60 days only)" },
+            { name: "ohlcv_1h.csv", type: "file", category: "history", params: { period: "730d", interval: "1h" }, desc: "1-hour bars (last 730 days)" },
+            { name: "ohlcv_max_period.csv", type: "file", category: "history", params: { period: "max", interval: "1d" }, desc: "Full available daily price history" },
+            { name: "history_metadata.json", type: "file", category: "metadata", desc: "Exchange, timezone, GMToffset, currency, firstTradeDate metadata" }
+          ]
+        },
+        {
+          name: "02_corporate_actions",
+          type: "folder",
+          children: [
+            { name: "dividends.csv", type: "file", category: "dividends", desc: "Historical dividend payments timeline" },
+            { name: "splits.csv", type: "file", category: "splits", desc: "Historical stock split events timeline" },
+            { name: "actions_combined.csv", type: "file", category: "actions", desc: "Dividends and splits merged timeline" }
+          ]
+        },
+        {
+          name: "03_financial_statements",
+          type: "folder",
+          children: [
+            { name: "income_statement_annual.csv", type: "file", category: "financials", desc: "Annual income statement (revenue, profit, operating expenses, etc.)" },
+            { name: "balance_sheet_annual.csv", type: "file", category: "balance_sheet", desc: "Annual balance sheet (assets, liabilities, equity, debt, etc.)" },
+            { name: "cashflow_annual.csv", type: "file", category: "cashflow", desc: "Annual cash flow statement (operating, investing, financing flows)" }
+          ]
+        },
+        {
+          name: "05_analyst_coverage",
+          type: "folder",
+          children: [
+            { name: "recommendations.csv", type: "file", category: "recommendations", desc: "StrongBuy / Buy / Hold / Sell / StrongSell counts by month" }
+          ]
+        },
+        {
+          name: "06_ownership_and_holders",
+          type: "folder",
+          children: [
+            { name: "institutional_holders.csv", type: "file", category: "holders", desc: "Top institutional holders, shares held, value, percent outstanding" }
+          ]
+        },
+        {
+          name: "07_company_profile",
+          type: "folder",
+          children: [
+            { name: "info_full.json", type: "file", category: "info", desc: "Full company profile (150+ fields, health ratios, margins, sector, etc.)" },
+            { name: "news.json", type: "file", category: "news", desc: "Latest headlines, publisher details, links, and times" }
+          ]
+        },
+        {
+          name: "08_options",
+          type: "folder",
+          children: [
+            { name: "expiration_dates.txt", type: "file", category: "options", desc: "List of all active option chain expiration dates" }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+const FRED_TREE = {
+  name: "DATA/FRED",
+  type: "root",
+  children: [
+    {
+      name: "01_MONEY_BANKING_FINANCE",
+      type: "folder",
+      children: [
+        {
+          name: "interest_rates",
+          type: "folder",
+          children: [
+            { name: "fed_funds_rate.csv", type: "file", category: "fred", series_id: "FEDFUNDS", desc: "Effective Federal Funds Rate (monthly)" },
+            { name: "treasury_yields_10yr.csv", type: "file", category: "fred", series_id: "DGS10", desc: "10-Year Treasury Constant Maturity Rate (daily)" },
+            { name: "yield_curve_spread.csv", type: "file", category: "fred", series_id: "T10Y2Y", desc: "10-Year Treasury Constant Maturity Minus 2-Year Treasury (daily)" },
+            { name: "sofr.csv", type: "file", category: "fred", series_id: "SOFR", desc: "Secured Overnight Financing Rate (daily)" },
+            { name: "mortgage_rate_30yr.csv", type: "file", category: "fred", series_id: "MORTGAGE30US", desc: "30-Year Fixed Rate Mortgage Average in the U.S. (weekly)" }
+          ]
+        },
+        {
+          name: "exchange_rates",
+          type: "folder",
+          children: [
+            { name: "usd_vs_eur.csv", type: "file", category: "fred", series_id: "DEXUSEU", desc: "U.S. Dollars to Euro Foreign Exchange Rate (daily)" },
+            { name: "trade_weighted_usd.csv", type: "file", category: "fred", series_id: "DTWEXBGS", desc: "Trade Weighted U.S. Dollar Index: Broad, Goods and Services (daily)" }
+          ]
+        },
+        {
+          name: "monetary_data",
+          type: "folder",
+          children: [
+            { name: "money_supply_m2.csv", type: "file", category: "fred", series_id: "M2SL", desc: "M2 Money Supply (monthly, seasonally adjusted)" },
+            { name: "fed_balance_sheet_assets.csv", type: "file", category: "fred", series_id: "WALCL", desc: "Federal Reserve Total Assets (weekly)" }
+          ]
+        },
+        {
+          name: "financial_indicators",
+          type: "folder",
+          children: [
+            { name: "vix_volatility_index.csv", type: "file", category: "fred", series_id: "VIXCLS", desc: "CBOE Volatility Index: VIX (daily)" },
+            { name: "sp500_index.csv", type: "file", category: "fred", series_id: "SP500", desc: "S&P 500 Stock Market Index (daily)" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "02_POPULATION_EMPLOYMENT_LABOR_MARKETS",
+      type: "folder",
+      children: [
+        {
+          name: "current_population_survey",
+          type: "folder",
+          children: [
+            { name: "unemployment_rate_national.csv", type: "file", category: "fred", series_id: "UNRATE", desc: "U.S. National Unemployment Rate (monthly)" },
+            { name: "labor_force_participation.csv", type: "file", category: "fred", series_id: "CIVPART", desc: "Labor Force Participation Rate (monthly)" }
+          ]
+        },
+        {
+          name: "current_employment_statistics",
+          type: "folder",
+          children: [
+            { name: "nonfarm_payrolls.csv", type: "file", category: "fred", series_id: "PAYEMS", desc: "All Employees, Total Nonfarm Payrolls (monthly)" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "03_NATIONAL_ACCOUNTS",
+      type: "folder",
+      children: [
+        {
+          name: "national_income_product_accounts",
+          type: "folder",
+          children: [
+            { name: "gdp_nominal.csv", type: "file", category: "fred", series_id: "GDP", desc: "U.S. Gross Domestic Product (quarterly, nominal)" },
+            { name: "gdp_real_chained.csv", type: "file", category: "fred", series_id: "GDPC1", desc: "U.S. Real Gross Domestic Product (quarterly, inflation-adjusted)" }
+          ]
+        },
+        {
+          name: "federal_government_debt",
+          type: "folder",
+          children: [
+            { name: "total_public_debt.csv", type: "file", category: "fred", series_id: "GFDEBTN", desc: "Federal Debt: Total Public Debt (quarterly)" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "04_PRODUCTION_AND_BUSINESS_ACTIVITY",
+      type: "folder",
+      children: [
+        {
+          name: "housing",
+          type: "folder",
+          children: [
+            { name: "case_shiller_home_price_index.csv", type: "file", category: "fred", series_id: "CSUSHPISA", desc: "S&P CoreLogic Case-Shiller U.S. National Home Price Index (monthly)" },
+            { name: "housing_starts.csv", type: "file", category: "fred", series_id: "HOUST", desc: "New Privately-Owned Housing Units Started (monthly)" }
+          ]
+        },
+        {
+          name: "industrial_production_capacity",
+          type: "folder",
+          children: [
+            { name: "industrial_production_index.csv", type: "file", category: "fred", series_id: "INDPRO", desc: "Industrial Production Index (monthly)" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "05_PRICES",
+      type: "folder",
+      children: [
+        {
+          name: "consumer_price_indexes_cpi_pce",
+          type: "folder",
+          children: [
+            { name: "cpi_all_urban_consumers.csv", type: "file", category: "fred", series_id: "CPIAUCSL", desc: "Consumer Price Index for All Urban Consumers (monthly, CPI-U)" },
+            { name: "core_pce_price_index.csv", type: "file", category: "fred", series_id: "PCEPILFE", desc: "Personal Consumption Expenditures Excluding Food and Energy (monthly, Core PCE)" }
+          ]
+        },
+        {
+          name: "commodities",
+          type: "folder",
+          children: [
+            { name: "wti_crude_oil.csv", type: "file", category: "fred", series_id: "DCOILWTICO", desc: "Crude Oil Prices: West Texas Intermediate (daily)" },
+            { name: "gold_price.csv", type: "file", category: "fred", series_id: "GOLDAMGBD228NLBM", desc: "Gold Fixing Price in London Bullion Market (daily)" }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+// ── SIDE PANEL LOGIC ──────────────────────────────────────────
+let activeSource = 'yf';
+
+function switchTab(source) {
+  activeSource = source;
+  const tabYF = document.getElementById('dexTabYF');
+  const tabFRED = document.getElementById('dexTabFRED');
+  const searchInput = document.getElementById('dexSearch');
+
+  if (source === 'yf') {
+    tabYF.classList.add('active');
+    tabFRED.classList.remove('active');
+    tabYF.setAttribute('aria-selected', 'true');
+    tabFRED.setAttribute('aria-selected', 'false');
+    renderTree(YF_TREE, searchInput.value);
+  } else {
+    tabFRED.classList.add('active');
+    tabYF.classList.remove('active');
+    tabFRED.setAttribute('aria-selected', 'true');
+    tabYF.setAttribute('aria-selected', 'false');
+    renderTree(FRED_TREE, searchInput.value);
+  }
 }
 
-dsYFinance.addEventListener('click', () => loadDataSource('yfinance', 'Yahoo Finance'));
-dsFRED.addEventListener('click',     () => loadDataSource('fred',     'FRED'));
+document.getElementById('dexTabYF').addEventListener('click', () => switchTab('yf'));
+document.getElementById('dexTabFRED').addEventListener('click', () => switchTab('fred'));
+
+document.getElementById('dexSearch').addEventListener('input', (e) => {
+  const currentTree = activeSource === 'yf' ? YF_TREE : FRED_TREE;
+  renderTree(currentTree, e.target.value);
+});
+
+function countFiles(node) {
+  if (node.type === 'file') return 1;
+  if (!node.children) return 0;
+  return node.children.reduce((acc, child) => acc + countFiles(child), 0);
+}
+
+function filterTree(node, query) {
+  if (!query) return node;
+  const isMatch = node.name.toLowerCase().includes(query.toLowerCase());
+
+  if (node.type === 'file') {
+    return isMatch ? node : null;
+  }
+
+  if (node.children) {
+    const matchedChildren = node.children
+      .map(child => filterTree(child, query))
+      .filter(child => child !== null);
+
+    if (matchedChildren.length > 0) {
+      return { ...node, children: matchedChildren };
+    }
+  }
+
+  return isMatch ? { ...node, children: [] } : null;
+}
+
+function renderTree(treeData, searchQuery = '') {
+  const treePane = document.getElementById('dexTreePane');
+  treePane.innerHTML = '';
+
+  let dataToRender = treeData;
+  if (searchQuery) {
+    const filtered = filterTree(treeData, searchQuery);
+    if (!filtered) {
+      treePane.innerHTML = `<div class="dex-no-results">No datasets match "${searchQuery}"</div>`;
+      return;
+    }
+    dataToRender = filtered;
+  }
+
+  const renderedNode = renderNode(dataToRender, 0, searchQuery);
+  if (searchQuery) {
+    expandAllNodes(renderedNode);
+  } else {
+    renderedNode.setAttribute('aria-expanded', 'true');
+  }
+  treePane.appendChild(renderedNode);
+}
+
+function expandAllNodes(element) {
+  if (element.classList.contains('dex-node')) {
+    element.setAttribute('aria-expanded', 'true');
+    const children = element.querySelectorAll('.dex-node');
+    children.forEach(child => child.setAttribute('aria-expanded', 'true'));
+  }
+}
+
+function highlightText(text, query) {
+  if (!query) return text;
+  const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  return text.replace(regex, '<span class="dex-hl">$1</span>');
+}
+
+function renderNode(node, depth = 0, searchQuery = '') {
+  const nodeEl = document.createElement('div');
+
+  if (node.type === 'file') {
+    nodeEl.className = `dex-file dex-l${depth}`;
+    nodeEl.setAttribute('role', 'treeitem');
+    const displayName = highlightText(node.name, searchQuery);
+    nodeEl.innerHTML = `
+      <svg class="dex-file-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <span class="dex-file-name">${displayName}</span>
+      <span class="dex-file-ext">${node.name.split('.').pop().toUpperCase()}</span>
+    `;
+    nodeEl.addEventListener('click', () => selectFileNode(node, nodeEl));
+  } else {
+    const isRoot = node.type === 'root';
+    nodeEl.className = isRoot ? 'dex-node' : 'dex-folder-node dex-node';
+    nodeEl.setAttribute('role', 'treeitem');
+    nodeEl.setAttribute('aria-expanded', 'false');
+
+    const headerEl = document.createElement('div');
+    headerEl.className = isRoot ? 'dex-cat-header' : `dex-folder dex-l${depth}`;
+
+    const chevronSvg = `
+      <svg class="${isRoot ? 'dex-cat-chevron' : 'dex-folder-chevron'}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    `;
+
+    const folderIconSvg = isRoot ? '' : `
+      <svg class="dex-folder-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+    `;
+
+    const displayName = highlightText(node.name, searchQuery);
+    const label = isRoot ? `<span class="dex-cat-label">${displayName}</span>` : `<span>${displayName}</span>`;
+    const count = isRoot ? `<span class="dex-cat-count">${countFiles(node)} files</span>` : '';
+
+    headerEl.innerHTML = `${chevronSvg}${folderIconSvg}${label}${count}`;
+    nodeEl.appendChild(headerEl);
+
+    const childrenEl = document.createElement('div');
+    childrenEl.className = isRoot ? 'dex-cat-children' : 'dex-folder-children';
+
+    node.children.forEach(child => {
+      childrenEl.appendChild(renderNode(child, depth + 1, searchQuery));
+    });
+    nodeEl.appendChild(childrenEl);
+
+    headerEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isExpanded = nodeEl.getAttribute('aria-expanded') === 'true';
+      nodeEl.setAttribute('aria-expanded', String(!isExpanded));
+    });
+  }
+
+  return nodeEl;
+}
+
+let selectedNode = null;
+
+function selectFileNode(node, element) {
+  const selectedElements = document.querySelectorAll('.dex-file.selected');
+  selectedElements.forEach(el => el.classList.remove('selected'));
+
+  element.classList.add('selected');
+  selectedNode = node;
+
+  const previewPane = document.getElementById('dexPreviewPane');
+  previewPane.innerHTML = '';
+
+  const isYF = node.category !== 'fred';
+  const iconText = isYF ? 'YF' : 'FD';
+  const iconClass = isYF ? 'yf' : 'fred';
+  const sourceName = isYF ? 'yfinance' : 'FRED';
+
+  let pythonCode = '';
+  if (isYF) {
+    if (node.category === 'history') {
+      pythonCode = `\
+# Fetch real-time OHLCV stock history
+import pandas as pd
+
+ticker = "AAPL"
+period = "${node.params.period}"
+interval = "${node.params.interval}"
+
+print(f"Fetching {ticker} history ({period}, {interval})...")
+df = await yf_download(ticker, period=period, interval=interval)
+print(f"Data shape: {df.shape}")
+print(df.tail(10))`;
+    } else if (node.category === 'metadata') {
+      pythonCode = `\
+# Fetch history metadata for ticker
+ticker = "AAPL"
+
+print(f"Fetching metadata for {ticker}...")
+info = await yf_info(ticker)
+keys = ["exchange", "timezone", "currency", "firstTradeDate", "symbol", "longName"]
+metadata = {k: info.get(k) for k in keys if k in info}
+for k, v in metadata.items():
+    print(f"{k:16}: {v}")`;
+    } else if (node.category === 'dividends') {
+      pythonCode = `\
+# Fetch dividends timeline
+ticker = "AAPL"
+
+print(f"Fetching dividends for {ticker}...")
+df = await yf_dividends(ticker)
+print(df.tail(10))`;
+    } else if (node.category === 'splits') {
+      pythonCode = `\
+# Fetch stock split timeline
+ticker = "AAPL"
+
+print(f"Fetching splits for {ticker}...")
+df = await yf_splits(ticker)
+print(df)`;
+    } else if (node.category === 'actions') {
+      pythonCode = `\
+# Fetch combined corporate actions (dividends + splits)
+ticker = "AAPL"
+
+print(f"Fetching corporate actions for {ticker}...")
+df = await yf_actions(ticker)
+print(df.tail(10))`;
+    } else if (node.category === 'financials') {
+      pythonCode = `\
+# Fetch annual income statement
+ticker = "AAPL"
+
+print(f"Fetching financials for {ticker}...")
+df = await yf_financials(ticker)
+print(df.head(10))`;
+    } else if (node.category === 'balance_sheet') {
+      pythonCode = `\
+# Fetch annual balance sheet
+ticker = "AAPL"
+
+print(f"Fetching balance sheet for {ticker}...")
+df = await yf_balance_sheet(ticker)
+print(df.head(10))`;
+    } else if (node.category === 'cashflow') {
+      pythonCode = `\
+# Fetch annual cash flow statement
+ticker = "AAPL"
+
+print(f"Fetching cashflow for {ticker}...")
+df = await yf_cashflow(ticker)
+print(df.head(10))`;
+    } else if (node.category === 'recommendations') {
+      pythonCode = `\
+# Fetch analyst consensus and recommendations
+ticker = "AAPL"
+
+print(f"Fetching analyst recommendations for {ticker}...")
+df = await yf_recommendations(ticker)
+print(df.tail(10))`;
+    } else if (node.category === 'holders') {
+      pythonCode = `\
+# Fetch institutional roster and holdings
+ticker = "AAPL"
+
+print(f"Fetching institutional holders for {ticker}...")
+df = await yf_holders(ticker)
+print(df.head(10))`;
+    } else if (node.category === 'info') {
+      pythonCode = `\
+# Fetch full company profile information
+ticker = "AAPL"
+
+print(f"Fetching company profile for {ticker}...")
+info = await yf_info(ticker)
+print(f"Company: {info.get('longName')}")
+print(f"Sector : {info.get('sector')}")
+print(f"Summary: {info.get('longBusinessSummary')[:250]}...")`;
+    } else if (node.category === 'news') {
+      pythonCode = `\
+# Fetch latest headlines and news articles
+ticker = "AAPL"
+
+print(f"Fetching news for {ticker}...")
+news = await yf_news(ticker)
+for item in news[:5]:
+    print(f"- {item.get('title')}")
+    print(f"  Publisher: {item.get('publisher')} | Link: {item.get('link')}\\n")`;
+    } else if (node.category === 'options') {
+      pythonCode = `\
+# Fetch option expiration dates and chains
+ticker = "AAPL"
+
+print(f"Fetching option dates for {ticker}...")
+dates = await yf_options(ticker)
+print("Option Expirations:")
+for d in dates[:5]:
+    print(f"  {d}")
+
+if len(dates) > 0:
+    print(f"\\nFetching option chain for nearest expiry: {dates[0]}...")
+    chain = await yf_option_chain(ticker, dates[0])
+    print(f"Calls count: {len(chain['calls'])}, Puts count: {len(chain['puts'])}")
+    print("\\nNearest Calls:")
+    print(chain['calls'][['strike', 'lastPrice', 'volume']].head(5))`;
+    }
+  } else {
+    pythonCode = `\
+# Fetch macroeconomic time series from FRED
+series_id = "${node.series_id}"
+
+print(f"Fetching FRED series: {series_id}...")
+data = await fred_download(series_id, limit=100)
+print(f"Series Title: {data['title']}")
+print(f"Units       : {data['units']} | Freq: {data['frequency']}")
+print(data['df'].tail(15))`;
+  }
+
+  const highlightedCode = highlightSyntax(pythonCode);
+
+  const card = document.createElement('div');
+  card.className = 'dex-preview-card';
+  card.innerHTML = `
+    <div class="dex-preview-name">
+      <span class="dex-preview-icon ${iconClass}">${iconText}</span>
+      <span>${node.name}</span>
+    </div>
+    <div class="dex-preview-desc">
+      ${node.desc}
+    </div>
+    <div class="dex-preview-meta">
+      <span class="dex-meta-tag live">LIVE</span>
+      <span class="dex-meta-tag api">${sourceName}</span>
+    </div>
+    <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON CODE</div>
+    <pre class="dex-code-preview"><code>${highlightedCode}</code></pre>
+    <button class="dex-load-btn" id="dexLoadBtn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><polyline points="9 18 15 12 9 6"/></svg>
+      Load and Run Dataset
+    </button>
+  `;
+
+  previewPane.appendChild(card);
+
+  const loadBtn = card.querySelector('#dexLoadBtn');
+  loadBtn.addEventListener('click', () => {
+    if (monacoEditor) {
+      monacoEditor.setValue(pythonCode);
+      closeDataExplorer();
+      monacoEditor.focus();
+      triggerRun();
+    }
+  });
+}
+
+function highlightSyntax(code) {
+  return code
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/(#.*)/g, '<span class="dex-code-comment">$1</span>')
+    .replace(/\b(import|as|await|from)\b/g, '<span class="dex-code-kw">$1</span>')
+    .replace(/(".*?"|'.*?')/g, '<span class="dex-code-str">$1</span>')
+    .replace(/\b(print|yf_download|fred_download|yf_info|yf_dividends|yf_splits|yf_actions|yf_financials|yf_balance_sheet|yf_cashflow|yf_recommendations|yf_holders|yf_options|yf_option_chain|yf_news)\b/g, '<span class="dex-code-fn">$1</span>')
+    .replace(/\b(\d+)\b/g, '<span class="dex-code-num">$1</span>');
+}
 
 // ── Fullscreen toggle ─────────────────────────────────────
 const workspaceEl = document.querySelector('.workspace');

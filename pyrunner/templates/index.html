@@ -263,6 +263,59 @@
   <!-- 4. App logic (defer — runs after pyodide.js is executed) -->
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 
+  <!-- ══ DATA EXPLORER PANEL ═══════════════════════════════════════ -->
+  <!-- Backdrop (click to close) -->
+  <div class="dex-backdrop" id="dexBackdrop" aria-hidden="true"></div>
+
+  <!-- Slide-in panel -->
+  <aside class="dex-panel" id="dexPanel" role="dialog" aria-modal="true" aria-label="Data Explorer">
+
+    <!-- Header -->
+    <div class="dex-header">
+      <div class="dex-header-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+        Data Explorer
+        <span class="dex-header-badge">930K+ FRED · yfinance LIVE</span>
+      </div>
+      <button class="dex-close-btn" id="dexCloseBtn" aria-label="Close data explorer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Toolbar: search + source tabs -->
+    <div class="dex-toolbar">
+      <div class="dex-search-wrap">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="dex-search" id="dexSearch" type="search" placeholder="Search datasets, series IDs…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="dex-tabs" role="tablist">
+        <button class="dex-tab yf active" id="dexTabYF" role="tab" aria-selected="true" data-source="yf">YF</button>
+        <button class="dex-tab fred" id="dexTabFRED" role="tab" aria-selected="false" data-source="fred">FRED</button>
+      </div>
+    </div>
+
+    <!-- Body: tree + preview -->
+    <div class="dex-body">
+      <div class="dex-tree-pane" id="dexTreePane" role="tree" aria-label="Data file tree"></div>
+      <div class="dex-preview-pane" id="dexPreviewPane">
+        <div class="dex-empty-state" id="dexEmptyState">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Select a dataset from the tree<br>to preview and load it
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="dex-stats">
+      <div class="dex-stats-dot"></div>
+      <span>yfinance v1.5.1 — no key required</span>
+      <span style="margin-left:auto; opacity:0.5;">FRED 930,000+ series — free API key</span>
+    </div>
+
+  </aside>
+
   <!-- Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {

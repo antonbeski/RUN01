@@ -56,6 +56,111 @@ def yf_proxy(ticker):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+# ── Yahoo Finance category proxies ────────────────────────────────────────────
+@app.route("/api/yf/<ticker>/<category>")
+def yf_category_proxy(ticker, category):
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker.upper())
+        category = category.lower()
+
+        if category == "info":
+            # Fetch and return info dict
+            return jsonify(t.info)
+
+        elif category == "actions":
+            df = t.actions
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            if "Date" in df.columns:
+                df["Date"] = df["Date"].astype(str)
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "dividends":
+            s = t.dividends
+            if s is None or s.empty:
+                return jsonify([])
+            df = s.reset_index()
+            if "Date" in df.columns:
+                df["Date"] = df["Date"].astype(str)
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "splits":
+            s = t.splits
+            if s is None or s.empty:
+                return jsonify([])
+            df = s.reset_index()
+            if "Date" in df.columns:
+                df["Date"] = df["Date"].astype(str)
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "financials":
+            df = t.financials
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "balance_sheet":
+            df = t.balance_sheet
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "cashflow":
+            df = t.cashflow
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "recommendations":
+            df = t.recommendations
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            if "Date" in df.columns:
+                df["Date"] = df["Date"].astype(str)
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "holders":
+            df = t.institutional_holders
+            if df is None or df.empty:
+                return jsonify([])
+            df = df.reset_index()
+            if "Date" in df.columns:
+                df["Date"] = df["Date"].astype(str)
+            return jsonify(df.to_dict(orient="records"))
+
+        elif category == "options":
+            return jsonify(list(t.options))
+
+        elif category == "news":
+            return jsonify(t.news)
+
+        else:
+            return jsonify({"error": f"Unsupported category: {category}"}), 400
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/<ticker>/options/<expiry>")
+def yf_options_chain_proxy(ticker, expiry):
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker.upper())
+        chain = t.option_chain(expiry)
+        calls = chain.calls.reset_index().to_dict(orient="records")
+        puts = chain.puts.reset_index().to_dict(orient="records")
+        return jsonify({"calls": calls, "puts": puts})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 # ── FRED (Federal Reserve) data proxy ────────────────────────────────────────
 # The FRED REST API requires a free API key. We proxy it server-side to avoid
 # CORS restrictions and keep the key out of the browser.
