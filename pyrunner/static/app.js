@@ -239,6 +239,21 @@ async def yf_download(ticker, period="1mo", interval="1d"):
     return df.set_index("Date")
 
 # ── yf_info: fetch company profile metadata ──────────────────
+# ── yf_fetch: universally fetch any category from server proxy ────────
+async def yf_fetch(ticker, category):
+    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/{category}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        df = pd.DataFrame(data)
+        if "Date" in df.columns:
+            df["Date"] = pd.to_datetime(df["Date"])
+            df = df.set_index("Date")
+        return df
+    return data
+
+# ── yf_info: fetch company profile metadata ──────────────────
 async def yf_info(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/info")
     data = await resp.json()
@@ -1932,104 +1947,9 @@ print(f"Fetching {ticker} history ({period}, {interval})...")
 df = await yf_download(ticker, period=period, interval=interval)
 print(f"Data shape: {df.shape}")
 print(df.tail(10))`;
-    } else if (node.category === 'metadata') {
-      pythonCode = `\
-# Fetch history metadata for ticker
-ticker = "AAPL"
-
-print(f"Fetching metadata for {ticker}...")
-info = await yf_info(ticker)
-keys = ["exchange", "timezone", "currency", "firstTradeDate", "symbol", "longName"]
-metadata = {k: info.get(k) for k in keys if k in info}
-for k, v in metadata.items():
-    print(f"{k:16}: {v}")`;
-    } else if (node.category === 'dividends') {
-      pythonCode = `\
-# Fetch dividends timeline
-ticker = "AAPL"
-
-print(f"Fetching dividends for {ticker}...")
-df = await yf_dividends(ticker)
-print(df.tail(10))`;
-    } else if (node.category === 'splits') {
-      pythonCode = `\
-# Fetch stock split timeline
-ticker = "AAPL"
-
-print(f"Fetching splits for {ticker}...")
-df = await yf_splits(ticker)
-print(df)`;
-    } else if (node.category === 'actions') {
-      pythonCode = `\
-# Fetch combined corporate actions (dividends + splits)
-ticker = "AAPL"
-
-print(f"Fetching corporate actions for {ticker}...")
-df = await yf_actions(ticker)
-print(df.tail(10))`;
-    } else if (node.category === 'financials') {
-      pythonCode = `\
-# Fetch annual income statement
-ticker = "AAPL"
-
-print(f"Fetching financials for {ticker}...")
-df = await yf_financials(ticker)
-print(df.head(10))`;
-    } else if (node.category === 'balance_sheet') {
-      pythonCode = `\
-# Fetch annual balance sheet
-ticker = "AAPL"
-
-print(f"Fetching balance sheet for {ticker}...")
-df = await yf_balance_sheet(ticker)
-print(df.head(10))`;
-    } else if (node.category === 'cashflow') {
-      pythonCode = `\
-# Fetch annual cash flow statement
-ticker = "AAPL"
-
-print(f"Fetching cashflow for {ticker}...")
-df = await yf_cashflow(ticker)
-print(df.head(10))`;
-    } else if (node.category === 'recommendations') {
-      pythonCode = `\
-# Fetch analyst consensus and recommendations
-ticker = "AAPL"
-
-print(f"Fetching analyst recommendations for {ticker}...")
-df = await yf_recommendations(ticker)
-print(df.tail(10))`;
-    } else if (node.category === 'holders') {
-      pythonCode = `\
-# Fetch institutional roster and holdings
-ticker = "AAPL"
-
-print(f"Fetching institutional holders for {ticker}...")
-df = await yf_holders(ticker)
-print(df.head(10))`;
-    } else if (node.category === 'info') {
-      pythonCode = `\
-# Fetch full company profile information
-ticker = "AAPL"
-
-print(f"Fetching company profile for {ticker}...")
-info = await yf_info(ticker)
-print(f"Company: {info.get('longName')}")
-print(f"Sector : {info.get('sector')}")
-print(f"Summary: {info.get('longBusinessSummary')[:250]}...")`;
-    } else if (node.category === 'news') {
-      pythonCode = `\
-# Fetch latest headlines and news articles
-ticker = "AAPL"
-
-print(f"Fetching news for {ticker}...")
-news = await yf_news(ticker)
-for item in news[:5]:
-    print(f"- {item.get('title')}")
-    print(f"  Publisher: {item.get('publisher')} | Link: {item.get('link')}\\n")`;
     } else if (node.category === 'options') {
       pythonCode = `\
-# Fetch option expiration dates and chains
+# Fetch option expiration dates
 ticker = "AAPL"
 
 print(f"Fetching option dates for {ticker}...")
@@ -2039,11 +1959,28 @@ for d in dates[:5]:
     print(f"  {d}")
 
 if len(dates) > 0:
-    print(f"\\nFetching option chain for nearest expiry: {dates[0]}...")
+    print(f"\nFetching option chain for nearest expiry: {dates[0]}...")
     chain = await yf_option_chain(ticker, dates[0])
     print(f"Calls count: {len(chain['calls'])}, Puts count: {len(chain['puts'])}")
-    print("\\nNearest Calls:")
+    print("\nNearest Calls:")
     print(chain['calls'][['strike', 'lastPrice', 'volume']].head(5))`;
+    } else {
+      pythonCode = `\
+# Fetch ${node.name}
+ticker = "AAPL"
+category = "${node.category}"
+
+print(f"Fetching {category} for {ticker}...")
+data = await yf_fetch(ticker, category)
+
+if hasattr(data, 'head'):
+    print(f"Data shape: {data.shape}")
+    print(data.head(10))
+elif isinstance(data, dict):
+    for k, v in list(data.items())[:10]:
+        print(f"{k}: {v}")
+else:
+    print(data[:5] if isinstance(data, list) else data)`;
     }
   } else {
     pythonCode = `\

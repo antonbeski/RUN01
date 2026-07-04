@@ -61,90 +61,48 @@ def yf_proxy(ticker):
 def yf_category_proxy(ticker, category):
     try:
         import yfinance as yf
+        import pandas as pd
+        import numpy as np
+        
         t = yf.Ticker(ticker.upper())
         category = category.lower()
 
-        if category == "info":
-            # Fetch and return info dict
-            return jsonify(t.info)
+        # Handle specific properties that require special conversion
+        if category == "options": return jsonify(list(t.options))
+        if category == "news": return jsonify(t.news)
+        if category == "info": return jsonify(t.info)
+        if category == "fast_info": return jsonify(dict(t.fast_info))
+        if category == "calendar": return jsonify(t.calendar)
 
-        elif category == "actions":
-            df = t.actions
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
-            if "Date" in df.columns:
-                df["Date"] = df["Date"].astype(str)
-            return jsonify(df.to_dict(orient="records"))
+        # Dynamically get any other attribute (insider_transactions, earnings_dates, etc.)
+        if not hasattr(t, category):
+            return jsonify({"error": f"Unsupported or invalid category: {category}"}), 400
+            
+        data = getattr(t, category)
+        
+        if callable(data):
+            # If it's a method requiring no args
+            try:
+                data = data()
+            except Exception:
+                return jsonify({"error": f"Cannot invoke method {category}() automatically."}), 400
 
-        elif category == "dividends":
-            s = t.dividends
-            if s is None or s.empty:
+        if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
+            if data.empty:
                 return jsonify([])
-            df = s.reset_index()
-            if "Date" in df.columns:
-                df["Date"] = df["Date"].astype(str)
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "splits":
-            s = t.splits
-            if s is None or s.empty:
-                return jsonify([])
-            df = s.reset_index()
-            if "Date" in df.columns:
-                df["Date"] = df["Date"].astype(str)
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "financials":
-            df = t.financials
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
+            df = data.reset_index()
             df.columns = [str(c) for c in df.columns]
+            # Convert datetime columns to string
+            for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]', '<M8[ns]']).columns:
+                df[col] = df[col].astype(str)
+            # Handle NaNs
+            df = df.replace({np.nan: None})
             return jsonify(df.to_dict(orient="records"))
-
-        elif category == "balance_sheet":
-            df = t.balance_sheet
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
-            df.columns = [str(c) for c in df.columns]
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "cashflow":
-            df = t.cashflow
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
-            df.columns = [str(c) for c in df.columns]
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "recommendations":
-            df = t.recommendations
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
-            if "Date" in df.columns:
-                df["Date"] = df["Date"].astype(str)
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "holders":
-            df = t.institutional_holders
-            if df is None or df.empty:
-                return jsonify([])
-            df = df.reset_index()
-            if "Date" in df.columns:
-                df["Date"] = df["Date"].astype(str)
-            return jsonify(df.to_dict(orient="records"))
-
-        elif category == "options":
-            return jsonify(list(t.options))
-
-        elif category == "news":
-            return jsonify(t.news)
-
+        
+        elif isinstance(data, dict) or isinstance(data, list):
+            return jsonify(data)
         else:
-            return jsonify({"error": f"Unsupported category: {category}"}), 400
+            return jsonify(str(data))
 
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
