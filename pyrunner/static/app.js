@@ -1188,64 +1188,185 @@ const YF_TREE = {
           name: "01_price_history",
           type: "folder",
           children: [
-            { name: "ohlcv_1d.csv", type: "file", category: "history", params: { period: "1y", interval: "1d" }, desc: "1-day interval OHLCV price history (default, split+dividend adjusted)" },
-            { name: "ohlcv_1wk.csv", type: "file", category: "history", params: { period: "2y", interval: "1wk" }, desc: "1-week interval OHLCV price history" },
-            { name: "ohlcv_1mo.csv", type: "file", category: "history", params: { period: "5y", interval: "1mo" }, desc: "1-month interval OHLCV price history" },
-            { name: "ohlcv_3mo.csv", type: "file", category: "history", params: { period: "max", interval: "3mo" }, desc: "3-month interval OHLCV price history" },
-            { name: "ohlcv_1m.csv", type: "file", category: "history", params: { period: "7d", interval: "1m" }, desc: "1-minute intraday bars (last 7 days only)" },
-            { name: "ohlcv_5m.csv", type: "file", category: "history", params: { period: "60d", interval: "5m" }, desc: "5-minute intraday bars (last 60 days only)" },
-            { name: "ohlcv_1h.csv", type: "file", category: "history", params: { period: "730d", interval: "1h" }, desc: "1-hour bars (last 730 days)" },
-            { name: "ohlcv_max_period.csv", type: "file", category: "history", params: { period: "max", interval: "1d" }, desc: "Full available daily price history" },
-            { name: "history_metadata.json", type: "file", category: "metadata", desc: "Exchange, timezone, GMToffset, currency, firstTradeDate metadata" }
+            { name: "ohlcv_1d.csv", type: "file", category: "history", params: { interval: "1d" }, desc: "Open,High,Low,Close,Volume,Dividends,Splits" },
+            { name: "ohlcv_1wk.csv", type: "file", category: "history", params: { interval: "1wk" }, desc: "" },
+            { name: "ohlcv_1mo.csv", type: "file", category: "history", params: { interval: "1mo" }, desc: "" },
+            { name: "ohlcv_3mo.csv", type: "file", category: "history", params: { interval: "3mo" }, desc: "" },
+            { name: "ohlcv_1m.csv", type: "file", category: "history", params: { interval: "1m" }, desc: "intraday, last 7 days only" },
+            { name: "ohlcv_2m_5m_15m_30m.csv", type: "file", category: "history", params: { interval: "5m" }, desc: "last 60 days only" },
+            { name: "ohlcv_1h_90m.csv", type: "file", category: "history", params: { interval: "1h" }, desc: "~730 days" },
+            { name: "ohlcv_max_period.csv", type: "file", category: "history", params: { period: "max" }, desc: "full available history" },
+            { name: "prepost_market.csv", type: "file", category: "history", params: { prepost: true }, desc: "pre/post-market bars" },
+            { name: "auto_adjusted.csv", type: "file", category: "history", params: { auto_adjust: true }, desc: "default, split+div adjusted" },
+            { name: "raw_unadjusted.csv", type: "file", category: "history", params: { auto_adjust: false }, desc: "raw close, no adjustment" },
+            { name: "back_adjusted.csv", type: "file", category: "history", params: { back_adjust: true }, desc: "" },
+            { name: "history_metadata.json", type: "file", category: "metadata", desc: "exchange,timezone,gmtoffset,currency,firstTradeDate" },
+            { name: "isin.txt", type: "file", category: "isin", desc: "isin / get_isin()" }
           ]
         },
         {
           name: "02_corporate_actions",
           type: "folder",
           children: [
-            { name: "dividends.csv", type: "file", category: "dividends", desc: "Historical dividend payments timeline" },
-            { name: "splits.csv", type: "file", category: "splits", desc: "Historical stock split events timeline" },
-            { name: "actions_combined.csv", type: "file", category: "actions", desc: "Dividends and splits merged timeline" }
+            { name: "dividends.csv", type: "file", category: "dividends", desc: "dividends / get_dividends()" },
+            { name: "splits.csv", type: "file", category: "splits", desc: "splits / get_splits()" },
+            { name: "capital_gains.csv", type: "file", category: "capital_gains", desc: "capital_gains / get_capital_gains() (funds only)" },
+            { name: "actions_combined.csv", type: "file", category: "actions", desc: "actions / get_actions() dividends+splits merged timeline" },
+            { name: "shares_outstanding_history.csv", type: "file", category: "shares_full", desc: "get_shares_full(start,end) granular share-count history" }
           ]
         },
         {
           name: "03_financial_statements",
           type: "folder",
           children: [
-            { name: "income_statement_annual.csv", type: "file", category: "financials", desc: "Annual income statement (revenue, profit, operating expenses, etc.)" },
-            { name: "balance_sheet_annual.csv", type: "file", category: "balance_sheet", desc: "Annual balance sheet (assets, liabilities, equity, debt, etc.)" },
-            { name: "cashflow_annual.csv", type: "file", category: "cashflow", desc: "Annual cash flow statement (operating, investing, financing flows)" }
+            { name: "income_statement_annual.csv", type: "file", category: "financials", desc: "income_stmt / financials" },
+            { name: "income_statement_quarterly.csv", type: "file", category: "quarterly_financials", desc: "quarterly_income_stmt / quarterly_financials" },
+            { name: "income_statement_ttm.csv", type: "file", category: "ttm_financials", desc: "ttm_income_stmt / ttm_financials" },
+            { name: "balance_sheet_annual.csv", type: "file", category: "balance_sheet", desc: "balance_sheet / balancesheet" },
+            { name: "balance_sheet_quarterly.csv", type: "file", category: "quarterly_balance_sheet", desc: "quarterly_balance_sheet" },
+            { name: "cashflow_annual.csv", type: "file", category: "cashflow", desc: "cashflow / cash_flow" },
+            { name: "cashflow_quarterly.csv", type: "file", category: "quarterly_cashflow", desc: "quarterly_cashflow" },
+            { name: "cashflow_ttm.csv", type: "file", category: "ttm_cashflow", desc: "ttm_cashflow" },
+            { name: "earnings_legacy.csv", type: "file", category: "earnings", desc: "earnings / quarterly_earnings (deprecated, kept for compat)" }
+          ]
+        },
+        {
+          name: "04_earnings_and_estimates",
+          type: "folder",
+          children: [
+            { name: "earnings_dates.csv", type: "file", category: "earnings_dates", desc: "earnings_dates / get_earnings_dates() past+upcoming, EPS est vs actual" },
+            { name: "earnings_history.csv", type: "file", category: "earnings_history", desc: "earnings_history epsEstimate, epsActual, epsDifference, surprisePercent" },
+            { name: "earnings_estimate.csv", type: "file", category: "earnings_estimate", desc: "earnings_estimate analyst count + avg/low/high EPS est (0q,+1q,0y,+1y)" },
+            { name: "revenue_estimate.csv", type: "file", category: "revenue_estimate", desc: "revenue_estimate analyst revenue estimates, same periods" },
+            { name: "eps_trend.csv", type: "file", category: "eps_trend", desc: "eps_trend estimate trend at current/7/30/60/90 days ago" },
+            { name: "eps_revisions.csv", type: "file", category: "eps_revisions", desc: "eps_revisions # analysts revising up/down in last 7/30 days" },
+            { name: "growth_estimates.csv", type: "file", category: "growth_estimates", desc: "growth_estimates stock vs industry/sector/index growth (incl. +5y,-5y)" },
+            { name: "calendar.json", type: "file", category: "calendar", desc: "calendar / get_calendar() next earnings date, ex-div date & amount" }
           ]
         },
         {
           name: "05_analyst_coverage",
           type: "folder",
           children: [
-            { name: "recommendations.csv", type: "file", category: "recommendations", desc: "StrongBuy / Buy / Hold / Sell / StrongSell counts by month" }
+            { name: "recommendations.csv", type: "file", category: "recommendations", desc: "recommendations strongBuy/buy/hold/sell/strongSell counts by month" },
+            { name: "recommendations_summary.csv", type: "file", category: "recommendations_summary", desc: "recommendations_summary" },
+            { name: "upgrades_downgrades.csv", type: "file", category: "upgrades_downgrades", desc: "upgrades_downgrades date, firm, fromGrade, toGrade, action" },
+            { name: "analyst_price_targets.json", type: "file", category: "analyst_price_targets", desc: "analyst_price_targets current/low/high/mean/median target" }
           ]
         },
         {
           name: "06_ownership_and_holders",
           type: "folder",
           children: [
-            { name: "institutional_holders.csv", type: "file", category: "holders", desc: "Top institutional holders, shares held, value, percent outstanding" }
+            { name: "major_holders.csv", type: "file", category: "major_holders", desc: "major_holders % held by insiders / institutions, # institutions" },
+            { name: "institutional_holders.csv", type: "file", category: "institutional_holders", desc: "institutional_holders top holders, shares held, value, % out" },
+            { name: "mutualfund_holders.csv", type: "file", category: "mutualfund_holders", desc: "mutualfund_holders top mutual-fund holders" },
+            { name: "insider_transactions.csv", type: "file", category: "insider_transactions", desc: "insider_transactions individual insider buy/sell trades" },
+            { name: "insider_purchases.csv", type: "file", category: "insider_purchases", desc: "insider_purchases aggregated purchase/sale summary" },
+            { name: "insider_roster_holders.csv", type: "file", category: "insider_roster_holders", desc: "insider_roster_holders named insiders + position/title" }
           ]
         },
         {
           name: "07_company_profile",
           type: "folder",
           children: [
-            { name: "info_full.json", type: "file", category: "info", desc: "Full company profile (150+ fields, health ratios, margins, sector, etc.)" },
-            { name: "news.json", type: "file", category: "news", desc: "Latest headlines, publisher details, links, and times" }
+            { name: "info_full.json", type: "file", category: "info", desc: "info / get_info() 150+ fields" },
+            { name: "fast_info.json", type: "file", category: "fast_info", desc: "fast_info / get_fast_info() quick snapshot (fewer fields, faster)" },
+            { name: "sec_filings.json", type: "file", category: "sec_filings", desc: "sec_filings / get_sec_filings() 10-K/10-Q/8-K list + links + dates" },
+            { name: "sustainability_esg.csv", type: "file", category: "sustainability", desc: "sustainability / get_sustainability() E/S/G scores, controversy level" },
+            { name: "shares_basic.csv", type: "file", category: "shares", desc: "shares / get_shares()" },
+            { name: "valuation_measures_history.csv", type: "file", category: "valuation", desc: "valuation / get_valuation_measures(freq,periods) market cap, trailing/forward P/E, P/S, P/B, EV/EBITDA, EV/Revenue" }
           ]
         },
         {
           name: "08_options",
           type: "folder",
           children: [
-            { name: "expiration_dates.txt", type: "file", category: "options", desc: "List of all active option chain expiration dates" }
+            { name: "expiration_dates.txt", type: "file", category: "options", desc: "options tuple of every available expiry date" },
+            { name: "calls_<EXPIRY>.csv", type: "file", category: "option_chain", desc: "option_chain(date).calls strike,bid,ask,lastPrice,volume,openInterest,impliedVolatility,inTheMoney" },
+            { name: "puts_<EXPIRY>.csv", type: "file", category: "option_chain", desc: "option_chain(date).puts same columns" },
+            { name: "underlying_<EXPIRY>.json", type: "file", category: "option_chain", desc: "option_chain(date).underlying underlying snapshot at fetch time" }
+          ]
+        },
+        {
+          name: "09_news",
+          type: "folder",
+          children: [
+            { name: "news.json", type: "file", category: "news", desc: "news / get_news(count, tab) headline, publisher, link, time, thumbnail" }
+          ]
+        },
+        {
+          name: "10_funds_data",
+          type: "folder",
+          children: [
+            { name: "description.txt", type: "file", category: "funds_data", desc: ".description fund objective/strategy text" },
+            { name: "fund_overview.json", type: "file", category: "funds_data", desc: ".fund_overview category, family, legal type, inception" },
+            { name: "fund_operations.csv", type: "file", category: "funds_data", desc: ".fund_operations net expense ratio, turnover, vs. category avg" },
+            { name: "asset_classes.csv", type: "file", category: "funds_data", desc: ".asset_classes % cash / stock / bond / other" },
+            { name: "top_holdings.csv", type: "file", category: "funds_data", desc: ".top_holdings top ~10 holdings + % weight" },
+            { name: "equity_holdings.csv", type: "file", category: "funds_data", desc: ".equity_holdings avg P/E, P/B, P/CF, P/S, growth vs category" },
+            { name: "bond_holdings.csv", type: "file", category: "funds_data", desc: ".bond_holdings duration, maturity vs category" },
+            { name: "bond_ratings.csv", type: "file", category: "funds_data", desc: ".bond_ratings % AAA/AA/A/BBB/BB/B/below-B/other" },
+            { name: "sector_weightings.csv", type: "file", category: "funds_data", desc: ".sector_weightings % allocation by GICS sector" }
           ]
         }
+      ]
+    },
+    {
+      name: "MULTI_TICKER",
+      type: "folder",
+      children: [
+        { name: "batch_download_ohlcv.csv", type: "file", category: "batch_download", desc: "yf.download([tickers], start, end, group_by, threads) many tickers, one call" },
+        { name: "tickers_bulk_object.json", type: "file", category: "tickers", desc: "yf.Tickers('AAPL MSFT GOOG') dict of Ticker objects, one request each" },
+        { name: "live_websocket_stream.jsonl", type: "file", category: "websocket", desc: "yf.WebSocket() / AsyncWebSocket() / Ticker.live() realtime streamed trade price+volume" }
+      ]
+    },
+    {
+      name: "MARKET",
+      type: "folder",
+      children: [
+        { name: "market_status.json", type: "file", category: "market_status", desc: ".status open/closed, session start/end, timezone" },
+        { name: "market_summary.json", type: "file", category: "market_summary", desc: ".summary snapshot of major indices (^GSPC,^DJI,^IXIC,^RUT,^VIX,…)" }
+      ]
+    },
+    {
+      name: "SECTOR_AND_INDUSTRY",
+      type: "folder",
+      children: [
+        { name: "sector_overview.json", type: "file", category: "sector", desc: "Sector.overview description, market cap, # companies/employees" },
+        { name: "sector_top_companies.csv", type: "file", category: "sector", desc: "Sector.top_companies ranked by market cap within the sector" },
+        { name: "sector_top_etfs.csv", type: "file", category: "sector", desc: "Sector.top_etfs largest ETFs tracking the sector" },
+        { name: "sector_top_mutual_funds.csv", type: "file", category: "sector", desc: "Sector.top_mutual_funds" },
+        { name: "sector_industries_breakdown.csv", type: "file", category: "sector", desc: "Sector.industries market weight of each industry in sector" },
+        { name: "sector_research_reports.json", type: "file", category: "sector", desc: "Sector.research_reports" },
+        { name: "industry_overview.json", type: "file", category: "industry", desc: "Industry.overview" },
+        { name: "industry_top_performing_companies.csv", type: "file", category: "industry", desc: "Industry.top_performing_companies by price return" },
+        { name: "industry_top_growth_companies.csv", type: "file", category: "industry", desc: "Industry.top_growth_companies by growth metrics" }
+      ]
+    },
+    {
+      name: "SCREENER",
+      type: "folder",
+      children: [
+        { name: "equity_screen_custom.csv", type: "file", category: "screener", desc: "EquityQuery(operator,operand) filter by region,sector,exchange, market cap, P/E, EPS growth, price vs moving avg, peer group, etc." },
+        { name: "fund_screen_custom.csv", type: "file", category: "screener", desc: "FundQuery(operator,operand) filter mutual funds by region/category/performance" },
+        { name: "etf_screen_custom.csv", type: "file", category: "screener", desc: "ETFQuery(operator,operand) filter ETFs by category, fund family, ratings" },
+        { name: "predefined_screens.csv", type: "file", category: "screener", desc: "screen('day_gainers'/'day_losers'/'most_actives'/'undervalued_large_caps'/'growth_technology_stocks'/etc.)" }
+      ]
+    },
+    {
+      name: "SEARCH_AND_LOOKUP",
+      type: "folder",
+      children: [
+        { name: "search_results.json", type: "file", category: "search", desc: "Search(query) matching quotes, news, research for free-text search" },
+        { name: "lookup_results.csv", type: "file", category: "lookup", desc: "Lookup(query) symbol lookup filtered by type (stock/etf/fund/index/future/crypto)" }
+      ]
+    },
+    {
+      name: "CALENDARS",
+      type: "folder",
+      children: [
+        { name: "calendar_events.csv", type: "file", category: "calendars", desc: "broader economic/earnings calendar events across the market" }
       ]
     }
   ]
@@ -1263,35 +1384,62 @@ const FRED_TREE = {
           name: "interest_rates",
           type: "folder",
           children: [
-            { name: "fed_funds_rate.csv", type: "file", category: "fred", series_id: "FEDFUNDS", desc: "Effective Federal Funds Rate (monthly)" },
-            { name: "treasury_yields_10yr.csv", type: "file", category: "fred", series_id: "DGS10", desc: "10-Year Treasury Constant Maturity Rate (daily)" },
-            { name: "yield_curve_spread.csv", type: "file", category: "fred", series_id: "T10Y2Y", desc: "10-Year Treasury Constant Maturity Minus 2-Year Treasury (daily)" },
-            { name: "sofr.csv", type: "file", category: "fred", series_id: "SOFR", desc: "Secured Overnight Financing Rate (daily)" },
-            { name: "mortgage_rate_30yr.csv", type: "file", category: "fred", series_id: "MORTGAGE30US", desc: "30-Year Fixed Rate Mortgage Average in the U.S. (weekly)" }
+            { name: "fed_funds_rate.csv", type: "file", category: "fred", series_id: "FEDFUNDS", desc: "FEDFUNDS (monthly), DFF (daily)" },
+            { name: "treasury_yields_all_maturities.csv", type: "file", category: "fred", series_id: "DGS10", desc: "DGS1MO,DGS3MO,DGS1,DGS2,DGS5,DGS10,DGS30" },
+            { name: "yield_curve_spreads.csv", type: "file", category: "fred", series_id: "T10Y2Y", desc: "T10Y2Y, T10Y3M" },
+            { name: "sofr.csv", type: "file", category: "fred", series_id: "SOFR", desc: "SOFR" },
+            { name: "prime_rate.csv", type: "file", category: "fred", series_id: "DPRIME", desc: "DPRIME" },
+            { name: "tips_real_yield.csv", type: "file", category: "fred", series_id: "DFII10", desc: "DFII10" },
+            { name: "mortgage_rates_30yr_15yr.csv", type: "file", category: "fred", series_id: "MORTGAGE30US", desc: "MORTGAGE30US, MORTGAGE15US" }
           ]
         },
         {
           name: "exchange_rates",
           type: "folder",
           children: [
-            { name: "usd_vs_eur.csv", type: "file", category: "fred", series_id: "DEXUSEU", desc: "U.S. Dollars to Euro Foreign Exchange Rate (daily)" },
-            { name: "trade_weighted_usd.csv", type: "file", category: "fred", series_id: "DTWEXBGS", desc: "Trade Weighted U.S. Dollar Index: Broad, Goods and Services (daily)" }
+            { name: "usd_vs_major_currencies.csv", type: "file", category: "fred", series_id: "DEXUSEU", desc: "DEXUSEU,DEXJPUS,DEXCHUS,DEXUSUK,DTWEXBGS(broad $ index)" }
           ]
         },
         {
           name: "monetary_data",
           type: "folder",
           children: [
-            { name: "money_supply_m2.csv", type: "file", category: "fred", series_id: "M2SL", desc: "M2 Money Supply (monthly, seasonally adjusted)" },
-            { name: "fed_balance_sheet_assets.csv", type: "file", category: "fred", series_id: "WALCL", desc: "Federal Reserve Total Assets (weekly)" }
+            { name: "money_supply_m1_m2.csv", type: "file", category: "fred", series_id: "M2SL", desc: "M1SL, M2SL" },
+            { name: "monetary_base.csv", type: "file", category: "fred", series_id: "BOGMBASE", desc: "BOGMBASE" },
+            { name: "fed_balance_sheet_assets.csv", type: "file", category: "fred", series_id: "WALCL", desc: "WALCL" }
           ]
         },
         {
           name: "financial_indicators",
           type: "folder",
           children: [
-            { name: "vix_volatility_index.csv", type: "file", category: "fred", series_id: "VIXCLS", desc: "CBOE Volatility Index: VIX (daily)" },
-            { name: "sp500_index.csv", type: "file", category: "fred", series_id: "SP500", desc: "S&P 500 Stock Market Index (daily)" }
+            { name: "vix_volatility_index.csv", type: "file", category: "fred", series_id: "VIXCLS", desc: "VIXCLS" },
+            { name: "sp500_index.csv", type: "file", category: "fred", series_id: "SP500", desc: "SP500" },
+            { name: "corporate_bond_yields_spreads.csv", type: "file", category: "fred", series_id: "BAMLH0A0HYM2", desc: "AAA, BAA, BAA10Y" },
+            { name: "high_yield_spread.csv", type: "file", category: "fred", series_id: "BAMLH0A0HYM2", desc: "BAMLH0A0HYM2" }
+          ]
+        },
+        {
+          name: "banking",
+          type: "folder",
+          children: [
+            { name: "bank_credit_all_commercial.csv", type: "file", category: "fred", series_id: "TOTBKCR", desc: "TOTBKCR" },
+            { name: "commercial_industrial_loans.csv", type: "file", category: "fred", series_id: "BUSLOANS", desc: "BUSLOANS" },
+            { name: "bank_reserves.csv", type: "file", category: "fred", series_id: "TOTRESNS", desc: "TOTRESNS" }
+          ]
+        },
+        {
+          name: "business_lending",
+          type: "folder",
+          children: [
+            { name: "business_lending_detail.csv", type: "file", category: "fred", series_id: "BUSLOANS", desc: "" }
+          ]
+        },
+        {
+          name: "foreign_exchange_intervention",
+          type: "folder",
+          children: [
+            { name: "fx_intervention.csv", type: "file", category: "fred", series_id: "DEXUSEU", desc: "" }
           ]
         }
       ]
@@ -1304,15 +1452,61 @@ const FRED_TREE = {
           name: "current_population_survey",
           type: "folder",
           children: [
-            { name: "unemployment_rate_national.csv", type: "file", category: "fred", series_id: "UNRATE", desc: "U.S. National Unemployment Rate (monthly)" },
-            { name: "labor_force_participation.csv", type: "file", category: "fred", series_id: "CIVPART", desc: "Labor Force Participation Rate (monthly)" }
+            { name: "unemployment_rate_national.csv", type: "file", category: "fred", series_id: "UNRATE", desc: "UNRATE" },
+            { name: "unemployment_rate_by_state.csv", type: "file", category: "fred", series_id: "CAUR", desc: "e.g. CAUR, TXUR, NYUR (one code per state)" },
+            { name: "labor_force_participation.csv", type: "file", category: "fred", series_id: "CIVPART", desc: "CIVPART" }
           ]
         },
         {
           name: "current_employment_statistics",
           type: "folder",
           children: [
-            { name: "nonfarm_payrolls.csv", type: "file", category: "fred", series_id: "PAYEMS", desc: "All Employees, Total Nonfarm Payrolls (monthly)" }
+            { name: "nonfarm_payrolls.csv", type: "file", category: "fred", series_id: "PAYEMS", desc: "PAYEMS" },
+            { name: "avg_hourly_earnings.csv", type: "file", category: "fred", series_id: "CES0500000003", desc: "CES0500000003" }
+          ]
+        },
+        {
+          name: "adp_employment",
+          type: "folder",
+          children: [
+            { name: "adp_employment.csv", type: "file", category: "fred", series_id: "ADPMNUSNERSA", desc: "ADPMNUSNERSA" }
+          ]
+        },
+        {
+          name: "jolts",
+          type: "folder",
+          children: [
+            { name: "job_openings.csv", type: "file", category: "fred", series_id: "JTSJOL", desc: "JTSJOL" },
+            { name: "hires.csv", type: "file", category: "fred", series_id: "JTSHIL", desc: "JTSHIL" },
+            { name: "quits.csv", type: "file", category: "fred", series_id: "JTSQUL", desc: "JTSQUL" }
+          ]
+        },
+        {
+          name: "weekly_initial_claims",
+          type: "folder",
+          children: [
+            { name: "initial_claims.csv", type: "file", category: "fred", series_id: "ICSA", desc: "ICSA" }
+          ]
+        },
+        {
+          name: "population",
+          type: "folder",
+          children: [
+            { name: "population.csv", type: "file", category: "fred", series_id: "POPTHM", desc: "POPTHM" }
+          ]
+        },
+        {
+          name: "productivity_and_costs",
+          type: "folder",
+          children: [
+            { name: "productivity.csv", type: "file", category: "fred", series_id: "OPHNFB", desc: "OPHNFB (nonfarm labor productivity)" }
+          ]
+        },
+        {
+          name: "minimum_wage",
+          type: "folder",
+          children: [
+            { name: "minimum_wage.csv", type: "file", category: "fred", series_id: "FEDMINNFRWG", desc: "FEDMINNFRWG" }
           ]
         }
       ]
@@ -1325,15 +1519,39 @@ const FRED_TREE = {
           name: "national_income_product_accounts",
           type: "folder",
           children: [
-            { name: "gdp_nominal.csv", type: "file", category: "fred", series_id: "GDP", desc: "U.S. Gross Domestic Product (quarterly, nominal)" },
-            { name: "gdp_real_chained.csv", type: "file", category: "fred", series_id: "GDPC1", desc: "U.S. Real Gross Domestic Product (quarterly, inflation-adjusted)" }
+            { name: "gdp_nominal.csv", type: "file", category: "fred", series_id: "GDP", desc: "GDP" },
+            { name: "gdp_real_chained.csv", type: "file", category: "fred", series_id: "GDPC1", desc: "GDPC1" },
+            { name: "gdp_per_capita.csv", type: "file", category: "fred", series_id: "A939RX0Q048SBEA", desc: "A939RX0Q048SBEA" },
+            { name: "gnp.csv", type: "file", category: "fred", series_id: "GNP", desc: "GNP" },
+            { name: "personal_consumption_expenditures.csv", type: "file", category: "fred", series_id: "PCE", desc: "PCE" },
+            { name: "gross_private_investment.csv", type: "file", category: "fred", series_id: "GPDI", desc: "GPDI" },
+            { name: "govt_consumption_investment.csv", type: "file", category: "fred", series_id: "GCE", desc: "GCE" },
+            { name: "net_exports.csv", type: "file", category: "fred", series_id: "NETEXP", desc: "NETEXP" }
           ]
         },
         {
           name: "federal_government_debt",
           type: "folder",
           children: [
-            { name: "total_public_debt.csv", type: "file", category: "fred", series_id: "GFDEBTN", desc: "Federal Debt: Total Public Debt (quarterly)" }
+            { name: "total_public_debt.csv", type: "file", category: "fred", series_id: "GFDEBTN", desc: "GFDEBTN" },
+            { name: "debt_held_by_public.csv", type: "file", category: "fred", series_id: "FYGFDPUN", desc: "FYGFDPUN" }
+          ]
+        },
+        {
+          name: "flow_of_funds",
+          type: "folder",
+          children: [
+            { name: "flow_of_funds.csv", type: "file", category: "fred", series_id: "BOGZ1FL192090005Q", desc: "household/sector balance sheets, by instrument" }
+          ]
+        },
+        {
+          name: "us_trade_international_transactions",
+          type: "folder",
+          children: [
+            { name: "trade_balance_goods_services.csv", type: "file", category: "fred", series_id: "BOPGSTB", desc: "BOPGSTB" },
+            { name: "exports.csv", type: "file", category: "fred", series_id: "EXPGS", desc: "EXPGS" },
+            { name: "imports.csv", type: "file", category: "fred", series_id: "IMPGS", desc: "IMPGS" },
+            { name: "current_account_balance.csv", type: "file", category: "fred", series_id: "IEABC", desc: "IEABC" }
           ]
         }
       ]
@@ -1346,15 +1564,34 @@ const FRED_TREE = {
           name: "housing",
           type: "folder",
           children: [
-            { name: "case_shiller_home_price_index.csv", type: "file", category: "fred", series_id: "CSUSHPISA", desc: "S&P CoreLogic Case-Shiller U.S. National Home Price Index (monthly)" },
-            { name: "housing_starts.csv", type: "file", category: "fred", series_id: "HOUST", desc: "New Privately-Owned Housing Units Started (monthly)" }
+            { name: "case_shiller_home_price_index.csv", type: "file", category: "fred", series_id: "CSUSHPISA", desc: "CSUSHPISA" },
+            { name: "housing_starts.csv", type: "file", category: "fred", series_id: "HOUST", desc: "HOUST" },
+            { name: "building_permits.csv", type: "file", category: "fred", series_id: "PERMIT", desc: "PERMIT" },
+            { name: "existing_home_sales.csv", type: "file", category: "fred", series_id: "EXHOSLUSM495S", desc: "EXHOSLUSM495S" },
+            { name: "new_home_sales.csv", type: "file", category: "fred", series_id: "HSN1F", desc: "HSN1F" },
+            { name: "median_home_sale_price.csv", type: "file", category: "fred", series_id: "MSPUS", desc: "MSPUS" }
           ]
         },
         {
           name: "industrial_production_capacity",
           type: "folder",
           children: [
-            { name: "industrial_production_index.csv", type: "file", category: "fred", series_id: "INDPRO", desc: "Industrial Production Index (monthly)" }
+            { name: "industrial_production_index.csv", type: "file", category: "fred", series_id: "INDPRO", desc: "INDPRO" },
+            { name: "capacity_utilization.csv", type: "file", category: "fred", series_id: "TCU", desc: "TCU" }
+          ]
+        },
+        {
+          name: "retail_trade",
+          type: "folder",
+          children: [
+            { name: "retail_trade.csv", type: "file", category: "fred", series_id: "RSXFS", desc: "RSXFS / RSAFS" }
+          ]
+        },
+        {
+          name: "business_cycle_expansions_contractions",
+          type: "folder",
+          children: [
+            { name: "business_cycle.csv", type: "file", category: "fred", series_id: "USREC", desc: "USREC (NBER recession indicator)" }
           ]
         }
       ]
@@ -1367,22 +1604,143 @@ const FRED_TREE = {
           name: "consumer_price_indexes_cpi_pce",
           type: "folder",
           children: [
-            { name: "cpi_all_urban_consumers.csv", type: "file", category: "fred", series_id: "CPIAUCSL", desc: "Consumer Price Index for All Urban Consumers (monthly, CPI-U)" },
-            { name: "core_pce_price_index.csv", type: "file", category: "fred", series_id: "PCEPILFE", desc: "Personal Consumption Expenditures Excluding Food and Energy (monthly, Core PCE)" }
+            { name: "cpi_all_urban_consumers.csv", type: "file", category: "fred", series_id: "CPIAUCSL", desc: "CPIAUCSL" },
+            { name: "core_cpi_ex_food_energy.csv", type: "file", category: "fred", series_id: "CPILFESL", desc: "CPILFESL" },
+            { name: "pce_price_index.csv", type: "file", category: "fred", series_id: "PCEPI", desc: "PCEPI" },
+            { name: "core_pce_price_index.csv", type: "file", category: "fred", series_id: "PCEPILFE", desc: "PCEPILFE (the Fed's preferred inflation gauge)" }
+          ]
+        },
+        {
+          name: "producer_price_indexes_ppi",
+          type: "folder",
+          children: [
+            { name: "ppi.csv", type: "file", category: "fred", series_id: "PPIFIS", desc: "PPIFIS" }
+          ]
+        },
+        {
+          name: "house_price_indexes",
+          type: "folder",
+          children: [
+            { name: "house_price_index.csv", type: "file", category: "fred", series_id: "HPIPONM226S", desc: "HPIPONM226S" }
           ]
         },
         {
           name: "commodities",
           type: "folder",
           children: [
-            { name: "wti_crude_oil.csv", type: "file", category: "fred", series_id: "DCOILWTICO", desc: "Crude Oil Prices: West Texas Intermediate (daily)" },
-            { name: "gold_price.csv", type: "file", category: "fred", series_id: "GOLDAMGBD228NLBM", desc: "Gold Fixing Price in London Bullion Market (daily)" }
+            { name: "wti_crude_oil.csv", type: "file", category: "fred", series_id: "DCOILWTICO", desc: "DCOILWTICO" },
+            { name: "brent_crude_oil.csv", type: "file", category: "fred", series_id: "DCOILBRENTEU", desc: "DCOILBRENTEU" },
+            { name: "gold_price.csv", type: "file", category: "fred", series_id: "GOLDAMGBD228NLBM", desc: "GOLDAMGBD228NLBM" },
+            { name: "henry_hub_natural_gas.csv", type: "file", category: "fred", series_id: "DHHNGSP", desc: "DHHNGSP" }
+          ]
+        },
+        {
+          name: "cryptocurrencies",
+          type: "folder",
+          children: [
+            { name: "crypto.csv", type: "file", category: "fred", series_id: "CBBTCUSD", desc: "CBBTCUSD, CBETHUSD" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "08_ACADEMIC_DATA",
+      type: "folder",
+      children: [
+        { name: "banking_monetary_statistics_1914_1941.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "nber_macrohistory_database.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "penn_world_table_7_1.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "penn_world_table_11_0.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "economic_policy_uncertainty_index.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "recession_probabilities.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "daily_fed_funds_rate_1928_1954.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "millennium_macro_data_uk.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "historical_federal_reserve_data.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "holc_redlining_maps_effects.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "survey_working_arrangements_attitudes.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" },
+        { name: "weekly_bond_prices_1855_1865.csv", type: "file", category: "fred", series_id: "M1SL", desc: "" }
+      ]
+    },
+    {
+      name: "09_API_METADATA_ENDPOINTS",
+      type: "folder",
+      children: [
+        {
+          name: "categories",
+          type: "folder",
+          children: [
+            { name: "category_by_id.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category" },
+            { name: "category_children.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/children" },
+            { name: "category_related.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/related" },
+            { name: "category_series_list.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/series" },
+            { name: "category_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/tags" },
+            { name: "category_related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/related_tags" }
+          ]
+        },
+        {
+          name: "releases",
+          type: "folder",
+          children: [
+            { name: "all_releases.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/releases (~300 scheduled data releases)" },
+            { name: "all_release_dates.csv", type: "file", category: "fred", series_id: "M1SL", desc: "fred/releases/dates" },
+            { name: "release_by_id.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release" },
+            { name: "release_dates.csv", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/dates" },
+            { name: "release_series.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/series" },
+            { name: "release_sources.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/sources" },
+            { name: "release_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/tags" },
+            { name: "release_related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/related_tags" },
+            { name: "release_tables.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/release/tables" }
+          ]
+        },
+        {
+          name: "series",
+          type: "folder",
+          children: [
+            { name: "series_metadata.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series title,units,freq,seasonal adj,notes,dates" },
+            { name: "series_categories.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/categories" },
+            { name: "series_OBSERVATIONS.csv", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/observations <-- the actual data VALUES, use this" },
+            { name: "series_release.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/release" },
+            { name: "series_search_results.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/search keyword search across all 930k+ series" },
+            { name: "series_search_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/search/tags" },
+            { name: "series_search_related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/search/related_tags" },
+            { name: "series_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/tags" },
+            { name: "series_updates_feed.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/updates recently updated series" },
+            { name: "series_vintage_dates.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/series/vintagedates ALFRED revision-history dates" }
+          ]
+        },
+        {
+          name: "sources",
+          type: "folder",
+          children: [
+            { name: "all_sources.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/sources every provider (BLS, BEA, Census, Fed Board, etc.)" },
+            { name: "source_by_id.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/source" },
+            { name: "source_releases.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/source/releases" }
+          ]
+        },
+        {
+          name: "tags",
+          type: "folder",
+          children: [
+            { name: "all_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/tags every topical tag ('gdp','monthly','nsa','usa',…)" },
+            { name: "related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/related_tags" },
+            { name: "tags_matching_series.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/tags/series" }
+          ]
+        },
+        {
+          name: "geofred_maps",
+          type: "folder",
+          children: [
+            { name: "shape_files.geojson", type: "file", category: "fred", series_id: "M1SL", desc: "geofred/shapes" },
+            { name: "series_group_metadata.json", type: "file", category: "fred", series_id: "M1SL", desc: "geofred/series_group" },
+            { name: "series_regional_data.json", type: "file", category: "fred", series_id: "M1SL", desc: "geofred/series_data" },
+            { name: "regional_data_by_date.json", type: "file", category: "fred", series_id: "M1SL", desc: "geofred/regional_data" }
           ]
         }
       ]
     }
   ]
 };
+
 
 // ── SIDE PANEL LOGIC ──────────────────────────────────────────
 let activeSource = 'yf';
