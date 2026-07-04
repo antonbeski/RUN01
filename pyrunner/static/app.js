@@ -1935,63 +1935,318 @@ function selectFileNode(node, element) {
   let pythonCode = '';
   if (isYF) {
     if (node.category === 'history') {
+      const period   = (node.params && node.params.period)   ? node.params.period   : '1mo';
+      const interval = (node.params && node.params.interval) ? node.params.interval : '1d';
       pythonCode = `\
-# Fetch real-time OHLCV stock history
-import pandas as pd
+# ── Fetch OHLCV price history ────────────────────────────────
+ticker   = "AAPL"
+period   = "${period}"
+interval = "${interval}"
 
-ticker = "AAPL"
-period = "${node.params.period}"
-interval = "${node.params.interval}"
-
-print(f"Fetching {ticker} history ({period}, {interval})...")
 df = await yf_download(ticker, period=period, interval=interval)
-print(f"Data shape: {df.shape}")
+print(f"Downloaded {len(df)} rows for {ticker}")
 print(df.tail(10))`;
+
+    } else if (node.category === 'isin') {
+      pythonCode = `\
+# ── Fetch ISIN for ticker ────────────────────────────────────
+import yfinance as yf
+ticker = "AAPL"
+data = await yf_fetch(ticker, "isin")
+print(f"ISIN: {data}")`;
+
+    } else if (node.category === 'option_chain') {
+      pythonCode = `\
+# ── Fetch option chain for nearest expiry ───────────────────
+ticker = "AAPL"
+
+dates = await yf_options(ticker)
+print(f"Available expiries ({len(dates)} total): {dates[:5]}")
+
+if dates:
+    chain = await yf_option_chain(ticker, dates[0])
+    calls = chain["calls"]
+    puts  = chain["puts"]
+    print(f"\nExpiry: {dates[0]}")
+    print(f"Calls: {len(calls)} contracts | Puts: {len(puts)} contracts")
+    print("\nTop 5 calls by volume:")
+    print(calls.nlargest(5, "volume")[["strike","lastPrice","bid","ask","volume","impliedVolatility"]])`;
+
     } else if (node.category === 'options') {
       pythonCode = `\
-# Fetch option expiration dates
+# ── Fetch available option expiry dates ─────────────────────
 ticker = "AAPL"
 
-print(f"Fetching option dates for {ticker}...")
 dates = await yf_options(ticker)
-print("Option Expirations:")
-for d in dates[:5]:
-    print(f"  {d}")
+print(f"Found {len(dates)} expiration dates")
+for d in dates:
+    print(f"  {d}")`;
 
-if len(dates) > 0:
-    print(f"\nFetching option chain for nearest expiry: {dates[0]}...")
-    chain = await yf_option_chain(ticker, dates[0])
-    print(f"Calls count: {len(chain['calls'])}, Puts count: {len(chain['puts'])}")
-    print("\nNearest Calls:")
-    print(chain['calls'][['strike', 'lastPrice', 'volume']].head(5))`;
-    } else {
+    } else if (node.category === 'info' || node.category === 'fast_info') {
       pythonCode = `\
-# Fetch ${node.name}
+# ── Fetch company profile info ───────────────────────────────
 ticker = "AAPL"
-category = "${node.category}"
 
-print(f"Fetching {category} for {ticker}...")
-data = await yf_fetch(ticker, category)
+data = await yf_fetch(ticker, "${node.category}")
 
-if hasattr(data, 'head'):
-    print(f"Data shape: {data.shape}")
-    print(data.head(10))
+# Print key metrics
+keys = ["longName","sector","industry","marketCap",
+        "trailingPE","forwardPE","dividendYield",
+        "52WeekChange","country","fullTimeEmployees"]
+for k in keys:
+    if k in data:
+        print(f"{k:20}: {data[k]}")`;
+
+    } else if (node.category === 'news') {
+      pythonCode = `\
+# ── Fetch latest news headlines ─────────────────────────────
+ticker = "AAPL"
+
+news = await yf_news(ticker)
+print(f"Found {len(news)} articles\\n")
+for item in news[:8]:
+    print(f"[{item.get('publisher','?')}] {item.get('title','')}")
+    print(f"  {item.get('link','')}\\n")`;
+
+    } else if (node.category === 'dividends') {
+      pythonCode = `\
+# ── Fetch dividend history ───────────────────────────────────
+ticker = "AAPL"
+
+df = await yf_dividends(ticker)
+print(f"Dividend history: {len(df)} payments")
+print(df.tail(12))`;
+
+    } else if (node.category === 'splits') {
+      pythonCode = `\
+# ── Fetch stock split history ────────────────────────────────
+ticker = "AAPL"
+
+df = await yf_splits(ticker)
+print(f"Split history: {len(df)} splits")
+print(df)`;
+
+    } else if (node.category === 'actions') {
+      pythonCode = `\
+# ── Fetch combined corporate actions (dividends + splits) ────
+ticker = "AAPL"
+
+df = await yf_actions(ticker)
+print(f"Corporate actions: {len(df)} events")
+print(df.tail(15))`;
+
+    } else if (node.category === 'financials' || node.category === 'quarterly_financials' || node.category === 'ttm_financials') {
+      pythonCode = `\
+# ── Fetch income statement ───────────────────────────────────
+ticker = "AAPL"
+
+df = await yf_financials(ticker)
+print(f"Income statement: {df.shape[0]} rows x {df.shape[1]} periods")
+print(df.head(10))`;
+
+    } else if (node.category === 'balance_sheet' || node.category === 'quarterly_balance_sheet') {
+      pythonCode = `\
+# ── Fetch balance sheet ──────────────────────────────────────
+ticker = "AAPL"
+
+df = await yf_balance_sheet(ticker)
+print(f"Balance sheet: {df.shape[0]} rows x {df.shape[1]} periods")
+print(df.head(10))`;
+
+    } else if (node.category === 'cashflow' || node.category === 'quarterly_cashflow' || node.category === 'ttm_cashflow') {
+      pythonCode = `\
+# ── Fetch cash flow statement ────────────────────────────────
+ticker = "AAPL"
+
+df = await yf_cashflow(ticker)
+print(f"Cash flow: {df.shape[0]} rows x {df.shape[1]} periods")
+print(df.head(10))`;
+
+    } else if (node.category === 'recommendations' || node.category === 'recommendations_summary') {
+      pythonCode = `\
+# ── Fetch analyst recommendations ───────────────────────────
+ticker = "AAPL"
+
+df = await yf_recommendations(ticker)
+print(f"Recommendations: {len(df)} records")
+print(df.tail(10))`;
+
+    } else if (node.category === 'institutional_holders' || node.category === 'mutualfund_holders' || node.category === 'major_holders' || node.category === 'holders') {
+      pythonCode = `\
+# ── Fetch institutional holders ──────────────────────────────
+ticker = "AAPL"
+
+df = await yf_holders(ticker)
+print(f"Institutional holders: {len(df)} entries")
+print(df.head(15))`;
+
+    } else if (node.category === 'earnings_dates' || node.category === 'earnings_history' || node.category === 'calendar') {
+      pythonCode = `\
+# ── Fetch earnings dates and estimates ───────────────────────
+ticker = "AAPL"
+
+data = await yf_fetch(ticker, "${node.category}")
+
+if hasattr(data, "head"):
+    print(f"Earnings data: {len(data)} rows")
+    print(data.head(12))
 elif isinstance(data, dict):
-    for k, v in list(data.items())[:10]:
+    for k, v in data.items():
+        print(f"{k}: {v}")`;
+
+    } else if (node.category === 'sustainability') {
+      pythonCode = `\
+# ── Fetch ESG sustainability scores ─────────────────────────
+ticker = "AAPL"
+
+df = await yf_fetch(ticker, "sustainability")
+if hasattr(df, "T"):
+    print(df.T)
+else:
+    print(df)`;
+
+    } else if (node.category === 'sec_filings') {
+      pythonCode = `\
+# ── Fetch SEC filings list (10-K / 10-Q / 8-K) ──────────────
+ticker = "AAPL"
+
+filings = await yf_fetch(ticker, "sec_filings")
+if isinstance(filings, list):
+    for f in filings[:5]:
+        print(f"[{f.get('date','')}] {f.get('type','')} — {f.get('title','')}")
+else:
+    print(filings)`;
+
+    } else if (node.category === 'upgrades_downgrades') {
+      pythonCode = `\
+# ── Fetch analyst upgrades/downgrades ───────────────────────
+ticker = "AAPL"
+
+df = await yf_fetch(ticker, "upgrades_downgrades")
+print(f"Upgrades/Downgrades: {len(df)} records")
+print(df.head(15))`;
+
+    } else if (node.category === 'insider_transactions' || node.category === 'insider_purchases' || node.category === 'insider_roster_holders') {
+      pythonCode = `\
+# ── Fetch insider transactions ───────────────────────────────
+ticker = "AAPL"
+
+df = await yf_fetch(ticker, "${node.category}")
+if hasattr(df, "head"):
+    print(f"Insider data: {len(df)} rows")
+    print(df.head(15))
+else:
+    print(df)`;
+
+    } else if (node.category === 'funds_data' || node.category === 'sector' || node.category === 'industry') {
+      pythonCode = `\
+# ── Fetch fund / sector data ─────────────────────────────────
+ticker = "SPY"   # Use an ETF/fund ticker
+
+data = await yf_fetch(ticker, "${node.category}")
+if hasattr(data, "head"):
+    print(data.head(15))
+elif isinstance(data, dict):
+    for k, v in list(data.items())[:12]:
         print(f"{k}: {v}")
 else:
-    print(data[:5] if isinstance(data, list) else data)`;
+    print(data)`;
+
+    } else if (node.category === 'batch_download') {
+      pythonCode = `\
+# ── Batch download multiple tickers at once ──────────────────
+import asyncio
+
+tickers = ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"]
+
+# Download each ticker sequentially (parallel calls via asyncio)
+results = {}
+for t in tickers:
+    df = await yf_download(t, period="3mo", interval="1d")
+    results[t] = df
+    print(f"{t}: {len(df)} rows")
+
+print("\nAll tickers fetched!")
+print("Closing prices (last 5 days):")
+import pandas as pd
+close_df = pd.DataFrame({t: results[t]["Close"] for t in tickers})
+print(close_df.tail(5))`;
+
+    } else if (node.category === 'screener') {
+      pythonCode = `\
+# ── Screener: top stocks by category ────────────────────────
+# Note: screener data requires the yfinance Screener API.
+# You can simulate with a basket of well-known tickers:
+import pandas as pd
+
+tickers = ["AAPL", "MSFT", "NVDA", "GOOG", "META",
+           "TSLA", "AMZN", "JPM", "V", "BRK-B"]
+
+rows = []
+for t in tickers:
+    info = await yf_info(t)
+    rows.append({
+        "Ticker":    t,
+        "Name":      info.get("shortName",""),
+        "Sector":    info.get("sector",""),
+        "MarketCap": info.get("marketCap",0),
+        "TrailPE":   info.get("trailingPE",0),
+    })
+
+df = pd.DataFrame(rows).sort_values("MarketCap", ascending=False)
+print(df.to_string(index=False))`;
+
+    } else if (node.category === 'search') {
+      pythonCode = `\
+# ── Search for tickers by keyword ───────────────────────────
+# Use yf_info to fetch key data once you have a ticker:
+ticker = "AAPL"
+
+info = await yf_info(ticker)
+print(f"Name   : {info.get('longName')}")
+print(f"Symbol : {info.get('symbol')}")
+print(f"Type   : {info.get('quoteType')}")
+print(f"Sector : {info.get('sector')}")  
+print(f"Market : {info.get('exchange')}")`;
+
+    } else {
+      pythonCode = `\
+# ── Fetch ${node.name} ─────────────────────────────────────
+ticker = "AAPL"
+
+data = await yf_fetch(ticker, "${node.category}")
+
+if hasattr(data, "head"):
+    print(f"Shape: {data.shape}")
+    print(data.head(10))
+elif isinstance(data, dict):
+    for k, v in list(data.items())[:12]:
+        print(f"{k}: {v}")
+elif isinstance(data, list):
+    print(f"List of {len(data)} items")
+    for item in data[:5]:
+        print(item)
+else:
+    print(data)`;
     }
   } else {
     pythonCode = `\
-# Fetch macroeconomic time series from FRED
+# ── Fetch macroeconomic time series from FRED ─────────────────
+import pandas as pd
+
 series_id = "${node.series_id}"
 
-print(f"Fetching FRED series: {series_id}...")
-data = await fred_download(series_id, limit=100)
-print(f"Series Title: {data['title']}")
-print(f"Units       : {data['units']} | Freq: {data['frequency']}")
-print(data['df'].tail(15))`;
+raw = await fred_download(series_id, limit=200)
+print(f"Series  : {raw['title']}")
+print(f"Units   : {raw['units']} | Freq: {raw['frequency']}")
+
+df = pd.DataFrame(raw["observations"])
+df["date"]  = pd.to_datetime(df["date"])
+df["value"] = pd.to_numeric(df["value"], errors="coerce")
+df = df.set_index("date").dropna()
+
+print(f"\nLatest 15 observations:")
+print(df.tail(15))`;
   }
 
   const highlightedCode = highlightSyntax(pythonCode);
@@ -2039,7 +2294,7 @@ function highlightSyntax(code) {
     .replace(/(#.*)/g, '<span class="dex-code-comment">$1</span>')
     .replace(/\b(import|as|await|from)\b/g, '<span class="dex-code-kw">$1</span>')
     .replace(/(".*?"|'.*?')/g, '<span class="dex-code-str">$1</span>')
-    .replace(/\b(print|yf_download|fred_download|yf_info|yf_dividends|yf_splits|yf_actions|yf_financials|yf_balance_sheet|yf_cashflow|yf_recommendations|yf_holders|yf_options|yf_option_chain|yf_news)\b/g, '<span class="dex-code-fn">$1</span>')
+    .replace(/\b(print|yf_download|fred_download|yf_info|yf_dividends|yf_splits|yf_actions|yf_financials|yf_balance_sheet|yf_cashflow|yf_recommendations|yf_holders|yf_options|yf_option_chain|yf_news|yf_fetch)\b/g, '<span class="dex-code-fn">$1</span>')
     .replace(/\b(\d+)\b/g, '<span class="dex-code-num">$1</span>');
 }
 

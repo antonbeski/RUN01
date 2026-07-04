@@ -30,15 +30,26 @@ def service_worker():
 def yf_proxy(ticker):
     try:
         import yfinance as yf
+        import pandas as pd
         period   = request.args.get("period",   "1mo")
         interval = request.args.get("interval", "1d")
 
-        t    = yf.Ticker(ticker.upper())
-        hist = t.history(period=period, interval=interval)
+        hist = yf.download(
+            ticker.upper(),
+            period=period,
+            interval=interval,
+            auto_adjust=True,
+            progress=False,
+            keepna=False,
+        )
 
-        if hist.empty:
-            return jsonify({"error": f"No price data found for '{ticker}'. "
-                                     f"Symbol may be delisted or invalid."}), 404
+        if hist is None or hist.empty:
+            return jsonify({"error": f"No price data returned for '{ticker}'. "
+                                     f"Check that the symbol is correct and try a longer period."}), 404
+
+        # Flatten MultiIndex columns produced by yf.download for a single ticker
+        if isinstance(hist.columns, pd.MultiIndex):
+            hist.columns = [col[0] for col in hist.columns]
 
         # Strip timezone so strftime works across yfinance versions
         if hist.index.tz is not None:
@@ -47,9 +58,8 @@ def yf_proxy(ticker):
         hist.index.name = "Date"
         hist.index = hist.index.strftime("%Y-%m-%d")
 
-        # Drop non-OHLCV columns (Dividends, Stock Splits) for clean output
-        ohlcv_cols = [c for c in hist.columns if c in
-                      {"Open", "High", "Low", "Close", "Volume"}]
+        # Keep only OHLCV columns
+        ohlcv_cols = [c for c in hist.columns if c in {"Open", "High", "Low", "Close", "Volume"}]
         records = hist[ohlcv_cols].reset_index().to_dict(orient="records")
         return jsonify(records)
 
