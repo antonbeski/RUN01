@@ -1272,7 +1272,7 @@ body::after {
   flex-shrink: 0;
   opacity: 0.4;
 }
-.dex-node.open > .dex-cat-header .dex-cat-chevron { transform: rotate(90deg); }
+.dex-node[aria-expanded="true"] > .dex-cat-header .dex-cat-chevron { transform: rotate(90deg); }
 
 .dex-cat-label { flex: 1; }
 .dex-cat-count {
@@ -1288,7 +1288,7 @@ body::after {
   display: none;
   overflow: hidden;
 }
-.dex-node.open > .dex-cat-children { display: block; }
+.dex-node[aria-expanded="true"] > .dex-cat-children { display: block; }
 
 /* Sub-folder */
 .dex-folder {
@@ -1311,10 +1311,10 @@ body::after {
 .dex-folder-children {
   display: none;
 }
-.dex-folder-node.open > .dex-folder { color: var(--text); }
-.dex-folder-node.open > .dex-folder svg { opacity: 0.8; }
-.dex-folder-node.open > .dex-folder .dex-folder-chevron { transform: rotate(90deg); }
-.dex-folder-node.open > .dex-folder-children { display: block; }
+.dex-folder-node[aria-expanded="true"] > .dex-folder { color: var(--text); }
+.dex-folder-node[aria-expanded="true"] > .dex-folder svg { opacity: 0.8; }
+.dex-folder-node[aria-expanded="true"] > .dex-folder .dex-folder-chevron { transform: rotate(90deg); }
+.dex-folder-node[aria-expanded="true"] > .dex-folder-children { display: block; }
 
 .dex-folder-chevron {
   width: 8px; height: 8px;
