@@ -129,6 +129,41 @@ def yf_options_chain_proxy(ticker, expiry):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+# ── Yahoo Finance predefined screener proxy ──────────────────────────────────
+# yf.screen() runs a *predefined* Yahoo query (day_gainers, most_actives, etc.)
+# — no ticker/user input needed, so it's served as a static, downloadable
+# dataset in the Data Explorer instead of an example the user has to edit.
+YF_SCREEN_PRESETS = {
+    "day_gainers", "day_losers", "most_actives",
+    "undervalued_large_caps", "growth_technology_stocks",
+    "aggressive_small_caps", "small_cap_gainers",
+    "undervalued_growth_stocks", "conservative_foreign_funds",
+    "high_yield_bond",
+}
+
+@app.route("/api/yf/screen/<preset>")
+def yf_screen_proxy(preset):
+    try:
+        import yfinance as yf
+        preset = preset.lower()
+        if preset not in YF_SCREEN_PRESETS:
+            return jsonify({"error": f"Unknown predefined screen: {preset}"}), 400
+
+        result = yf.screen(preset)
+        quotes = result.get("quotes", []) if isinstance(result, dict) else []
+        rows = [{
+            "symbol":                     q.get("symbol"),
+            "shortName":                  q.get("shortName"),
+            "regularMarketPrice":         q.get("regularMarketPrice"),
+            "regularMarketChangePercent": q.get("regularMarketChangePercent"),
+            "regularMarketVolume":        q.get("regularMarketVolume"),
+            "marketCap":                  q.get("marketCap"),
+            "sector":                     q.get("sector"),
+        } for q in quotes]
+        return jsonify(rows)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 # ── FRED (Federal Reserve) data proxy ────────────────────────────────────────
 # The FRED REST API requires a free API key. We proxy it server-side to avoid
 # CORS restrictions and keep the key out of the browser.
@@ -188,6 +223,51 @@ def fred_proxy(series_id):
                 if o.get("value") is not None
             ],
         })
+
+    except urllib.error.HTTPError as exc:
+        try:
+            err_msg = json.loads(exc.read().decode('utf-8'))
+            msg = err_msg.get("error_message", str(exc))
+        except Exception:
+            msg = str(exc)
+        return jsonify({"error": f"FRED API Error ({exc.code}): {msg}"}), exc.code
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# ── FRED global metadata proxy (releases / sources / tags) ──────────────────
+# These are global lookups with no series id required, so they're served as
+# static, directly-downloadable datasets in the Data Explorer.
+FRED_META_ENDPOINTS = {"releases", "releases/dates", "sources", "tags"}
+
+@app.route("/api/fred/meta/<path:endpoint>")
+def fred_meta_proxy(endpoint):
+    try:
+        from urllib.request import urlopen
+        import urllib.parse
+        import urllib.error
+        import os
+
+        endpoint = endpoint.strip("/")
+        if endpoint not in FRED_META_ENDPOINTS:
+            return jsonify({"error": f"Unsupported FRED meta endpoint: {endpoint}"}), 400
+
+        api_key = os.environ.get("FRED_API_KEY", "").strip()
+        if not api_key:
+            return jsonify({"error": "FRED_API_KEY environment variable is not set. "
+                                     "Please add it to your deployment (e.g. Vercel) settings."}), 400
+
+        limit  = request.args.get("limit", "1000")
+        params = {"api_key": api_key, "file_type": "json", "limit": limit}
+        url    = f"{FRED_BASE}/{endpoint}?{urllib.parse.urlencode(params)}"
+
+        with urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        for key in ("releases", "sources", "tags"):
+            if key in data:
+                return jsonify(data[key])
+        return jsonify(data)
 
     except urllib.error.HTTPError as exc:
         try:
