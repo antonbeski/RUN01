@@ -1243,6 +1243,22 @@ body::after {
 }
 .dex-load-btn:active { transform: none; opacity: 0.75; }
 
+.dex-static-info {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 4px 0 14px;
+  line-height: 1.5;
+}
+[data-theme="light"] .dex-static-info {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+}
+
 /* ── TREE NODES ──────────────────────────────────────────── */
 .dex-node {
   user-select: none;
@@ -1424,4 +1440,3 @@ body::after {
 [data-theme="light"] .dex-load-btn { background: #1D1D1F; color: #FFFFFF; }
 [data-theme="light"] .dex-backdrop { background: rgba(0,0,0,0.35); }
 [data-theme="light"] .dex-stats { border-top-color: rgba(0,0,0,0.07); }
-
