@@ -1366,7 +1366,7 @@ const YF_TREE = {
         { name: "equity_screen_custom.csv", type: "file", category: "screener", desc: "EquityQuery(operator,operand) filter by region,sector,exchange, market cap, P/E, EPS growth, price vs moving avg, peer group, etc." },
         { name: "fund_screen_custom.csv", type: "file", category: "screener", desc: "FundQuery(operator,operand) filter mutual funds by region/category/performance" },
         { name: "etf_screen_custom.csv", type: "file", category: "screener", desc: "ETFQuery(operator,operand) filter ETFs by category, fund family, ratings" },
-        { name: "predefined_screens.csv", type: "file", category: "screener", desc: "screen('day_gainers'/'day_losers'/'most_actives'/'undervalued_large_caps'/'growth_technology_stocks'/etc.)" }
+        { name: "predefined_screens.csv", type: "file", category: "predefined_screens", desc: "screen('day_gainers') — static preset, no ticker required. Downloads directly." }
       ]
     },
     {
@@ -1917,6 +1917,141 @@ function renderNode(node, depth = 0, searchQuery = '') {
 
 let selectedNode = null;
 
+// ── STATIC / NO-INPUT DATASET DOWNLOADS ───────────────────────────────
+// Curated FRED macro series, FRED global metadata, and yfinance predefined
+// screens need no ticker/series lookup — fetch + download them directly
+// instead of just handing the user a code snippet.
+
+const FRED_META_ENDPOINTS = {
+  'all_releases.json':     'releases',
+  'all_release_dates.csv': 'releases/dates',
+  'all_sources.json':      'sources',
+  'all_tags.json':         'tags',
+};
+
+function getStaticDownloadInfo(node) {
+  if (node.type !== 'file') return null;
+
+  // FRED global metadata (releases / sources / tags — no series id needed)
+  if (node.category === 'fred' && FRED_META_ENDPOINTS[node.name]) {
+    const ep = FRED_META_ENDPOINTS[node.name];
+    return { url: `/api/fred/meta/${ep}`, key: `fredmeta_${ep.replace('/', '_')}`, filename: node.name };
+  }
+
+  // Curated FRED macro series with a real (non-placeholder) series id
+  if (node.category === 'fred' && node.series_id && node.series_id !== 'M1SL') {
+    return { url: `/api/fred/${node.series_id}`, key: `fred_${node.series_id}`, filename: node.name };
+  }
+
+  // yfinance predefined screener presets — no ticker required
+  if (node.category === 'predefined_screens') {
+    return { url: `/api/yf/screen/day_gainers`, key: `yf_screen_day_gainers`, filename: node.name };
+  }
+
+  return null;
+}
+
+function formatTimestamp(iso) {
+  if (!iso) return 'Never';
+  try { return new Date(iso).toLocaleString(); } catch { return iso; }
+}
+
+function toCSV(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return '';
+  const headers = Array.from(
+    rows.reduce((set, row) => { Object.keys(row).forEach(k => set.add(k)); return set; }, new Set())
+  );
+  const escape = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [headers.join(',')];
+  for (const row of rows) lines.push(headers.map(h => escape(row[h])).join(','));
+  return lines.join('\n');
+}
+
+function extractRows(data) {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    for (const key of ['observations', 'releases', 'sources', 'tags', 'quotes']) {
+      if (Array.isArray(data[key])) return data[key];
+    }
+  }
+  return [];
+}
+
+function renderStaticDownloadStatus(staticInfo) {
+  const el = document.getElementById('dexStaticStatus');
+  if (!el) return;
+  const stored = localStorage.getItem(`run01-dl-${staticInfo.key}`);
+  el.textContent = stored ? `✓ Downloaded — last saved ${formatTimestamp(stored)}` : 'Not downloaded yet';
+}
+
+async function downloadStaticDataset(staticInfo, node) {
+  const btn = document.getElementById('dexStaticDownloadBtn');
+  const statusEl = document.getElementById('dexStaticStatus');
+  if (!btn) return;
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Downloading…';
+
+  try {
+    const resp = await fetch(staticInfo.url);
+    const data = await resp.json();
+    if (data && data.error) throw new Error(data.error);
+
+    const rows  = extractRows(data);
+    const isCsv = node.name.toLowerCase().endsWith('.csv');
+    const blob  = isCsv
+      ? new Blob([toCSV(rows.length ? rows : (Array.isArray(data) ? data : [data]))], { type: 'text/csv;charset=utf-8' })
+      : new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = staticInfo.filename; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    localStorage.setItem(`run01-dl-${staticInfo.key}`, new Date().toISOString());
+    renderStaticDownloadStatus(staticInfo);
+  } catch (err) {
+    statusEl.textContent = `⚠ Download failed: ${err.message ?? err}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, sourceName, previewPane) {
+  const card = document.createElement('div');
+  card.className = 'dex-preview-card';
+  card.innerHTML = `
+    <div class="dex-preview-name">
+      <span class="dex-preview-icon ${iconClass}">${iconText}</span>
+      <span>${node.name}</span>
+    </div>
+    <div class="dex-preview-desc">${node.desc}</div>
+    <div class="dex-preview-meta">
+      <span class="dex-meta-tag live">STATIC</span>
+      <span class="dex-meta-tag api">${sourceName}</span>
+      <span class="dex-meta-tag">No input required</span>
+    </div>
+    <div class="dex-static-info" id="dexStaticStatus">Checking…</div>
+    <button class="dex-load-btn" id="dexStaticDownloadBtn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download Latest
+    </button>
+  `;
+  previewPane.appendChild(card);
+  renderStaticDownloadStatus(staticInfo);
+  document.getElementById('dexStaticDownloadBtn')
+    .addEventListener('click', () => downloadStaticDataset(staticInfo, node));
+}
+
 function selectFileNode(node, element) {
   const selectedElements = document.querySelectorAll('.dex-file.selected');
   selectedElements.forEach(el => el.classList.remove('selected'));
@@ -1931,6 +2066,12 @@ function selectFileNode(node, element) {
   const iconText = isYF ? 'YF' : 'FD';
   const iconClass = isYF ? 'yf' : 'fred';
   const sourceName = isYF ? 'yfinance' : 'FRED';
+
+  const staticInfo = getStaticDownloadInfo(node);
+  if (staticInfo) {
+    renderStaticDatasetCard(node, staticInfo, iconText, iconClass, sourceName, previewPane);
+    return;
+  }
 
   let pythonCode = '';
   if (isYF) {
