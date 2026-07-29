@@ -298,61 +298,80 @@ async def yf_splits(ticker):
     return df
 
 # ── yf_financials: fetch income statement ───────────────────
-async def yf_financials(ticker):
-    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/financials")
-    data = await resp.json()
-    if isinstance(data, dict) and "error" in data:
-        raise ValueError(data["error"])
-    df = pd.DataFrame(data)
-    if not df.empty and "index" in df.columns:
-        df = df.set_index("index")
-    return df
+async def yf_financials(ticker, category="financials"):
+    return await yf_fetch(ticker, category)
 
 # ── yf_balance_sheet: fetch balance sheet ───────────────────
-async def yf_balance_sheet(ticker):
-    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/balance_sheet")
-    data = await resp.json()
-    if isinstance(data, dict) and "error" in data:
-        raise ValueError(data["error"])
-    df = pd.DataFrame(data)
-    if not df.empty and "index" in df.columns:
-        df = df.set_index("index")
-    return df
+async def yf_balance_sheet(ticker, category="balance_sheet"):
+    return await yf_fetch(ticker, category)
 
 # ── yf_cashflow: fetch cash flow statement ──────────────────
-async def yf_cashflow(ticker):
-    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/cashflow")
-    data = await resp.json()
-    if isinstance(data, dict) and "error" in data:
-        raise ValueError(data["error"])
-    df = pd.DataFrame(data)
-    if not df.empty and "index" in df.columns:
-        df = df.set_index("index")
-    return df
+async def yf_cashflow(ticker, category="cashflow"):
+    return await yf_fetch(ticker, category)
 
 # ── yf_recommendations: fetch analyst consensus ─────────────
-async def yf_recommendations(ticker):
-    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/recommendations")
-    data = await resp.json()
-    if isinstance(data, dict) and "error" in data:
-        raise ValueError(data["error"])
-    df = pd.DataFrame(data)
-    if not df.empty and "Date" in df.columns:
-        df["Date"] = pd.to_datetime(df["Date"])
-        df = df.set_index("Date")
-    return df
+async def yf_recommendations(ticker, category="recommendations"):
+    return await yf_fetch(ticker, category)
 
-# ── yf_holders: fetch institutional holders ─────────────────
-async def yf_holders(ticker):
-    resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/holders")
+# ── yf_holders: fetch holders ───────────────────────────────
+async def yf_holders(ticker, category="institutional_holders"):
+    return await yf_fetch(ticker, category)
+
+# ── yf_sector: fetch sector metrics ──────────────────────────
+async def yf_sector(key="technology", category="overview"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/sector/{key}/{category}")
     data = await resp.json()
     if isinstance(data, dict) and "error" in data:
         raise ValueError(data["error"])
-    df = pd.DataFrame(data)
-    if not df.empty and "Date" in df.columns:
-        df["Date"] = pd.to_datetime(df["Date"])
-        df = df.set_index("Date")
-    return df
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        return pd.DataFrame(data)
+    return data
+
+# ── yf_industry: fetch industry metrics ──────────────────────
+async def yf_industry(key="software-infrastructure", category="overview"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/industry/{key}/{category}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        return pd.DataFrame(data)
+    return data
+
+# ── yf_market: fetch market status/summary ───────────────────
+async def yf_market(category="status", market_id="US"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/market/{market_id}/{category}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        return pd.DataFrame(data)
+    return data
+
+# ── yf_tickers: fetch bulk tickers data ──────────────────────
+async def yf_tickers(symbols="AAPL MSFT GOOG"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/tickers?symbols={symbols}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    return data
+
+# ── yf_search: search quotes and news ────────────────────────
+async def yf_search(query="apple"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/search?q={query}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    return data
+
+# ── yf_lookup: symbol lookup ────────────────────────────────
+async def yf_lookup(query="apple"):
+    resp = await pyodide.http.pyfetch(f"/api/yf/lookup?q={query}")
+    data = await resp.json()
+    if isinstance(data, dict) and "error" in data:
+        raise ValueError(data["error"])
+    if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+        return pd.DataFrame(data)
+    return data
 
 # ── yf_options: fetch option chain expiry list ──────────────
 async def yf_options(ticker):
@@ -1215,7 +1234,7 @@ const YF_TREE = {
             { name: "auto_adjusted.csv", type: "file", category: "history", params: { auto_adjust: true }, desc: "default, split+div adjusted" },
             { name: "raw_unadjusted.csv", type: "file", category: "history", params: { auto_adjust: false }, desc: "raw close, no adjustment" },
             { name: "back_adjusted.csv", type: "file", category: "history", params: { back_adjust: true }, desc: "" },
-            { name: "history_metadata.json", type: "file", category: "metadata", desc: "exchange,timezone,gmtoffset,currency,firstTradeDate" },
+            { name: "history_metadata.json", type: "file", category: "history_metadata", desc: "exchange,timezone,gmtoffset,currency,firstTradeDate" },
             { name: "isin.txt", type: "file", category: "isin", desc: "isin / get_isin()" }
           ]
         },
@@ -1314,15 +1333,15 @@ const YF_TREE = {
           name: "10_funds_data",
           type: "folder",
           children: [
-            { name: "description.txt", type: "file", category: "funds_data", desc: ".description fund objective/strategy text" },
-            { name: "fund_overview.json", type: "file", category: "funds_data", desc: ".fund_overview category, family, legal type, inception" },
-            { name: "fund_operations.csv", type: "file", category: "funds_data", desc: ".fund_operations net expense ratio, turnover, vs. category avg" },
-            { name: "asset_classes.csv", type: "file", category: "funds_data", desc: ".asset_classes % cash / stock / bond / other" },
-            { name: "top_holdings.csv", type: "file", category: "funds_data", desc: ".top_holdings top ~10 holdings + % weight" },
-            { name: "equity_holdings.csv", type: "file", category: "funds_data", desc: ".equity_holdings avg P/E, P/B, P/CF, P/S, growth vs category" },
-            { name: "bond_holdings.csv", type: "file", category: "funds_data", desc: ".bond_holdings duration, maturity vs category" },
-            { name: "bond_ratings.csv", type: "file", category: "funds_data", desc: ".bond_ratings % AAA/AA/A/BBB/BB/B/below-B/other" },
-            { name: "sector_weightings.csv", type: "file", category: "funds_data", desc: ".sector_weightings % allocation by GICS sector" }
+            { name: "description.txt", type: "file", category: "funds_description", desc: ".description fund objective/strategy text" },
+            { name: "fund_overview.json", type: "file", category: "funds_fund_overview", desc: ".fund_overview category, family, legal type, inception" },
+            { name: "fund_operations.csv", type: "file", category: "funds_fund_operations", desc: ".fund_operations net expense ratio, turnover, vs. category avg" },
+            { name: "asset_classes.csv", type: "file", category: "funds_asset_classes", desc: ".asset_classes % cash / stock / bond / other" },
+            { name: "top_holdings.csv", type: "file", category: "funds_top_holdings", desc: ".top_holdings top ~10 holdings + % weight" },
+            { name: "equity_holdings.csv", type: "file", category: "funds_equity_holdings", desc: ".equity_holdings avg P/E, P/B, P/CF, P/S, growth vs category" },
+            { name: "bond_holdings.csv", type: "file", category: "funds_bond_holdings", desc: ".bond_holdings duration, maturity vs category" },
+            { name: "bond_ratings.csv", type: "file", category: "funds_bond_ratings", desc: ".bond_ratings % AAA/AA/A/BBB/BB/B/below-B/other" },
+            { name: "sector_weightings.csv", type: "file", category: "funds_sector_weightings", desc: ".sector_weightings % allocation by GICS sector" }
           ]
         }
       ]
@@ -1332,40 +1351,36 @@ const YF_TREE = {
       type: "folder",
       children: [
         { name: "batch_download_ohlcv.csv", type: "file", category: "batch_download", desc: "yf.download([tickers], start, end, group_by, threads) many tickers, one call" },
-        { name: "tickers_bulk_object.json", type: "file", category: "tickers", desc: "yf.Tickers('AAPL MSFT GOOG') dict of Ticker objects, one request each" },
-        { name: "live_websocket_stream.jsonl", type: "file", category: "websocket", desc: "yf.WebSocket() / AsyncWebSocket() / Ticker.live() realtime streamed trade price+volume" }
+        { name: "tickers_bulk_object.json", type: "file", category: "tickers", desc: "yf.Tickers('AAPL MSFT GOOG') dict of Ticker objects, one request each" }
       ]
     },
     {
       name: "MARKET",
       type: "folder",
       children: [
-        { name: "market_status.json", type: "file", category: "market_status", desc: ".status open/closed, session start/end, timezone" },
-        { name: "market_summary.json", type: "file", category: "market_summary", desc: ".summary snapshot of major indices (^GSPC,^DJI,^IXIC,^RUT,^VIX,…)" }
+        { name: "market_status.json", type: "file", category: "status", desc: ".status open/closed, session start/end, timezone" },
+        { name: "market_summary.json", type: "file", category: "summary", desc: ".summary snapshot of major indices (^GSPC,^DJI,^IXIC,^RUT,^VIX,…)" }
       ]
     },
     {
       name: "SECTOR_AND_INDUSTRY",
       type: "folder",
       children: [
-        { name: "sector_overview.json", type: "file", category: "sector", desc: "Sector.overview description, market cap, # companies/employees" },
-        { name: "sector_top_companies.csv", type: "file", category: "sector", desc: "Sector.top_companies ranked by market cap within the sector" },
-        { name: "sector_top_etfs.csv", type: "file", category: "sector", desc: "Sector.top_etfs largest ETFs tracking the sector" },
-        { name: "sector_top_mutual_funds.csv", type: "file", category: "sector", desc: "Sector.top_mutual_funds" },
-        { name: "sector_industries_breakdown.csv", type: "file", category: "sector", desc: "Sector.industries market weight of each industry in sector" },
-        { name: "sector_research_reports.json", type: "file", category: "sector", desc: "Sector.research_reports" },
-        { name: "industry_overview.json", type: "file", category: "industry", desc: "Industry.overview" },
-        { name: "industry_top_performing_companies.csv", type: "file", category: "industry", desc: "Industry.top_performing_companies by price return" },
-        { name: "industry_top_growth_companies.csv", type: "file", category: "industry", desc: "Industry.top_growth_companies by growth metrics" }
+        { name: "sector_overview.json", type: "file", category: "sector_overview", desc: "Sector.overview description, market cap, # companies/employees" },
+        { name: "sector_top_companies.csv", type: "file", category: "sector_top_companies", desc: "Sector.top_companies ranked by market cap within the sector" },
+        { name: "sector_top_etfs.csv", type: "file", category: "sector_top_etfs", desc: "Sector.top_etfs largest ETFs tracking the sector" },
+        { name: "sector_top_mutual_funds.csv", type: "file", category: "sector_top_mutual_funds", desc: "Sector.top_mutual_funds" },
+        { name: "sector_industries_breakdown.csv", type: "file", category: "sector_industries", desc: "Sector.industries market weight of each industry in sector" },
+        { name: "sector_research_reports.json", type: "file", category: "sector_research_reports", desc: "Sector.research_reports" },
+        { name: "industry_overview.json", type: "file", category: "industry_overview", desc: "Industry.overview" },
+        { name: "industry_top_performing_companies.csv", type: "file", category: "industry_top_performing_companies", desc: "Industry.top_performing_companies by price return" },
+        { name: "industry_top_growth_companies.csv", type: "file", category: "industry_top_growth_companies", desc: "Industry.top_growth_companies by growth metrics" }
       ]
     },
     {
       name: "SCREENER",
       type: "folder",
       children: [
-        { name: "equity_screen_custom.csv", type: "file", category: "screener", desc: "EquityQuery(operator,operand) filter by region,sector,exchange, market cap, P/E, EPS growth, price vs moving avg, peer group, etc." },
-        { name: "fund_screen_custom.csv", type: "file", category: "screener", desc: "FundQuery(operator,operand) filter mutual funds by region/category/performance" },
-        { name: "etf_screen_custom.csv", type: "file", category: "screener", desc: "ETFQuery(operator,operand) filter ETFs by category, fund family, ratings" },
         { name: "predefined_screens.csv", type: "file", category: "predefined_screens", desc: "screen('day_gainers') — static preset, no ticker required. Downloads directly." }
       ]
     },
@@ -1381,7 +1396,7 @@ const YF_TREE = {
       name: "CALENDARS",
       type: "folder",
       children: [
-        { name: "calendar_events.csv", type: "file", category: "calendars", desc: "broader economic/earnings calendar events across the market" }
+        { name: "calendar_events.csv", type: "file", category: "calendar", desc: "broader economic/earnings calendar events across the market" }
       ]
     }
   ]
@@ -1684,11 +1699,6 @@ const FRED_TREE = {
           name: "categories",
           type: "folder",
           children: [
-            { name: "category_by_id.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category" },
-            { name: "category_children.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/children" },
-            { name: "category_related.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/related" },
-            { name: "category_series_list.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/series" },
-            { name: "category_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/tags" },
             { name: "category_related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/category/related_tags" }
           ]
         },
@@ -1927,15 +1937,41 @@ const FRED_META_ENDPOINTS = {
   'all_release_dates.csv': 'releases/dates',
   'all_sources.json':      'sources',
   'all_tags.json':         'tags',
+  'category_by_id.json':   'category',
+  'category_children.json': 'category/children',
+  'category_related.json': 'category/related',
+  'category_series_list.json': 'category/series',
+  'category_tags.json':    'category/tags',
+  'category_related_tags.json': 'category/related_tags',
+  'release_by_id.json':    'release',
+  'release_dates.csv':     'release/dates',
+  'release_series.json':   'release/series',
+  'release_sources.json':  'release/sources',
+  'release_tags.json':     'release/tags',
+  'release_related_tags.json': 'release/related_tags',
+  'release_tables.json':   'release/tables',
+  'series_metadata.json':  'series',
+  'series_categories.json': 'series/categories',
+  'series_release.json':   'series/release',
+  'series_search_results.json': 'series/search',
+  'series_search_tags.json': 'series/search/tags',
+  'series_search_related_tags.json': 'series/search/related_tags',
+  'series_tags.json':      'series/tags',
+  'series_updates_feed.json': 'series/updates',
+  'series_vintage_dates.json': 'series/vintagedates',
+  'source_by_id.json':     'source',
+  'source_releases.json':  'source/releases',
+  'related_tags.json':     'related_tags',
+  'tags_matching_series.json': 'tags/series'
 };
 
 function getStaticDownloadInfo(node) {
   if (node.type !== 'file') return null;
 
-  // FRED global metadata (releases / sources / tags — no series id needed)
-  if (node.category === 'fred' && FRED_META_ENDPOINTS[node.name]) {
+  // FRED global metadata (releases / sources / tags / categories / series — no series id needed)
+  if ((node.category === 'fred' || node.category === 'fred_meta') && FRED_META_ENDPOINTS[node.name]) {
     const ep = FRED_META_ENDPOINTS[node.name];
-    return { url: `/api/fred/meta/${ep}`, key: `fredmeta_${ep.replace('/', '_')}`, filename: node.name };
+    return { url: `/api/fred/meta/${ep}`, key: `fredmeta_${ep.replace(/\//g, '_')}`, filename: node.name };
   }
 
   // Curated FRED macro series with a real (non-placeholder) series id
@@ -2062,7 +2098,7 @@ function selectFileNode(node, element) {
   const previewPane = document.getElementById('dexPreviewPane');
   previewPane.innerHTML = '';
 
-  const isYF = node.category !== 'fred';
+  const isYF = node.category !== 'fred' && node.category !== 'fred_meta';
   const iconText = isYF ? 'YF' : 'FD';
   const iconClass = isYF ? 'yf' : 'fred';
   const sourceName = isYF ? 'yfinance' : 'FRED';
@@ -2091,7 +2127,6 @@ print(df.tail(10))`;
     } else if (node.category === 'isin') {
       pythonCode = `\
 # ── Fetch ISIN for ticker ────────────────────────────────────
-import yfinance as yf
 ticker = "AAPL"
 data = await yf_fetch(ticker, "isin")
 print(f"ISIN: {data}")`;
@@ -2176,50 +2211,65 @@ df = await yf_actions(ticker)
 print(f"Corporate actions: {len(df)} events")
 print(df.tail(15))`;
 
-    } else if (node.category === 'financials' || node.category === 'quarterly_financials' || node.category === 'ttm_financials') {
+    } else if (['financials', 'quarterly_financials', 'ttm_financials'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch income statement ───────────────────────────────────
+# ── Fetch income statement (${node.category}) ────────────────
 ticker = "AAPL"
 
-df = await yf_financials(ticker)
-print(f"Income statement: {df.shape[0]} rows x {df.shape[1]} periods")
-print(df.head(10))`;
+df = await yf_fetch(ticker, "${node.category}")
+print(f"Income statement ({node.category}):")
+if hasattr(df, "head"):
+    print(df.head(10))
+else:
+    print(df)`;
 
-    } else if (node.category === 'balance_sheet' || node.category === 'quarterly_balance_sheet') {
+    } else if (['balance_sheet', 'quarterly_balance_sheet'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch balance sheet ──────────────────────────────────────
+# ── Fetch balance sheet (${node.category}) ────────────────────
 ticker = "AAPL"
 
-df = await yf_balance_sheet(ticker)
-print(f"Balance sheet: {df.shape[0]} rows x {df.shape[1]} periods")
-print(df.head(10))`;
+df = await yf_fetch(ticker, "${node.category}")
+print(f"Balance sheet ({node.category}):")
+if hasattr(df, "head"):
+    print(df.head(10))
+else:
+    print(df)`;
 
-    } else if (node.category === 'cashflow' || node.category === 'quarterly_cashflow' || node.category === 'ttm_cashflow') {
+    } else if (['cashflow', 'quarterly_cashflow', 'ttm_cashflow'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch cash flow statement ────────────────────────────────
+# ── Fetch cash flow statement (${node.category}) ──────────────
 ticker = "AAPL"
 
-df = await yf_cashflow(ticker)
-print(f"Cash flow: {df.shape[0]} rows x {df.shape[1]} periods")
-print(df.head(10))`;
+df = await yf_fetch(ticker, "${node.category}")
+print(f"Cash flow ({node.category}):")
+if hasattr(df, "head"):
+    print(df.head(10))
+else:
+    print(df)`;
 
-    } else if (node.category === 'recommendations' || node.category === 'recommendations_summary') {
+    } else if (['recommendations', 'recommendations_summary'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch analyst recommendations ───────────────────────────
+# ── Fetch analyst recommendations (${node.category}) ──────────
 ticker = "AAPL"
 
-df = await yf_recommendations(ticker)
-print(f"Recommendations: {len(df)} records")
-print(df.tail(10))`;
+df = await yf_fetch(ticker, "${node.category}")
+print(f"Recommendations ({node.category}):")
+if hasattr(df, "head"):
+    print(df.head(10))
+else:
+    print(df)`;
 
-    } else if (node.category === 'institutional_holders' || node.category === 'mutualfund_holders' || node.category === 'major_holders' || node.category === 'holders') {
+    } else if (['institutional_holders', 'mutualfund_holders', 'major_holders', 'holders'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch institutional holders ──────────────────────────────
+# ── Fetch holders (${node.category}) ─────────────────────────
 ticker = "AAPL"
 
-df = await yf_holders(ticker)
-print(f"Institutional holders: {len(df)} entries")
-print(df.head(15))`;
+df = await yf_fetch(ticker, "${node.category}")
+print(f"Holders ({node.category}):")
+if hasattr(df, "head"):
+    print(df.head(15))
+else:
+    print(df)`;
 
     } else if (node.category === 'earnings_dates' || node.category === 'earnings_history' || node.category === 'calendar') {
       pythonCode = `\
@@ -2279,17 +2329,85 @@ if hasattr(df, "head"):
 else:
     print(df)`;
 
-    } else if (node.category === 'funds_data' || node.category === 'sector' || node.category === 'industry') {
+    } else if (node.category.startsWith('funds_')) {
       pythonCode = `\
-# ── Fetch fund / sector data ─────────────────────────────────
-ticker = "SPY"   # Use an ETF/fund ticker
+# ── Fetch fund data (${node.name}) ───────────────────────────
+ticker = "SPY"   # Fund / ETF symbol
 
 data = await yf_fetch(ticker, "${node.category}")
 if hasattr(data, "head"):
     print(data.head(15))
 elif isinstance(data, dict):
-    for k, v in list(data.items())[:12]:
+    for k, v in data.items():
         print(f"{k}: {v}")
+else:
+    print(data)`;
+
+    } else if (node.category.startsWith('sector_')) {
+      const subCat = node.category.replace('sector_', '');
+      pythonCode = `\
+# ── Fetch Sector metrics ─────────────────────────────────────
+key = "technology"
+
+data = await yf_sector(key, "${subCat}")
+print(f"Sector '{key}' - ${subCat}:")
+if hasattr(data, "head"):
+    print(data.head(15))
+else:
+    print(data)`;
+
+    } else if (node.category.startsWith('industry_')) {
+      const subCat = node.category.replace('industry_', '');
+      pythonCode = `\
+# ── Fetch Industry metrics ───────────────────────────────────
+key = "software-infrastructure"
+
+data = await yf_industry(key, "${subCat}")
+print(f"Industry '{key}' - ${subCat}:")
+if hasattr(data, "head"):
+    print(data.head(15))
+else:
+    print(data)`;
+
+    } else if (node.category === 'status' || node.category === 'summary') {
+      pythonCode = `\
+# ── Fetch Market status / summary ───────────────────────────
+data = await yf_market("${node.category}", "us_market")
+print(f"Market ${node.category}:")
+if hasattr(data, "head"):
+    print(data.head(15))
+else:
+    print(data)`;
+
+    } else if (node.category === 'tickers') {
+      pythonCode = `\
+# ── Fetch bulk Tickers data ─────────────────────────────────
+symbols = "AAPL MSFT GOOG"
+
+data = await yf_tickers(symbols)
+for sym, info in data.items():
+    print(f"[{sym}] {info.get('shortName', sym)} - {info.get('sector', 'N/A')}")`;
+
+    } else if (node.category === 'search') {
+      pythonCode = `\
+# ── Search Yahoo Finance ────────────────────────────────────
+query = "apple"
+
+res = await yf_search(query)
+print(f"Search results for '{query}':")
+print(f"Quotes found: {len(res.get('quotes', []))}")
+for q in res.get("quotes", [])[:5]:
+    print(f"  {q.get('symbol')} - {q.get('shortname')}")`;
+
+    } else if (node.category === 'lookup') {
+      pythonCode = `\
+# ── Symbol Lookup ───────────────────────────────────────────
+query = "apple"
+
+data = await yf_lookup(query)
+print(f"Lookup results for '{query}':")
+if hasattr(data, "head"):
+    print(data.head(15))
 else:
     print(data)`;
 
@@ -2312,43 +2430,6 @@ print("Closing prices (last 5 days):")
 import pandas as pd
 close_df = pd.DataFrame({t: results[t]["Close"] for t in tickers})
 print(close_df.tail(5))`;
-
-    } else if (node.category === 'screener') {
-      pythonCode = `\
-# ── Screener: top stocks by category ────────────────────────
-# Note: screener data requires the yfinance Screener API.
-# You can simulate with a basket of well-known tickers:
-import pandas as pd
-
-tickers = ["AAPL", "MSFT", "NVDA", "GOOG", "META",
-           "TSLA", "AMZN", "JPM", "V", "BRK-B"]
-
-rows = []
-for t in tickers:
-    info = await yf_info(t)
-    rows.append({
-        "Ticker":    t,
-        "Name":      info.get("shortName",""),
-        "Sector":    info.get("sector",""),
-        "MarketCap": info.get("marketCap",0),
-        "TrailPE":   info.get("trailingPE",0),
-    })
-
-df = pd.DataFrame(rows).sort_values("MarketCap", ascending=False)
-print(df.to_string(index=False))`;
-
-    } else if (node.category === 'search') {
-      pythonCode = `\
-# ── Search for tickers by keyword ───────────────────────────
-# Use yf_info to fetch key data once you have a ticker:
-ticker = "AAPL"
-
-info = await yf_info(ticker)
-print(f"Name   : {info.get('longName')}")
-print(f"Symbol : {info.get('symbol')}")
-print(f"Type   : {info.get('quoteType')}")
-print(f"Sector : {info.get('sector')}")  
-print(f"Market : {info.get('exchange')}")`;
 
     } else {
       pythonCode = `\

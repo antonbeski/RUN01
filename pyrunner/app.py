@@ -66,6 +66,18 @@ def yf_proxy(ticker):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+def json_clean(obj):
+    if isinstance(obj, dict):
+        return {str(k): json_clean(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
+        return [json_clean(v) for v in obj]
+    elif hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    elif isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    else:
+        return str(obj)
+
 # ── Yahoo Finance category proxies ────────────────────────────────────────────
 @app.route("/api/yf/<ticker>/<category>")
 def yf_category_proxy(ticker, category):
@@ -78,24 +90,40 @@ def yf_category_proxy(ticker, category):
         category = category.lower()
 
         # Handle specific properties that require special conversion
-        if category == "options": return jsonify(list(t.options))
-        if category == "news": return jsonify(t.news)
-        if category == "info": return jsonify(t.info)
-        if category == "fast_info": return jsonify(dict(t.fast_info))
-        if category == "calendar": return jsonify(t.calendar)
+        if category == "options": return jsonify(json_clean(list(t.options)))
+        if category == "news": return jsonify(json_clean(t.news))
+        if category == "info": return jsonify(json_clean(t.info))
+        if category == "fast_info": return jsonify(json_clean(dict(t.fast_info)))
+        if category == "calendar": return jsonify(json_clean(t.calendar))
 
-        # Dynamically get any other attribute (insider_transactions, earnings_dates, etc.)
-        if not hasattr(t, category):
+        category_aliases = {
+            "metadata": "history_metadata",
+            "calendars": "calendar",
+            "shares": "get_shares",
+            "shares_full": "get_shares_full",
+            "valuation": "get_valuation_measures",
+        }
+        category = category_aliases.get(category, category)
+
+        if category.startswith("funds_"):
+            sub = category[len("funds_"):]
+            fd = getattr(t, "funds_data", None)
+            if fd is None or not hasattr(fd, sub):
+                return jsonify({"error": f"Unknown or unavailable funds_data field: {sub}"}), 400
+            data = getattr(fd, sub)
+        elif hasattr(t, category):
+            data = getattr(t, category)
+        elif hasattr(t, f"get_{category}"):
+            data = getattr(t, f"get_{category}")
+        else:
             return jsonify({"error": f"Unsupported or invalid category: {category}"}), 400
             
-        data = getattr(t, category)
-        
         if callable(data):
-            # If it's a method requiring no args
+            kwargs = {k: v for k, v in request.args.items() if k not in ("period", "interval")}
             try:
-                data = data()
-            except Exception:
-                return jsonify({"error": f"Cannot invoke method {category}() automatically."}), 400
+                data = data(**kwargs) if kwargs else data()
+            except Exception as e:
+                return jsonify({"error": f"Cannot invoke method {category}(): {e}"}), 400
 
         if isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
             if data.empty:
@@ -107,10 +135,10 @@ def yf_category_proxy(ticker, category):
                 df[col] = df[col].astype(str)
             # Handle NaNs
             df = df.replace({np.nan: None})
-            return jsonify(df.to_dict(orient="records"))
+            return jsonify(json_clean(df.to_dict(orient="records")))
         
         elif isinstance(data, dict) or isinstance(data, list):
-            return jsonify(data)
+            return jsonify(json_clean(data))
         else:
             return jsonify(str(data))
 
@@ -125,7 +153,135 @@ def yf_options_chain_proxy(ticker, expiry):
         chain = t.option_chain(expiry)
         calls = chain.calls.reset_index().to_dict(orient="records")
         puts = chain.puts.reset_index().to_dict(orient="records")
-        return jsonify({"calls": calls, "puts": puts})
+        return jsonify(json_clean({"calls": calls, "puts": puts}))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# ── Yahoo Finance sector, industry, market, tickers, search, lookup proxies ───
+@app.route("/api/yf/sector/<key>/<category>")
+@app.route("/api/yf/sector/<category>")
+def yf_sector_proxy(category, key="technology"):
+    try:
+        import yfinance as yf
+        import pandas as pd
+        import numpy as np
+        s = yf.Sector(key)
+        cat = category.lower()
+        cat_map = {"industries_breakdown": "industries"}
+        cat = cat_map.get(cat, cat)
+        if not hasattr(s, cat):
+            return jsonify({"error": f"Unsupported sector attribute: {category}"}), 400
+        data = getattr(s, cat)
+        if callable(data): data = data()
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            if data.empty: return jsonify([])
+            df = data.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]', '<M8[ns]']).columns:
+                df[col] = df[col].astype(str)
+            df = df.replace({np.nan: None})
+            return jsonify(json_clean(df.to_dict(orient="records")))
+        elif isinstance(data, (dict, list)):
+            return jsonify(json_clean(data))
+        else:
+            return jsonify(str(data))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/industry/<key>/<category>")
+@app.route("/api/yf/industry/<category>")
+def yf_industry_proxy(category, key="software-infrastructure"):
+    try:
+        import yfinance as yf
+        import pandas as pd
+        import numpy as np
+        ind = yf.Industry(key)
+        cat = category.lower()
+        if not hasattr(ind, cat):
+            return jsonify({"error": f"Unsupported industry attribute: {category}"}), 400
+        data = getattr(ind, cat)
+        if callable(data): data = data()
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            if data.empty: return jsonify([])
+            df = data.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]', '<M8[ns]']).columns:
+                df[col] = df[col].astype(str)
+            df = df.replace({np.nan: None})
+            return jsonify(json_clean(df.to_dict(orient="records")))
+        elif isinstance(data, (dict, list)):
+            return jsonify(json_clean(data))
+        else:
+            return jsonify(str(data))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/market/<market_id>/<category>")
+@app.route("/api/yf/market/<category>")
+def yf_market_proxy(category, market_id="US"):
+    try:
+        import yfinance as yf
+        import pandas as pd
+        import numpy as np
+        if market_id.lower() in ("us_market", "us"):
+            market_id = "US"
+        m = yf.Market(market_id)
+        cat = category.lower().replace("market_", "")
+        if not hasattr(m, cat):
+            return jsonify({"error": f"Unsupported market attribute: {category}"}), 400
+        data = getattr(m, cat)
+        if callable(data): data = data()
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            if data.empty: return jsonify([])
+            df = data.reset_index()
+            df.columns = [str(c) for c in df.columns]
+            for col in df.select_dtypes(include=['datetime64[ns, UTC]', 'datetime64[ns]', '<M8[ns]']).columns:
+                df[col] = df[col].astype(str)
+            df = df.replace({np.nan: None})
+            return jsonify(json_clean(df.to_dict(orient="records")))
+        elif isinstance(data, (dict, list)):
+            return jsonify(json_clean(data))
+        else:
+            return jsonify(str(data))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/tickers")
+def yf_tickers_proxy():
+    try:
+        import yfinance as yf
+        symbols = request.args.get("symbols", "AAPL MSFT GOOG")
+        t = yf.Tickers(symbols)
+        res = {}
+        for sym, obj in t.tickers.items():
+            try:
+                res[sym] = obj.info
+            except Exception:
+                res[sym] = {"symbol": sym}
+        return jsonify(json_clean(res))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/search")
+def yf_search_proxy():
+    try:
+        import yfinance as yf
+        q = request.args.get("q", "apple")
+        s = yf.Search(q)
+        return jsonify(json_clean({"quotes": getattr(s, "quotes", []), "news": getattr(s, "news", [])}))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": str(exc)}), 500
+
+@app.route("/api/yf/lookup")
+def yf_lookup_proxy():
+    try:
+        import yfinance as yf
+        q = request.args.get("q", "apple")
+        l = yf.Lookup(q)
+        if hasattr(l, "response"):
+            return jsonify(l.response)
+        return jsonify(str(l))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -235,10 +391,18 @@ def fred_proxy(series_id):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# ── FRED global metadata proxy (releases / sources / tags) ──────────────────
-# These are global lookups with no series id required, so they're served as
-# static, directly-downloadable datasets in the Data Explorer.
-FRED_META_ENDPOINTS = {"releases", "releases/dates", "sources", "tags"}
+# ── FRED global metadata proxy (releases / sources / tags / categories / series) ──
+FRED_META_ENDPOINTS = {
+    "releases", "releases/dates", "release", "release/dates", "release/series",
+    "release/sources", "release/tags", "release/related_tags", "release/tables",
+    "sources", "source", "source/releases",
+    "tags", "related_tags", "tags/series",
+    "category", "category/children", "category/related", "category/series",
+    "category/tags", "category/related_tags",
+    "series", "series/categories", "series/observations", "series/release",
+    "series/search", "series/search/tags", "series/search/related_tags",
+    "series/tags", "series/updates", "series/vintagedates"
+}
 
 @app.route("/api/fred/meta/<path:endpoint>")
 def fred_meta_proxy(endpoint):
@@ -257,14 +421,27 @@ def fred_meta_proxy(endpoint):
             return jsonify({"error": "FRED_API_KEY environment variable is not set. "
                                      "Please add it to your deployment (e.g. Vercel) settings."}), 400
 
-        limit  = request.args.get("limit", "1000")
-        params = {"api_key": api_key, "file_type": "json", "limit": limit}
-        url    = f"{FRED_BASE}/{endpoint}?{urllib.parse.urlencode(params)}"
+        params = {"api_key": api_key, "file_type": "json"}
+        for k, v in request.args.items():
+            params[k] = v
+        if "limit" not in params and "search_text" not in params and "q" not in params:
+            params["limit"] = "1000"
+
+        if endpoint.startswith("category") and "category_id" not in params:
+            params["category_id"] = "0"
+        if endpoint.startswith("release") and endpoint not in ("releases", "releases/dates") and "release_id" not in params:
+            params["release_id"] = "53"
+        if endpoint.startswith("series") and endpoint not in ("series/search", "series/updates") and "series_id" not in params:
+            params["series_id"] = "GDP"
+        if endpoint.startswith("source") and endpoint != "sources" and "source_id" not in params:
+            params["source_id"] = "1"
+
+        url = f"{FRED_BASE}/{endpoint}?{urllib.parse.urlencode(params)}"
 
         with urlopen(url, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
-        for key in ("releases", "sources", "tags"):
+        for key in ("releases", "sources", "tags", "categories", "seriess", "release_dates", "tables"):
             if key in data:
                 return jsonify(data[key])
         return jsonify(data)
