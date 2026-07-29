@@ -2143,9 +2143,9 @@ if dates:
     chain = await yf_option_chain(ticker, dates[0])
     calls = chain["calls"]
     puts  = chain["puts"]
-    print(f"\nExpiry: {dates[0]}")
+    print(f"\\nExpiry: {dates[0]}")
     print(f"Calls: {len(calls)} contracts | Puts: {len(puts)} contracts")
-    print("\nTop 5 calls by volume:")
+    print("\\nTop 5 calls by volume:")
     print(calls.nlargest(5, "volume")[["strike","lastPrice","bid","ask","volume","impliedVolatility"]])`;
 
     } else if (node.category === 'options') {
@@ -2425,7 +2425,7 @@ for t in tickers:
     results[t] = df
     print(f"{t}: {len(df)} rows")
 
-print("\nAll tickers fetched!")
+print("\\nAll tickers fetched!")
 print("Closing prices (last 5 days):")
 import pandas as pd
 close_df = pd.DataFrame({t: results[t]["Close"] for t in tickers})
@@ -2467,7 +2467,7 @@ df["date"]  = pd.to_datetime(df["date"])
 df["value"] = pd.to_numeric(df["value"], errors="coerce")
 df = df.set_index("date").dropna()
 
-print(f"\nLatest 15 observations:")
+print(f"\\nLatest 15 observations:")
 print(df.tail(15))`;
   }
 
