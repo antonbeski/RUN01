@@ -250,8 +250,11 @@
             </div>
           </div>
 
-          <!-- Quick actions toolbar -->
-          <div class="ai-quick-actions" style="display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: rgba(0,0,0,0.1); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+          <!-- Quick actions toolbar (positioned directly above the type box) -->
+          <div class="ai-quick-actions" style="display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: rgba(0,0,0,0.15); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); align-items: center;">
+            <button class="btn btn-ai-run-primary" id="aiActionRunBar" title="Apply latest code & run in IDE">⚡ Agree & Run</button>
+            <button class="btn btn-ai-apply-primary" id="aiActionApplyBar" title="Apply latest code to editor">▶ Apply Code</button>
+            <span style="width: 1px; height: 16px; background: var(--glass-border); margin: 0 2px;"></span>
             <button class="btn btn-ai-action" id="aiActionExplain" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Explain Code</button>
             <button class="btn btn-ai-action" id="aiActionFix" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Fix Errors</button>
             <button class="btn btn-ai-action" id="aiActionOptimize" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Optimize</button>

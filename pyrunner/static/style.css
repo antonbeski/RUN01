@@ -1652,3 +1652,103 @@ body::after {
   color: #ef5350;
 }
 
+/* ── Liquid Metal Shimmer & Ripple Click Effects ────────────────── */
+@keyframes liquid-metal-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes ripple-animation {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+.btn-liquid-metal,
+.btn-ai-action,
+.ai-code-btn,
+.btn-run,
+.btn-ai,
+.btn-ai-run-primary,
+.btn-ai-apply-primary {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-style: preserve-3d;
+}
+
+.btn-liquid-metal:active,
+.btn-ai-action:active,
+.ai-code-btn:active,
+.btn-run:active,
+.btn-ai-run-primary:active,
+.btn-ai-apply-primary:active {
+  transform: scale(0.96) translateY(1px) !important;
+}
+
+/* ⚡ Agree & Run button above type box */
+.btn-ai-run-primary {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.25)) !important;
+  background-size: 200% 200% !important;
+  animation: liquid-metal-shimmer 4s ease infinite !important;
+  border: 1px solid rgba(34, 197, 94, 0.4) !important;
+  color: #4ade80 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-ai-run-primary:hover {
+  background-position: 100% 50% !important;
+  border-color: rgba(34, 197, 94, 0.7) !important;
+  color: #86efac !important;
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px) scale(1.02);
+}
+
+/* ▶ Apply Code button above type box */
+.btn-ai-apply-primary {
+  background: linear-gradient(135deg, rgba(255, 202, 40, 0.2), rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.2)) !important;
+  background-size: 200% 200% !important;
+  animation: liquid-metal-shimmer 4s ease infinite !important;
+  border: 1px solid rgba(255, 202, 40, 0.4) !important;
+  color: #ffca28 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(255, 202, 40, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-ai-apply-primary:hover {
+  background-position: 100% 50% !important;
+  border-color: rgba(255, 202, 40, 0.7) !important;
+  color: #ffe082 !important;
+  box-shadow: 0 4px 14px rgba(255, 202, 40, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px) scale(1.02);
+}
+
+/* Ripple effect span */
+.btn-ripple-span {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+  animation: ripple-animation 0.6s ease-out forwards;
+}
+
+
