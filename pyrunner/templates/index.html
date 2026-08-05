@@ -231,7 +231,7 @@
           </span>
           <div class="pane-right-meta">
             <!-- Model selector -->
-            <select class="ai-model-select" id="aiModelSelect" aria-label="Select AI model" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: var(--text-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: inherit; outline: none; max-width: 170px; margin-right: 8px;">
+            <select class="ai-model-select" id="aiModelSelect" aria-label="Select AI model">
               <!-- Dynamically populated -->
             </select>
             <button class="pane-fs-btn" id="closeAIBtn" title="Close assistant" aria-label="Close assistant">
@@ -250,23 +250,30 @@
             </div>
           </div>
 
-          <!-- Quick actions toolbar (positioned directly above the type box) -->
-          <div class="ai-quick-actions" style="display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: rgba(0,0,0,0.15); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); align-items: center;">
-            <button class="btn btn-ai-run-primary" id="aiActionRunBar" title="Apply latest code & run in IDE">⚡ Agree & Run</button>
-            <button class="btn btn-ai-apply-primary" id="aiActionApplyBar" title="Apply latest code to editor">▶ Apply Code</button>
-            <span style="width: 1px; height: 16px; background: var(--glass-border); margin: 0 2px;"></span>
-            <button class="btn btn-ai-action" id="aiActionExplain" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Explain Code</button>
-            <button class="btn btn-ai-action" id="aiActionFix" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Fix Errors</button>
-            <button class="btn btn-ai-action" id="aiActionOptimize" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Optimize</button>
-            <button class="btn btn-ai-action" id="aiActionComments" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Add Comments</button>
+          <!-- Quick actions toolbar -->
+          <div class="ai-quick-actions">
+            <button class="btn btn-ai-action" id="aiActionExplain">Explain Code</button>
+            <button class="btn btn-ai-action" id="aiActionFix">Fix Errors</button>
+            <button class="btn btn-ai-action" id="aiActionOptimize">Optimize</button>
+            <button class="btn btn-ai-action" id="aiActionComments">Add Comments</button>
           </div>
 
-          <!-- Chat Input -->
-          <div class="ai-input-wrap" style="padding: 12px; background: rgba(0,0,0,0.15); display: flex; gap: 8px; align-items: flex-end;">
-            <textarea class="ai-textarea" id="aiTextarea" placeholder="Ask AI... (Ctrl+Enter to send)" style="flex: 1; height: 38px; max-height: 120px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px; color: var(--text-color); font-size: 12.5px; font-family: inherit; resize: none; outline: none; line-height: 1.4; scrollbar-width: none;"></textarea>
-            <button class="ai-send-btn" id="aiSendBtn" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); border-radius: 6px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-color); transition: all 0.2s;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
+          <!-- Chat Input + Code-Action Bar -->
+          <div class="ai-input-wrap">
+            <!-- Code-action bar: hidden, appears after AI generates code -->
+            <div class="ai-code-action-bar" id="aiCodeActionBar">
+              <span class="ai-code-action-label">Code ready —</span>
+              <button class="btn btn-ai-run-primary" id="aiActionRunBar">&#9889; Agree &amp; Run</button>
+              <button class="btn btn-ai-apply-primary" id="aiActionApplyBar">&#9654; Apply Code</button>
+              <button class="ai-code-action-dismiss" id="aiCodeActionDismiss" title="Dismiss">&times;</button>
+            </div>
+            <!-- Textarea row -->
+            <div class="ai-textarea-row">
+              <textarea class="ai-textarea" id="aiTextarea" placeholder="Ask AI anything... (Ctrl+Enter to send)"></textarea>
+              <button class="ai-send-btn" id="aiSendBtn" aria-label="Send">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </section>
