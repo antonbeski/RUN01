@@ -2831,46 +2831,20 @@ document.addEventListener('keydown', (e) => {
         actions.appendChild(copyBtn);
         
         if (isPython) {
-          const applyBtn = document.createElement('button');
-          applyBtn.className = 'ai-code-btn';
-          applyBtn.textContent = '▶ Apply';
-          applyBtn.style.color = '#ffca28';
-          applyBtn.addEventListener('click', () => {
-            if (monacoEditor) {
-              const selection = monacoEditor.getSelection();
-              if (selection && !selection.isEmpty()) {
-                const range = new monaco.Range(
-                  selection.startLineNumber,
-                  selection.startColumn,
-                  selection.endLineNumber,
-                  selection.endColumn
-                );
-                const id = { major: 1, minor: 1 };
-                const textOp = { identifier: id, range: range, text: codeLines, forceMoveMarkers: true };
-                monacoEditor.executeEdits("my-source", [textOp]);
-              } else {
-                monacoEditor.setValue(codeLines);
-              }
-              applyBtn.textContent = 'Applied!';
-              setTimeout(() => applyBtn.textContent = '▶ Apply', 2000);
-            }
-          });
-          actions.appendChild(applyBtn);
-
-          const agreeRunBtn = document.createElement('button');
-          agreeRunBtn.className = 'ai-code-btn';
-          agreeRunBtn.textContent = '⚡ Agree & Run';
-          agreeRunBtn.style.color = '#22c55e';
-          agreeRunBtn.style.fontWeight = 'bold';
-          agreeRunBtn.addEventListener('click', () => {
+          const runBtn = document.createElement('button');
+          runBtn.className = 'ai-code-btn';
+          runBtn.textContent = '⚡ Run';
+          runBtn.style.color = '#4ade80';
+          runBtn.style.fontWeight = 'bold';
+          runBtn.addEventListener('click', () => {
             if (monacoEditor) {
               monacoEditor.setValue(codeLines);
-              agreeRunBtn.textContent = 'Running...';
+              runBtn.textContent = 'Running...';
               triggerRun();
-              setTimeout(() => agreeRunBtn.textContent = '⚡ Agree & Run', 2000);
+              setTimeout(() => runBtn.textContent = '⚡ Run', 2000);
             }
           });
-          actions.appendChild(agreeRunBtn);
+          actions.appendChild(runBtn);
         }
         
         header.appendChild(actions);
@@ -3104,7 +3078,7 @@ CRITICAL IDE ENVIRONMENT RULES & LIMITATIONS:
     return null;
   }
 
-  // ⚡ Agree & Run (inside input area, shown after code generated)
+  // ⚡ Run (inside input area, shown after code generated)
   const aiActionRunBar = document.getElementById('aiActionRunBar');
   if (aiActionRunBar) {
     aiActionRunBar.addEventListener('click', () => {
@@ -3113,44 +3087,13 @@ CRITICAL IDE ENVIRONMENT RULES & LIMITATIONS:
         if (monacoEditor) monacoEditor.setValue(code);
         aiActionRunBar.textContent = 'Running...';
         triggerRun();
-        // Dismiss bar and reset label after run
         const bar = document.getElementById('aiCodeActionBar');
         setTimeout(() => {
-          aiActionRunBar.textContent = '⚡ Agree & Run';
+          aiActionRunBar.textContent = '⚡ Run';
           if (bar) bar.classList.remove('visible');
         }, 2200);
       } else {
         sendUserMessage('Please generate a complete, working Python script for my current task so I can run it.');
-      }
-    });
-  }
-
-  // ▶ Apply Code (above type box)
-  const aiActionApplyBar = document.getElementById('aiActionApplyBar');
-  if (aiActionApplyBar) {
-    aiActionApplyBar.addEventListener('click', () => {
-      const code = getLatestCodeSnippet();
-      if (code) {
-        if (monacoEditor) {
-          const selection = monacoEditor.getSelection();
-          if (selection && !selection.isEmpty()) {
-            const range = new monaco.Range(
-              selection.startLineNumber,
-              selection.startColumn,
-              selection.endLineNumber,
-              selection.endColumn
-            );
-            const id = { major: 1, minor: 1 };
-            const textOp = { identifier: id, range: range, text: code, forceMoveMarkers: true };
-            monacoEditor.executeEdits("my-source", [textOp]);
-          } else {
-            monacoEditor.setValue(code);
-          }
-        }
-        aiActionApplyBar.textContent = 'Applied!';
-        setTimeout(() => aiActionApplyBar.textContent = '▶ Apply Code', 2000);
-      } else {
-        sendUserMessage('Please generate a complete Python code snippet so I can apply it to my editor.');
       }
     });
   }
