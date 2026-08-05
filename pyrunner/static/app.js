@@ -2856,6 +2856,21 @@ document.addEventListener('keydown', (e) => {
             }
           });
           actions.appendChild(applyBtn);
+
+          const agreeRunBtn = document.createElement('button');
+          agreeRunBtn.className = 'ai-code-btn';
+          agreeRunBtn.textContent = '⚡ Agree & Run';
+          agreeRunBtn.style.color = '#22c55e';
+          agreeRunBtn.style.fontWeight = 'bold';
+          agreeRunBtn.addEventListener('click', () => {
+            if (monacoEditor) {
+              monacoEditor.setValue(codeLines);
+              agreeRunBtn.textContent = 'Running...';
+              triggerRun();
+              setTimeout(() => agreeRunBtn.textContent = '⚡ Agree & Run', 2000);
+            }
+          });
+          actions.appendChild(agreeRunBtn);
         }
         
         header.appendChild(actions);
@@ -2954,7 +2969,37 @@ document.addEventListener('keydown', (e) => {
     
     const systemPrompt = {
       role: 'system',
-      content: 'You are an expert Python coding assistant for RUN01, a browser-based Python IDE. You help write, explain, debug, and optimize Python code. Available libraries: NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, yfinance, fredapi. Keep explanations concise. Always wrap code in ```python ... ``` fences. Use clear markdown headers/lists.'
+      content: `You are an expert AI pair programmer embedded inside RUN01 — a browser-based WebAssembly Python IDE.
+
+CRITICAL IDE ENVIRONMENT RULES & LIMITATIONS:
+1. RUNTIME: Python runs in Pyodide v0.26.4 inside WebAssembly in the browser.
+2. NETWORK & CORS: Direct HTTP requests to external domains (or standard 'import yfinance as yf' / urllib calls) fail due to browser CORS policy and lack of raw sockets.
+3. BUILT-IN ASYNC HELPERS (DO NOT IMPORT yfinance):
+   - To fetch stock data, DO NOT write 'import yfinance as yf' or 'yf.Ticker(...)'.
+   - ALWAYS use the pre-injected async helpers:
+     * df = await yf_download("AAPL", period="3mo", interval="1d")  # Returns DataFrame indexed by Date
+     * info = await yf_info("AAPL")                                # Returns dict with metadata
+     * data = await yf_fetch(ticker, category)                     # Universal proxy fetch
+     * actions = await yf_actions("AAPL")
+     * divs = await yf_dividends("AAPL")
+     * splits = await yf_splits("AAPL")
+     * options = await yf_options("AAPL")
+     * chain = await yf_option_chain("AAPL", expiry)
+     * sec = await yf_sector("technology")
+     * ind = await yf_industry("software-infrastructure")
+     * mkt = await yf_market("status")
+     * news = await yf_news("AAPL")
+     * search = await yf_search("query")
+     * lookup = await yf_lookup("query")
+     * gdp = await fred_download("GDP", limit=100)                # Economic data from FRED
+4. TOP-LEVEL AWAIT: Top-level 'await' is natively supported in this IDE (e.g. 'df = await yf_download("AAPL")'). You do NOT need asyncio.run().
+5. PLOTTING:
+   - Matplotlib / Seaborn: 'plt.show()' is automatically intercepted to render inline PNG images in the output panel. Always call 'plt.show()' after plotting.
+   - Plotly: 'fig.show()' is automatically intercepted to render interactive Plotly charts in the output panel. Always call 'fig.show()' after creating figures.
+6. PRE-INSTALLED LIBRARIES: numpy, pandas, scipy, scikit-learn, statsmodels, matplotlib, seaborn, plotly. Do NOT try to pip install C-extension packages.
+7. CODE OUTPUT INSTRUCTIONS:
+   - Always write complete, executable Python code compatible with RUN01.
+   - Always wrap code blocks inside \`\`\`python ... \`\`\` fences so the IDE UI can display "Apply" and "Agree & Run" buttons for the user.`
     };
 
     const messages = [
