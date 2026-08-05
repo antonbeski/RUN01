@@ -2802,10 +2802,116 @@ document.addEventListener('keydown', (e) => {
   }
 
   function renderMarkdown(element, text) {
-    const parts = text.split(/(```python[\s\S]*?```|```[\s\S]*?```)/g);
+    // Split on code fences AND surgical edit blocks
+    const parts = text.split(/(```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
     element.innerHTML = '';
-    
     parts.forEach(part => {
+      // ── Surgical edit diff block ──────────────────────────────────
+      if (part.startsWith('<<<SURGICAL_EDIT>>>')) {
+        const findMatch  = part.match(/<<<FIND>>>([\s\S]*?)<<<REPLACE>>>/);
+        const replMatch  = part.match(/<<<REPLACE>>>([\s\S]*?)<<<END_EDIT>>>/);
+        if (!findMatch || !replMatch) return;
+        const findText  = findMatch[1].trim();
+        const replText  = replMatch[1].trim();
+
+        const diffCard = document.createElement('div');
+        diffCard.className = 'ai-diff-card';
+
+        const diffHeader = document.createElement('div');
+        diffHeader.className = 'ai-diff-header';
+        diffHeader.innerHTML = '<span class="ai-diff-title">&#9998; Surgical Edit</span>';
+
+        const diffActions = document.createElement('div');
+        diffActions.className = 'ai-diff-actions';
+
+        const acceptBtn = document.createElement('button');
+        acceptBtn.className = 'ai-diff-btn ai-diff-accept';
+        acceptBtn.textContent = '✓ Accept';
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.className = 'ai-diff-btn ai-diff-reject';
+        rejectBtn.textContent = '✕ Reject';
+
+        diffActions.appendChild(acceptBtn);
+        diffActions.appendChild(rejectBtn);
+        diffHeader.appendChild(diffActions);
+        diffCard.appendChild(diffHeader);
+
+        // Visual diff lines
+        const diffBody = document.createElement('div');
+        diffBody.className = 'ai-diff-body';
+        findText.split('\n').forEach(l => {
+          const row = document.createElement('div');
+          row.className = 'ai-diff-line ai-diff-remove';
+          row.textContent = '− ' + l;
+          diffBody.appendChild(row);
+        });
+        replText.split('\n').forEach(l => {
+          const row = document.createElement('div');
+          row.className = 'ai-diff-line ai-diff-add';
+          row.textContent = '+ ' + l;
+          diffBody.appendChild(row);
+        });
+        diffCard.appendChild(diffBody);
+        element.appendChild(diffCard);
+
+        // Highlight the target lines in Monaco immediately
+        let pendingDecorations = [];
+        if (monacoEditor) {
+          const model = monacoEditor.getModel();
+          if (model) {
+            const matches = model.findMatches(findText, true, false, true, null, true);
+            if (matches.length > 0) {
+              pendingDecorations = monacoEditor.deltaDecorations([], matches.map(m => ({
+                range: m.range,
+                options: {
+                  isWholeLine: false,
+                  className: 'monaco-pending-edit-line',
+                  glyphMarginClassName: 'monaco-pending-edit-glyph',
+                  overviewRuler: { color: 'rgba(255,202,40,0.6)', position: 1 }
+                }
+              })));
+            }
+          }
+        }
+
+        // Accept: apply the surgical replacement
+        acceptBtn.addEventListener('click', () => {
+          if (monacoEditor) {
+            const model = monacoEditor.getModel();
+            if (model) {
+              const matches = model.findMatches(findText, true, false, true, null, true);
+              if (matches.length > 0) {
+                monacoEditor.executeEdits('surgical-edit', matches.map(m => ({
+                  range: m.range,
+                  text: replText,
+                  forceMoveMarkers: true
+                })));
+              }
+            }
+            monacoEditor.deltaDecorations(pendingDecorations, []);
+          }
+          diffCard.classList.add('ai-diff-accepted');
+          acceptBtn.textContent = '✓ Applied';
+          acceptBtn.disabled = true;
+          rejectBtn.disabled = true;
+          // Auto-run after surgical accept
+          setTimeout(() => triggerRun(), 300);
+        });
+
+        // Reject: clear decorations
+        rejectBtn.addEventListener('click', () => {
+          if (monacoEditor) monacoEditor.deltaDecorations(pendingDecorations, []);
+          diffCard.classList.add('ai-diff-rejected');
+          acceptBtn.disabled = true;
+          rejectBtn.textContent = '✕ Rejected';
+          rejectBtn.disabled = true;
+        });
+
+        return;
+      }
+
+      // ── Python / generic code block ───────────────────────────────
       if (part.startsWith('```')) {
         const isPython = part.startsWith('```python');
         const codeLines = part.replace(/^```(python)?\n/, '').replace(/\n```$/, '');
@@ -2972,8 +3078,18 @@ CRITICAL IDE ENVIRONMENT RULES & LIMITATIONS:
    - Plotly: 'fig.show()' is automatically intercepted to render interactive Plotly charts in the output panel. Always call 'fig.show()' after creating figures.
 6. PRE-INSTALLED LIBRARIES: numpy, pandas, scipy, scikit-learn, statsmodels, matplotlib, seaborn, plotly. Do NOT try to pip install C-extension packages.
 7. CODE OUTPUT INSTRUCTIONS:
-   - Always write complete, executable Python code compatible with RUN01.
-   - Always wrap code blocks inside \`\`\`python ... \`\`\` fences so the IDE UI can display "Apply" and "Agree & Run" buttons for the user.`
+   - When the user asks to fix, change, or improve SPECIFIC lines/sections in their existing code, output ONE or MORE surgical edit blocks using this EXACT format (no markdown fences around them):
+
+<<<SURGICAL_EDIT>>>
+<<<FIND>>>
+exact original lines to find and replace (copy them verbatim from the user's code)
+<<<REPLACE>>>
+new lines to replace them with
+<<<END_EDIT>>>
+
+   - You can include MULTIPLE surgical edit blocks in one response if multiple areas need changing.
+   - When the user asks for a FULL script or new code, use a normal \`\`\`python ... \`\`\` code block.
+   - Always wrap NEW full scripts in \`\`\`python ... \`\`\` fences so the IDE can display the Run button.`
     };
 
     const messages = [

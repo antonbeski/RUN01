@@ -1942,4 +1942,153 @@ body::after {
   transform: translate(-50%, -50%) scale(0);
 }
 
+/* ── Surgical Diff Edit Card ──────────────────────────────────────── */
+.ai-diff-card {
+  margin: 8px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 202, 40, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  animation: ai-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.2s, opacity 0.2s;
+}
+[data-theme="light"] .ai-diff-card {
+  background: rgba(255, 252, 235, 0.8);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.ai-diff-card.ai-diff-accepted {
+  border-color: rgba(34, 197, 94, 0.4);
+  opacity: 0.7;
+}
+.ai-diff-card.ai-diff-rejected {
+  border-color: rgba(239, 68, 68, 0.25);
+  opacity: 0.45;
+}
+
+.ai-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255, 202, 40, 0.07);
+  border-bottom: 1px solid rgba(255, 202, 40, 0.12);
+}
+[data-theme="light"] .ai-diff-header {
+  background: rgba(245, 158, 11, 0.06);
+  border-bottom-color: rgba(245, 158, 11, 0.15);
+}
+
+.ai-diff-title {
+  font-size: 10.5px;
+  color: #ffca28;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+[data-theme="light"] .ai-diff-title {
+  color: #b45309;
+}
+
+.ai-diff-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ai-diff-btn {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.ai-diff-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ai-diff-accept {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+.ai-diff-accept:not(:disabled):hover {
+  background: rgba(34, 197, 94, 0.28);
+  border-color: rgba(34, 197, 94, 0.7);
+  color: #86efac;
+}
+[data-theme="light"] .ai-diff-accept {
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.ai-diff-reject {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+.ai-diff-reject:not(:disabled):hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+}
+[data-theme="light"] .ai-diff-reject {
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.ai-diff-body {
+  padding: 6px 0;
+  overflow-x: auto;
+}
+
+.ai-diff-line {
+  padding: 1.5px 12px;
+  white-space: pre;
+  line-height: 1.55;
+  font-size: 11px;
+}
+
+.ai-diff-remove {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left: 3px solid rgba(239, 68, 68, 0.55);
+}
+[data-theme="light"] .ai-diff-remove {
+  background: rgba(254, 226, 226, 0.6);
+  color: #dc2626;
+}
+
+.ai-diff-add {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  border-left: 3px solid rgba(34, 197, 94, 0.5);
+}
+[data-theme="light"] .ai-diff-add {
+  background: rgba(220, 252, 231, 0.6);
+  color: #15803d;
+}
+
+/* Monaco Editor Pending-Edit Decoration */
+.monaco-pending-edit-line {
+  background: rgba(255, 202, 40, 0.12) !important;
+  border-left: 3px solid rgba(255, 202, 40, 0.7) !important;
+}
+.monaco-pending-edit-glyph {
+  background: rgba(255, 202, 40, 0.6);
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+  margin-top: 6px;
+  margin-left: 3px;
+}
+
+
 
