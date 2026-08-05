@@ -2650,3 +2650,393 @@ document.addEventListener('keydown', (e) => {
     panel.style.height = Math.min(Math.max(curH + dir, 160), outH - 120) + 'px';
   });
 })();
+
+// ── Vertical resize handle for AI assistant pane ─────────────────
+(function initResizeAI() {
+  const handle     = document.getElementById('resizeHandleAI');
+  const workspace  = document.querySelector('.workspace');
+  const paneAI     = document.getElementById('paneAI');
+  if (!handle || !workspace || !paneAI) return;
+  let dragging = false, startX = 0, startW = 0, totalW = 0;
+
+  handle.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startX   = e.clientX;
+    startW   = paneAI.getBoundingClientRect().width;
+    totalW   = workspace.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const delta = startX - e.clientX; // dragging left = increase width
+    const newW  = Math.min(Math.max(startW + delta, 300), 500);
+    paneAI.style.width = newW + 'px';
+    paneAI.style.flex = `0 0 ${newW}px`;
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 10);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+  });
+})();
+
+// ── AI Coding Assistant chat logic ───────────────────────────────
+(function initAIAssistant() {
+  const btnAI = document.getElementById('btnAI');
+  const closeAIBtn = document.getElementById('closeAIBtn');
+  const paneAI = document.getElementById('paneAI');
+  const handleAI = document.getElementById('resizeHandleAI');
+  const aiModelSelect = document.getElementById('aiModelSelect');
+  const aiMessages = document.getElementById('aiMessages');
+  const aiTextarea = document.getElementById('aiTextarea');
+  const aiSendBtn = document.getElementById('aiSendBtn');
+  
+  if (!paneAI || !btnAI) return;
+
+  let messagesHistory = [];
+
+  // Load models from API
+  async function loadModels() {
+    try {
+      const resp = await fetch('/api/ai/models');
+      const models = await resp.json();
+      aiModelSelect.innerHTML = '';
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        aiModelSelect.appendChild(opt);
+      });
+    } catch (err) {
+      console.error('Failed to load AI models:', err);
+    }
+  }
+  loadModels();
+
+  // Helper to toggle AI panel visibility
+  function toggleAIPanel() {
+    const isHidden = paneAI.style.display === 'none';
+    if (isHidden) {
+      paneAI.style.display = 'flex';
+      handleAI.style.display = 'block';
+      btnAI.classList.add('active');
+      aiTextarea.focus();
+    } else {
+      paneAI.style.display = 'none';
+      handleAI.style.display = 'none';
+      btnAI.classList.remove('active');
+    }
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+  }
+
+  btnAI.addEventListener('click', toggleAIPanel);
+  closeAIBtn.addEventListener('click', toggleAIPanel);
+
+  // Keyboard shortcut Ctrl+K to toggle AI panel
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      toggleAIPanel();
+    }
+  });
+
+  // Handle auto-adjusting textarea height
+  aiTextarea.addEventListener('input', () => {
+    aiTextarea.style.height = 'auto';
+    aiTextarea.style.height = Math.min(aiTextarea.scrollHeight, 120) + 'px';
+  });
+
+  // Handle Ctrl+Enter to send message
+  aiTextarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      sendUserMessage();
+    }
+  });
+
+  aiSendBtn.addEventListener('click', () => sendUserMessage());
+
+  function appendMessage(role, text, isError = false) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `ai-msg ai-msg-${role} ${isError ? 'ai-msg-error' : ''}`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'ai-msg-bubble';
+    
+    if (role === 'assistant') {
+      renderMarkdown(bubble, text);
+    } else {
+      bubble.textContent = text;
+    }
+    
+    msgDiv.appendChild(bubble);
+    aiMessages.appendChild(msgDiv);
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+    return bubble;
+  }
+
+  function appendLoadingIndicator() {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'ai-msg ai-msg-assistant';
+    const bubble = document.createElement('div');
+    bubble.className = 'ai-msg-bubble';
+    
+    const indicator = document.createElement('div');
+    indicator.className = 'ai-typing-indicator';
+    indicator.innerHTML = '<span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span>';
+    
+    bubble.appendChild(indicator);
+    msgDiv.appendChild(bubble);
+    aiMessages.appendChild(msgDiv);
+    aiMessages.scrollTop = aiMessages.scrollHeight;
+    return msgDiv;
+  }
+
+  function renderMarkdown(element, text) {
+    const parts = text.split(/(```python[\s\S]*?```|```[\s\S]*?```)/g);
+    element.innerHTML = '';
+    
+    parts.forEach(part => {
+      if (part.startsWith('```')) {
+        const isPython = part.startsWith('```python');
+        const codeLines = part.replace(/^```(python)?\n/, '').replace(/\n```$/, '');
+        
+        const container = document.createElement('div');
+        container.className = 'ai-code-block-container';
+        
+        const header = document.createElement('div');
+        header.className = 'ai-code-block-header';
+        header.innerHTML = `<span>${isPython ? 'python' : 'code'}</span>`;
+        
+        const actions = document.createElement('div');
+        actions.className = 'ai-code-block-actions';
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'ai-code-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(codeLines);
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+        });
+        actions.appendChild(copyBtn);
+        
+        if (isPython) {
+          const applyBtn = document.createElement('button');
+          applyBtn.className = 'ai-code-btn';
+          applyBtn.textContent = '▶ Apply';
+          applyBtn.style.color = '#ffca28';
+          applyBtn.addEventListener('click', () => {
+            if (monacoEditor) {
+              const selection = monacoEditor.getSelection();
+              if (selection && !selection.isEmpty()) {
+                const range = new monaco.Range(
+                  selection.startLineNumber,
+                  selection.startColumn,
+                  selection.endLineNumber,
+                  selection.endColumn
+                );
+                const id = { major: 1, minor: 1 };
+                const textOp = { identifier: id, range: range, text: codeLines, forceMoveMarkers: true };
+                monacoEditor.executeEdits("my-source", [textOp]);
+              } else {
+                monacoEditor.setValue(codeLines);
+              }
+              applyBtn.textContent = 'Applied!';
+              setTimeout(() => applyBtn.textContent = '▶ Apply', 2000);
+            }
+          });
+          actions.appendChild(applyBtn);
+        }
+        
+        header.appendChild(actions);
+        container.appendChild(header);
+        
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.textContent = codeLines;
+        pre.appendChild(code);
+        container.appendChild(pre);
+        element.appendChild(container);
+      } else if (part.trim() !== '') {
+        const lines = part.split('\n');
+        let currentP = null;
+        let currentList = null;
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            if (!currentList) {
+              currentList = document.createElement('ul');
+              element.appendChild(currentList);
+            }
+            const li = document.createElement('li');
+            li.textContent = trimmed.substring(2);
+            currentList.appendChild(li);
+            currentP = null;
+          } else if (/^\d+\.\s/.test(trimmed)) {
+            if (!currentList) {
+              currentList = document.createElement('ol');
+              element.appendChild(currentList);
+            }
+            const li = document.createElement('li');
+            li.textContent = trimmed.replace(/^\d+\.\s/, '');
+            currentList.appendChild(li);
+            currentP = null;
+          } else if (trimmed !== '') {
+            currentList = null;
+            if (!currentP) {
+              currentP = document.createElement('p');
+              element.appendChild(currentP);
+            } else {
+              currentP.appendChild(document.createElement('br'));
+            }
+            const boldParts = trimmed.split(/(\*\*.*?\*\*)/g);
+            boldParts.forEach(bp => {
+              if (bp.startsWith('**') && bp.endsWith('**')) {
+                const b = document.createElement('strong');
+                b.textContent = bp.slice(2, -2);
+                currentP.appendChild(b);
+              } else {
+                currentP.appendChild(document.createTextNode(bp));
+              }
+            });
+          } else {
+            currentP = null;
+            currentList = null;
+          }
+        });
+      }
+    });
+  }
+
+  function getContextPrompt() {
+    let codeContent = '';
+    if (monacoEditor) {
+      codeContent = monacoEditor.getValue();
+    }
+    
+    let consoleOutput = '';
+    const outputDiv = document.getElementById('output');
+    if (outputDiv) {
+      consoleOutput = outputDiv.innerText || outputDiv.textContent;
+      if (consoleOutput.length > 2000) {
+        consoleOutput = consoleOutput.slice(-2000);
+      }
+    }
+
+    return `\n\n[CONTEXT: User's Current Python Code]\n\`\`\`python\n${codeContent}\n\`\`\`\n\n[CONTEXT: Last Console Output]\n\`\`\`\n${consoleOutput}\n\`\`\``;
+  }
+
+  async function sendUserMessage(overrideText = null) {
+    const text = (overrideText || aiTextarea.value).trim();
+    if (!text) return;
+
+    if (!overrideText) {
+      aiTextarea.value = '';
+      aiTextarea.style.height = 'auto';
+    }
+
+    appendMessage('user', text);
+
+    const model = aiModelSelect.value;
+    const indicator = appendLoadingIndicator();
+    const context = getContextPrompt();
+    
+    const systemPrompt = {
+      role: 'system',
+      content: 'You are an expert Python coding assistant for RUN01, a browser-based Python IDE. You help write, explain, debug, and optimize Python code. Available libraries: NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, yfinance, fredapi. Keep explanations concise. Always wrap code in ```python ... ``` fences. Use clear markdown headers/lists.'
+    };
+
+    const messages = [
+      systemPrompt,
+      ...messagesHistory,
+      { role: 'user', content: text + context }
+    ];
+
+    try {
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, model })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.error || 'Server returned an error');
+      }
+
+      indicator.remove();
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      
+      const assistantBubble = appendMessage('assistant', '');
+      let fullAssistantText = '';
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const rawJson = trimmed.substring(6);
+              const parsed = JSON.parse(rawJson);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              fullAssistantText += token;
+              renderMarkdown(assistantBubble, fullAssistantText);
+              aiMessages.scrollTop = aiMessages.scrollHeight;
+            } catch (err) {
+              // skip parse failures on partial chunks
+            }
+          }
+        }
+      }
+
+      messagesHistory.push({ role: 'user', content: text });
+      messagesHistory.push({ role: 'assistant', content: fullAssistantText });
+      
+      if (messagesHistory.length > 10) {
+        messagesHistory = messagesHistory.slice(-10);
+      }
+
+    } catch (err) {
+      if (indicator) indicator.remove();
+      appendMessage('assistant', `Failed to get response: ${err.message}`, true);
+    }
+  }
+
+  // Quick Action Buttons
+  document.getElementById('aiActionExplain').addEventListener('click', () => {
+    sendUserMessage('Can you explain the current code in the editor, detailing what each part does and how it runs?');
+  });
+
+  document.getElementById('aiActionFix').addEventListener('click', () => {
+    sendUserMessage('I see an issue or error output. Can you analyze the current code and the last console output to diagnose and provide a correct python code fix?');
+  });
+
+  document.getElementById('aiActionOptimize').addEventListener('click', () => {
+    sendUserMessage('Can you optimize the current code for performance, readability, or best practices, and suggest any refactoring?');
+  });
+
+  document.getElementById('aiActionComments').addEventListener('click', () => {
+    sendUserMessage('Can you add clear, informative docstrings and comments to the current python code to make it self-explanatory?');
+  });
+})();

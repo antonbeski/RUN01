@@ -143,6 +143,15 @@
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
 
+      <!-- AI Assistant toggle -->
+      <button class="btn btn-ghost btn-ai" id="btnAI" title="AI Assistant (Ctrl+K)" aria-label="Toggle AI Assistant">
+        <span class="ai-btn-sparkle" aria-hidden="true" style="color: #ffca28; margin-right: 4px; font-weight: bold;">⚡</span>
+        AI Assistant
+      </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
       <!-- Run -->
       <button class="btn btn-run" id="btnRun" disabled aria-label="Run code (Ctrl+Enter)">
         <span class="run-icon" aria-hidden="true">▶</span>
@@ -205,6 +214,56 @@
               <span class="prompt-caret" aria-hidden="true">❯</span>
               Run01 is loading…
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Resize handle for AI assistant -->
+      <div class="resize-handle" id="resizeHandleAI" style="display:none" role="separator" aria-orientation="vertical"
+           aria-label="Drag to resize AI assistant" tabindex="0"></div>
+
+      <!-- AI Assistant Pane -->
+      <section class="pane pane-ai" id="paneAI" style="display:none" aria-label="AI assistant">
+        <div class="pane-header">
+          <span class="pane-label">
+            <span class="pill pill-ai" style="background: linear-gradient(135deg, #ffca28, #ff8f00); color: #000; font-weight: bold; border: none;">AI</span>
+            assistant
+          </span>
+          <div class="pane-right-meta">
+            <!-- Model selector -->
+            <select class="ai-model-select" id="aiModelSelect" aria-label="Select AI model" style="background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: var(--text-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: inherit; outline: none; max-width: 170px; margin-right: 8px;">
+              <!-- Dynamically populated -->
+            </select>
+            <button class="pane-fs-btn" id="closeAIBtn" title="Close assistant" aria-label="Close assistant">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-chat-container" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; min-height: 0;">
+          <!-- Messages -->
+          <div class="ai-messages" id="aiMessages" style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; min-height: 0; scrollbar-width: thin;">
+            <div class="ai-msg ai-msg-system">
+              <div class="ai-msg-bubble" style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 8px; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+                Hello! I am your AI coding assistant. Ask me anything, or run quick actions below. I automatically reference your active code and output.
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick actions toolbar -->
+          <div class="ai-quick-actions" style="display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: rgba(0,0,0,0.1); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+            <button class="btn btn-ai-action" id="aiActionExplain" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Explain Code</button>
+            <button class="btn btn-ai-action" id="aiActionFix" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Fix Errors</button>
+            <button class="btn btn-ai-action" id="aiActionOptimize" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Optimize</button>
+            <button class="btn btn-ai-action" id="aiActionComments" style="font-size: 10px; padding: 4px 8px; height: auto; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02); color: var(--text-muted); border-radius: 4px; cursor: pointer; transition: all 0.2s;">Add Comments</button>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="ai-input-wrap" style="padding: 12px; background: rgba(0,0,0,0.15); display: flex; gap: 8px; align-items: flex-end;">
+            <textarea class="ai-textarea" id="aiTextarea" placeholder="Ask AI... (Ctrl+Enter to send)" style="flex: 1; height: 38px; max-height: 120px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px; color: var(--text-color); font-size: 12.5px; font-family: inherit; resize: none; outline: none; line-height: 1.4; scrollbar-width: none;"></textarea>
+            <button class="ai-send-btn" id="aiSendBtn" style="background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); border-radius: 6px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-color); transition: all 0.2s;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
           </div>
         </div>
       </section>

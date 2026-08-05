@@ -501,5 +501,77 @@ def run_code():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+# ── AI Coding Assistant endpoints (Groq & Gemini) ────────────────────────────
+@app.route("/api/ai/models")
+def ai_models():
+    models = [
+        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B (Groq)", "provider": "Groq"},
+        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B (Groq)", "provider": "Groq"},
+        {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B (Groq)", "provider": "Groq"},
+        {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B (Groq)", "provider": "Groq"},
+        {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash (Google)", "provider": "Google"},
+        {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Google)", "provider": "Google"},
+        {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash (Google)", "provider": "Google"},
+        {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash (Google)", "provider": "Google"},
+        {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro (Google)", "provider": "Google"}
+    ]
+    return jsonify(models)
+
+@app.route("/api/ai/chat", methods=["POST"])
+def ai_chat():
+    try:
+        import os
+        import requests
+        from flask import Response, stream_with_context
+
+        body = request.get_json(force=True)
+        messages = body.get("messages", [])
+        model = body.get("model", "llama-3.3-70b-versatile")
+
+        if model.startswith("gemini-"):
+            api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+            if not api_key:
+                return jsonify({"error": "GEMINI_API_KEY environment variable is not set. Please add it to your Vercel settings."}), 400
+            url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+        else:
+            api_key = os.environ.get("GROQ_API_KEY", "").strip()
+            if not api_key:
+                return jsonify({"error": "GROQ_API_KEY environment variable is not set. Please add it to your Vercel settings."}), 400
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": True
+        }
+
+        # Make requests call with stream enabled
+        res = requests.post(url, headers=headers, json=payload, stream=True, timeout=60)
+        if res.status_code != 200:
+            try:
+                err_data = res.json()
+                err_msg = err_data.get("error", {}).get("message", res.text)
+            except Exception:
+                err_msg = res.text
+            return jsonify({"error": f"API Error ({res.status_code}): {err_msg}"}), res.status_code
+
+        def generate():
+            for chunk in res.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
+
+        return Response(stream_with_context(generate()), content_type="text/event-stream")
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
