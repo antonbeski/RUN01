@@ -3005,30 +3005,152 @@ document.addEventListener('keydown', (e) => {
         container.appendChild(pre);
         element.appendChild(container);
       } else if (part.trim() !== '') {
-        // ── Rich Markdown via marked.js ───────────────────────────────
-        // Handles: headings, bold, italic, tables, blockquotes,
-        //          inline code, horizontal rules, ordered/unordered lists
+        // ── Self-contained Markdown renderer ─────────────────────────
         const mdWrapper = document.createElement('div');
         mdWrapper.className = 'ai-md-body';
-
-        if (typeof marked !== 'undefined') {
-          // Configure marked for clean, safe output
-          marked.setOptions({
-            gfm: true,          // GitHub-flavoured (tables, strikethrough)
-            breaks: true,       // Single newline → <br>
-            headerIds: false,   // No id attrs on headings
-            mangle: false,
-          });
-          mdWrapper.innerHTML = marked.parse(part);
-        } else {
-          // Fallback if CDN fails — simple text with escaped HTML
-          mdWrapper.textContent = part;
-        }
-
+        mdWrapper.innerHTML = parseMarkdown(part);
         element.appendChild(mdWrapper);
       }
     });
   }
+
+  // ── parseMarkdown ─────────────────────────────────────────────────
+  // Zero-dependency Markdown → HTML converter.
+  // Handles: headings, tables (GFM), bold, italic, inline code,
+  //          blockquotes, unordered/ordered lists, horizontal rules, paragraphs.
+  function parseMarkdown(md) {
+
+    // inline(rawText): escape HTML then apply bold/italic/code/del markers
+    function inline(raw) {
+      // 1. Escape HTML entities in the raw content
+      let s = raw
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      // 2. Apply inline Markdown (order matters: code first, then bold/italic)
+      s = s.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+      s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/__(.+?)__/g, '<strong>$1</strong>');
+      s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+      s = s.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+      s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+      return s;
+    }
+
+    // Parse a GFM table row — splits on | respecting escaped pipes
+    function parseRow(rowLine) {
+      return rowLine.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+    }
+
+    // Is this line a GFM table separator? (e.g. |------|:---:|----:|)
+    function isSeparator(line) {
+      return /^\|?[\s\-:|]+\|[\s\-:|]*$/.test(line.trim()) ||
+             /^[-|: ]+$/.test(line.trim()) && line.includes('-') && line.includes('|');
+    }
+
+    const lines = md.split('\n');
+    let out = '';
+    let i = 0;
+
+    while (i < lines.length) {
+      const raw  = lines[i];
+      const line = raw.trim();
+
+      // ── Blank line ─────────────────────────────────────────────────
+      if (!line) { i++; continue; }
+
+      // ── ATX Heading: # through ###### ─────────────────────────────
+      const hm = line.match(/^(#{1,6})\s+(.+)$/);
+      if (hm) {
+        const lv = hm[1].length;
+        out += `<h${lv}>${inline(hm[2])}</h${lv}>`;
+        i++; continue;
+      }
+
+      // ── Horizontal rule: --- or *** or ___ ────────────────────────
+      if (/^(?:---+|\*\*\*+|___+)$/.test(line)) {
+        out += '<hr>';
+        i++; continue;
+      }
+
+      // ── GFM Table: current line has | and next line is a separator ─
+      if (line.includes('|') && isSeparator(lines[i + 1] || '')) {
+        const headers = parseRow(line);
+        i += 2; // skip the separator row
+        out += '<table><thead><tr>' +
+          headers.map(h => `<th>${h}</th>`).join('') +
+          '</tr></thead><tbody>';
+        while (i < lines.length && lines[i].trim() && lines[i].includes('|')) {
+          out += '<tr>' + parseRow(lines[i]).map(c => `<td>${c}</td>`).join('') + '</tr>';
+          i++;
+        }
+        out += '</tbody></table>';
+        continue;
+      }
+
+      // ── Blockquote: > ... ─────────────────────────────────────────
+      if (/^>\s/.test(line)) {
+        out += '<blockquote>';
+        while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+          out += inline(lines[i].trim().replace(/^>\s?/, '')) + ' ';
+          i++;
+        }
+        out += '</blockquote>';
+        continue;
+      }
+
+      // ── Unordered list: - * + ────────────────────────────────────
+      if (/^[-*+]\s/.test(line)) {
+        out += '<ul>';
+        while (i < lines.length) {
+          const l = lines[i].trim();
+          if (!l) { i++; break; }
+          if (!/^[-*+]\s/.test(l)) break;
+          out += `<li>${inline(l.replace(/^[-*+]\s+/, ''))}</li>`;
+          i++;
+        }
+        out += '</ul>';
+        continue;
+      }
+
+      // ── Ordered list: 1. 2. 3. ───────────────────────────────────
+      if (/^\d+\.\s/.test(line)) {
+        out += '<ol>';
+        while (i < lines.length) {
+          const l = lines[i].trim();
+          if (!l) { i++; break; }
+          if (!/^\d+\.\s/.test(l)) break;
+          out += `<li>${inline(l.replace(/^\d+\.\s+/, ''))}</li>`;
+          i++;
+        }
+        out += '</ol>';
+        continue;
+      }
+
+      // ── Paragraph: gather consecutive non-block lines ─────────────
+      const paraChunks = [];
+      while (i < lines.length) {
+        const l = lines[i].trim();
+        if (!l) { i++; break; }
+        // Stop at any block-level marker
+        if (/^#{1,6}\s/.test(l))             break;
+        if (/^(?:---+|\*\*\*+|___+)$/.test(l)) break;
+        if (/^>\s?/.test(l))                  break;
+        if (/^[-*+]\s/.test(l))               break;
+        if (/^\d+\.\s/.test(l))               break;
+        if (l.includes('|') && isSeparator(lines[i + 1] || '')) break;
+        paraChunks.push(l);
+        i++;
+      }
+      if (paraChunks.length) {
+        out += `<p>${paraChunks.map(inline).join('<br>')}</p>`;
+      }
+    }
+
+    return out;
+  }
+
 
   function getContextPrompt() {
     let codeContent = '';
