@@ -501,7 +501,7 @@ def run_code():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# ── AI Coding Assistant endpoints (Groq API Only) ────────────────────────────
+# ── AI Coding Assistant endpoints (Groq API — dual-key fallback) ─────────────
 @app.route("/api/ai/models")
 def ai_models():
     models = [
@@ -515,43 +515,113 @@ def ai_models():
     ]
     return jsonify(models)
 
+
+def _call_groq(api_key, model, messages, payload_extra=None):
+    """Make a single (non-streaming) attempt to the Groq API.
+
+    Returns (requests.Response, error_str).  error_str is None on success.
+    """
+    import requests
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {"model": model, "messages": messages, "stream": True}
+    if payload_extra:
+        payload.update(payload_extra)
+    try:
+        res = requests.post(url, headers=headers, json=payload, stream=True, timeout=60)
+        return res, None
+    except Exception as exc:
+        return None, str(exc)
+
+
+# Status codes that warrant an automatic fallback to the secondary key.
+_FALLBACK_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
 @app.route("/api/ai/chat", methods=["POST"])
 def ai_chat():
+    """Chat endpoint with automatic dual-key fallback.
+
+    Env vars:
+        GROQ_API_KEY   – primary key (required)
+        GROQ_API_KEY_2 – secondary / backup key (optional)
+
+    On a rate-limit (HTTP 429) or server error (5xx) from the primary key the
+    request is transparently retried with the secondary key.  If the secondary
+    key is also unavailable or fails, a descriptive error is returned.
+    """
     try:
         import os
-        import requests
         from flask import Response, stream_with_context
 
-        body = request.get_json(force=True)
+        body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model = body.get("model", "llama-3.3-70b-versatile")
+        model    = body.get("model", "llama-3.3-70b-versatile")
 
-        api_key = os.environ.get("GROQ_API_KEY", "").strip()
-        if not api_key:
-            return jsonify({"error": "GROQ_API_KEY environment variable is not set. Please add your Groq API key in Vercel settings."}), 400
+        # ── Collect available keys ──────────────────────────────────────────
+        key_primary   = os.environ.get("GROQ_API_KEY",   "").strip()
+        key_secondary = os.environ.get("GROQ_API_KEY_2", "").strip()
 
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
+        if not key_primary and not key_secondary:
+            return jsonify({
+                "error": "No Groq API key is configured. "
+                         "Set GROQ_API_KEY (and optionally GROQ_API_KEY_2) "
+                         "in your Vercel environment settings."
+            }), 400
 
-        payload = {
-            "model": model,
-            "messages": messages,
-            "stream": True
-        }
+        # Build an ordered list of keys to try: primary first, then secondary.
+        keys_to_try = [k for k in [key_primary, key_secondary] if k]
 
-        # Make requests call with stream enabled
-        res = requests.post(url, headers=headers, json=payload, stream=True, timeout=60)
-        if res.status_code != 200:
+        res        = None
+        last_error = None
+        used_key_label = None
+
+        for idx, api_key in enumerate(keys_to_try):
+            label = "primary" if idx == 0 else "secondary"
+            res, network_err = _call_groq(api_key, model, messages)
+
+            if network_err:
+                # Network-level failure — try next key
+                last_error = f"[{label} key] Network error: {network_err}"
+                res = None
+                continue
+
+            if res.status_code == 200:
+                used_key_label = label
+                break  # Success — stream this response
+
+            if res.status_code in _FALLBACK_STATUS_CODES and idx < len(keys_to_try) - 1:
+                # Rate-limited or server error — try next key silently
+                try:
+                    err_data = res.json()
+                    err_msg  = err_data.get("error", {}).get("message", res.text)
+                except Exception:
+                    err_msg = res.text
+                last_error = (
+                    f"[{label} key] HTTP {res.status_code}: {err_msg} — "
+                    f"switching to backup key automatically."
+                )
+                res = None
+                continue
+
+            # Non-retryable error (4xx other than 429, etc.)
             try:
                 err_data = res.json()
-                err_msg = err_data.get("error", {}).get("message", res.text)
+                err_msg  = err_data.get("error", {}).get("message", res.text)
             except Exception:
                 err_msg = res.text
             return jsonify({"error": f"Groq API Error ({res.status_code}): {err_msg}"}), res.status_code
 
+        # All keys exhausted without a successful response
+        if res is None:
+            return jsonify({
+                "error": f"Both Groq API keys failed. Last error: {last_error}"
+            }), 503
+
+        # ── Stream the successful response back to the browser ─────────────
         def generate():
             for chunk in res.iter_content(chunk_size=1024):
                 if chunk:
@@ -561,6 +631,7 @@ def ai_chat():
 
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
