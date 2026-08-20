@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --radius: 0.5rem;
+}
+
+.dark {
+  --sidebar-ring: oklch(0.439 0 0);
+}
