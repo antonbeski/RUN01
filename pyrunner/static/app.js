@@ -2720,20 +2720,46 @@ document.addEventListener('keydown', (e) => {
 
   let messagesHistory = [];
 
-  // Load models from API
+  // Confirmed-active Groq models (verified Aug 2026 — deprecated models removed)
+  const GROQ_MODELS = [
+    { id: 'openai/gpt-oss-120b',  name: 'GPT-OSS 120B — Fastest' },
+    { id: 'openai/gpt-oss-20b',   name: 'GPT-OSS 20B — Balanced' },
+    { id: 'qwen/qwen3.6-27b',     name: 'Qwen 3.6 27B' },
+    { id: 'groq/compound',        name: 'Groq Compound (Agentic)' },
+    { id: 'groq/compound-mini',   name: 'Groq Compound Mini' },
+  ];
+
+  // Pre-seed dropdown immediately so there is always a valid selection
+  function seedModelSelect(models) {
+    aiModelSelect.innerHTML = '';
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id || m.id;
+      opt.textContent = m.name;
+      aiModelSelect.appendChild(opt);
+    });
+    // Default to gpt-oss-120b
+    aiModelSelect.value = 'openai/gpt-oss-120b';
+  }
+  seedModelSelect(GROQ_MODELS);
+
+  // Also try to load fresh list from API (updates names/order if server changes)
   async function loadModels() {
     try {
       const resp = await fetch('/api/ai/models');
+      if (!resp.ok) return;
       const models = await resp.json();
-      aiModelSelect.innerHTML = '';
-      models.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = m.name;
-        aiModelSelect.appendChild(opt);
-      });
+      if (Array.isArray(models) && models.length > 0) {
+        const prev = aiModelSelect.value;
+        seedModelSelect(models);
+        // Restore previous selection if still available
+        if ([...aiModelSelect.options].some(o => o.value === prev)) {
+          aiModelSelect.value = prev;
+        }
+      }
     } catch (err) {
-      console.error('Failed to load AI models:', err);
+      console.error('Failed to refresh AI models:', err);
+      // Static fallback already seeded — no action needed
     }
   }
   loadModels();

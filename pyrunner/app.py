@@ -502,16 +502,16 @@ def run_code():
         return jsonify({"error": str(exc)}), 500
 
 # ── AI Coding Assistant endpoints (Groq API — dual-key fallback) ─────────────
+# Model list is sourced from console.groq.com/docs/deprecations — Aug 2026 verified.
+# llama-3.3-70b-versatile and llama-3.1-8b-instant were shut down on Aug 16, 2026.
 @app.route("/api/ai/models")
 def ai_models():
     models = [
-        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B (Groq)", "provider": "Groq"},
-        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant (Groq)", "provider": "Groq"},
-        {"id": "groq/compound", "name": "Groq Compound (Groq)", "provider": "Groq"},
-        {"id": "groq/compound-mini", "name": "Groq Compound Mini (Groq)", "provider": "Groq"},
-        {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B (Groq)", "provider": "Groq"},
-        {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B (Groq)", "provider": "Groq"},
-        {"id": "qwen/qwen3.6-27b", "name": "Qwen 3.6 27B (Groq)", "provider": "Groq"}
+        {"id": "openai/gpt-oss-120b",  "name": "GPT-OSS 120B — Fastest",  "provider": "Groq"},
+        {"id": "openai/gpt-oss-20b",   "name": "GPT-OSS 20B — Balanced",  "provider": "Groq"},
+        {"id": "qwen/qwen3.6-27b",     "name": "Qwen 3.6 27B",            "provider": "Groq"},
+        {"id": "groq/compound",        "name": "Groq Compound (Agentic)", "provider": "Groq"},
+        {"id": "groq/compound-mini",   "name": "Groq Compound Mini",      "provider": "Groq"},
     ]
     return jsonify(models)
 
@@ -560,7 +560,7 @@ def ai_chat():
 
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model    = body.get("model", "llama-3.3-70b-versatile")
+        model    = body.get("model", "openai/gpt-oss-120b")
 
         # ── Collect available keys ──────────────────────────────────────────
         key_primary   = os.environ.get("GROQ_API_KEY",   "").strip()
@@ -576,11 +576,17 @@ def ai_chat():
         # Build an ordered list of keys to try: primary first, then secondary.
         keys_to_try = [k for k in [key_primary, key_secondary] if k]
 
-        # Build an ordered list of models to try. We use a fallback model if the requested model fails on all keys.
-        backup_model = "llama-3.1-8b-instant"
-        models_to_try = [model]
-        if model != backup_model:
-            models_to_try.append(backup_model)
+        # Build an ordered fallback chain of models.
+        # If the requested model fails on all keys (404/429/5xx), the next model is tried.
+        # All models listed here are confirmed active on Groq as of Aug 2026.
+        _FALLBACK_CHAIN = [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b",
+            "groq/compound-mini",
+        ]
+        # Always try the requested model first, then the chain (deduped, preserving order)
+        models_to_try = [model] + [m for m in _FALLBACK_CHAIN if m != model]
 
         res = None
         last_error = None
