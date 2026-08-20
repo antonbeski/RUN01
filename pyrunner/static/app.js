@@ -3005,53 +3005,27 @@ document.addEventListener('keydown', (e) => {
         container.appendChild(pre);
         element.appendChild(container);
       } else if (part.trim() !== '') {
-        const lines = part.split('\n');
-        let currentP = null;
-        let currentList = null;
-        
-        lines.forEach(line => {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            if (!currentList) {
-              currentList = document.createElement('ul');
-              element.appendChild(currentList);
-            }
-            const li = document.createElement('li');
-            li.textContent = trimmed.substring(2);
-            currentList.appendChild(li);
-            currentP = null;
-          } else if (/^\d+\.\s/.test(trimmed)) {
-            if (!currentList) {
-              currentList = document.createElement('ol');
-              element.appendChild(currentList);
-            }
-            const li = document.createElement('li');
-            li.textContent = trimmed.replace(/^\d+\.\s/, '');
-            currentList.appendChild(li);
-            currentP = null;
-          } else if (trimmed !== '') {
-            currentList = null;
-            if (!currentP) {
-              currentP = document.createElement('p');
-              element.appendChild(currentP);
-            } else {
-              currentP.appendChild(document.createElement('br'));
-            }
-            const boldParts = trimmed.split(/(\*\*.*?\*\*)/g);
-            boldParts.forEach(bp => {
-              if (bp.startsWith('**') && bp.endsWith('**')) {
-                const b = document.createElement('strong');
-                b.textContent = bp.slice(2, -2);
-                currentP.appendChild(b);
-              } else {
-                currentP.appendChild(document.createTextNode(bp));
-              }
-            });
-          } else {
-            currentP = null;
-            currentList = null;
-          }
-        });
+        // ── Rich Markdown via marked.js ───────────────────────────────
+        // Handles: headings, bold, italic, tables, blockquotes,
+        //          inline code, horizontal rules, ordered/unordered lists
+        const mdWrapper = document.createElement('div');
+        mdWrapper.className = 'ai-md-body';
+
+        if (typeof marked !== 'undefined') {
+          // Configure marked for clean, safe output
+          marked.setOptions({
+            gfm: true,          // GitHub-flavoured (tables, strikethrough)
+            breaks: true,       // Single newline → <br>
+            headerIds: false,   // No id attrs on headings
+            mangle: false,
+          });
+          mdWrapper.innerHTML = marked.parse(part);
+        } else {
+          // Fallback if CDN fails — simple text with escaped HTML
+          mdWrapper.textContent = part;
+        }
+
+        element.appendChild(mdWrapper);
       }
     });
   }
