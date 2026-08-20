@@ -1505,43 +1505,8 @@ body::after {
   color: #1d1d1f;
 }
 
-/* ── Quick Actions Toolbar ─────────────────────────────────── */
-.ai-quick-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 7px 12px;
-  background: rgba(0, 0, 0, 0.12);
-  border-top: 1px solid var(--glass-border);
-  align-items: center;
-}
-.btn-ai-action {
-  font-size: 10px;
-  padding: 4px 9px;
-  height: auto;
-  border: 1px solid var(--glass-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-muted);
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.18s;
-  font-family: inherit;
-}
-.btn-ai-action:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  color: var(--text-color) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-}
-[data-theme="light"] .btn-ai-action {
-  background: rgba(0, 0, 0, 0.03);
-  color: #555;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-[data-theme="light"] .btn-ai-action:hover {
-  background: rgba(0, 0, 0, 0.06) !important;
-  color: #1d1d1f !important;
-  border-color: rgba(0, 0, 0, 0.16) !important;
-}
+/* ── Quick Actions Toolbar ─ REMOVED ──────────────────────────── */
+/* .ai-quick-actions and .btn-ai-action styles retained for reference only     */
 
 /* ── AI Input Wrap ─────────────────────────────────────────── */
 .ai-input-wrap {
@@ -1609,26 +1574,46 @@ body::after {
   border: 1px solid var(--glass-border);
   border-radius: 7px;
   padding: 9px 10px;
-  color: var(--text-color);
+  color: var(--text);
   font-size: 12.5px;
   font-family: inherit;
   resize: none;
   outline: none;
   line-height: 1.4;
   scrollbar-width: none;
-  transition: border-color 0.2s, background 0.2s;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.2s;
+}
+.ai-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.45;
+  transition: opacity 0.5s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ai-textarea:focus {
-  border-color: rgba(255, 202, 40, 0.4);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08), 0 0 16px rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.06);
 }
 [data-theme="light"] .ai-textarea {
   background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.12);
   color: #1d1d1f;
 }
+[data-theme="light"] .ai-textarea::placeholder {
+  color: #555;
+  opacity: 0.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 [data-theme="light"] .ai-textarea:focus {
-  border-color: rgba(239, 108, 0, 0.35);
+  border-color: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
   background: rgba(0, 0, 0, 0.01);
 }
 .ai-send-btn {

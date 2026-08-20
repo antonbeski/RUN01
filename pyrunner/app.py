@@ -538,7 +538,8 @@ def _call_groq(api_key, model, messages, payload_extra=None):
 
 
 # Status codes that warrant an automatic fallback to the secondary key.
-_FALLBACK_STATUS_CODES = {429, 500, 502, 503, 504}
+# 404 = model not found / no access to model on this key — try the other key.
+_FALLBACK_STATUS_CODES = {404, 429, 500, 502, 503, 504}
 
 
 @app.route("/api/ai/chat", methods=["POST"])
@@ -575,50 +576,55 @@ def ai_chat():
         # Build an ordered list of keys to try: primary first, then secondary.
         keys_to_try = [k for k in [key_primary, key_secondary] if k]
 
-        res        = None
+        # Build an ordered list of models to try. We use a fallback model if the requested model fails on all keys.
+        backup_model = "llama-3.1-8b-instant"
+        models_to_try = [model]
+        if model != backup_model:
+            models_to_try.append(backup_model)
+
+        res = None
         last_error = None
-        used_key_label = None
+        success = False
 
-        for idx, api_key in enumerate(keys_to_try):
-            label = "primary" if idx == 0 else "secondary"
-            res, network_err = _call_groq(api_key, model, messages)
+        for target_model in models_to_try:
+            for idx, api_key in enumerate(keys_to_try):
+                label = "primary" if idx == 0 else "secondary"
+                res, network_err = _call_groq(api_key, target_model, messages)
 
-            if network_err:
-                # Network-level failure — try next key
-                last_error = f"[{label} key] Network error: {network_err}"
-                res = None
-                continue
+                if network_err:
+                    # Network-level failure — try next key
+                    last_error = f"[{label} key, model {target_model}] Network error: {network_err}"
+                    res = None
+                    continue
 
-            if res.status_code == 200:
-                used_key_label = label
-                break  # Success — stream this response
+                if res.status_code == 200:
+                    success = True
+                    break  # Success — stream this response
 
-            if res.status_code in _FALLBACK_STATUS_CODES and idx < len(keys_to_try) - 1:
-                # Rate-limited or server error — try next key silently
+                # Parse error response details
                 try:
                     err_data = res.json()
                     err_msg  = err_data.get("error", {}).get("message", res.text)
                 except Exception:
                     err_msg = res.text
-                last_error = (
-                    f"[{label} key] HTTP {res.status_code}: {err_msg} — "
-                    f"switching to backup key automatically."
-                )
-                res = None
-                continue
 
-            # Non-retryable error (4xx other than 429, etc.)
-            try:
-                err_data = res.json()
-                err_msg  = err_data.get("error", {}).get("message", res.text)
-            except Exception:
-                err_msg = res.text
-            return jsonify({"error": f"Groq API Error ({res.status_code}): {err_msg}"}), res.status_code
+                last_error = f"[{label} key, model {target_model}] HTTP {res.status_code}: {err_msg}"
 
-        # All keys exhausted without a successful response
-        if res is None:
+                # If this status code warrants fallback (404, 429, 5xx), try the next key/model
+                if res.status_code in _FALLBACK_STATUS_CODES:
+                    res = None
+                    continue
+                else:
+                    # Non-retryable error (e.g., 400 Bad Request, etc.)
+                    return jsonify({"error": f"Groq API Error ({res.status_code}): {err_msg}"}), res.status_code
+
+            if success:
+                break
+
+        # All keys and fallback models exhausted without a successful response
+        if res is None or not success:
             return jsonify({
-                "error": f"Both Groq API keys failed. Last error: {last_error}"
+                "error": f"Failed to connect to Groq API. All keys/models failed. Last error: {last_error}"
             }), 503
 
         # ── Stream the successful response back to the browser ─────────────

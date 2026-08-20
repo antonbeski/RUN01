@@ -753,6 +753,22 @@ const monacoReady = new Promise((resolve) => {
         () => { if (!isRunning && pyodide) triggerRun(); }
       );
 
+      // Force remeasure fonts once custom font loads, preventing line overlaps
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          setTimeout(() => {
+            if (monaco && monaco.editor) {
+              monaco.editor.remeasureFonts();
+            }
+          }, 100);
+          setTimeout(() => {
+            if (monaco && monaco.editor) {
+              monaco.editor.remeasureFonts();
+            }
+          }, 1000);
+        });
+      }
+
       resolve();
     }, function (err) {
       clearTimeout(timeout);
@@ -3222,22 +3238,31 @@ document.addEventListener('keydown', (e) => {
     });
   }
 
-  // Quick Action Buttons
-  document.getElementById('aiActionExplain').addEventListener('click', () => {
-    sendUserMessage('Can you explain the current code in the editor, detailing what each part does and how it runs?');
-  });
+  // ── Cycling placeholder suggestions in the textarea ──────────────────
+  const AI_PLACEHOLDERS = [
+    'Explain the current code…',
+    'Fix the error in the console output…',
+    'Optimize this for performance…',
+    'Add docstrings and comments…',
+    'Plot a candlestick chart for AAPL…',
+    'Write a moving-average crossover strategy…',
+    'Download FRED GDP data and plot it…',
+    'Refactor into functions…',
+    'What does this code do?',
+    'Generate a scatter plot with regression line…',
+    'Debug why my DataFrame is empty…',
+    'Convert this to use async/await…',
+  ];
 
-  document.getElementById('aiActionFix').addEventListener('click', () => {
-    sendUserMessage('I see an issue or error output. Can you analyze the current code and the last console output to diagnose and provide a correct python code fix?');
-  });
-
-  document.getElementById('aiActionOptimize').addEventListener('click', () => {
-    sendUserMessage('Can you optimize the current code for performance, readability, or best practices, and suggest any refactoring?');
-  });
-
-  document.getElementById('aiActionComments').addEventListener('click', () => {
-    sendUserMessage('Can you add clear, informative docstrings and comments to the current python code to make it self-explanatory?');
-  });
+  let _phIdx = 0;
+  function _rotatePlaceholder() {
+    if (document.activeElement === aiTextarea) return; // don't rotate while typing
+    _phIdx = (_phIdx + 1) % AI_PLACEHOLDERS.length;
+    aiTextarea.setAttribute('placeholder', AI_PLACEHOLDERS[_phIdx]);
+  }
+  // Set initial placeholder then rotate every 3 s
+  aiTextarea.setAttribute('placeholder', AI_PLACEHOLDERS[0]);
+  setInterval(_rotatePlaceholder, 3000);
 })();
 
 // ── Global Liquid Metal Ripple Effect ─────────────────────────────
