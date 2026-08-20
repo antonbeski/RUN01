@@ -90,15 +90,16 @@
   color: #1D1D1F;
 }
 [data-theme="light"] .init-card {
-  background: rgba(0,0,0,0.025);
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.015);
+  border: 4px solid var(--text);
+  box-shadow: 6px 6px 0px 0px rgba(0,0,0,0.1);
 }
 [data-theme="light"] .init-progress-track {
-  background: rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.02);
+  border-color: var(--text);
 }
 [data-theme="light"] .init-progress-fill {
-  background: linear-gradient(90deg, rgba(0,0,0,0.2) 0%, #000 50%, rgba(0,0,0,0.2) 100%);
+  background: var(--text);
 }
 [data-theme="light"] .init-pill {
   background: rgba(0,0,0,0.03);
@@ -106,8 +107,8 @@
 }
 [data-theme="light"] .init-pill.loaded {
   background: rgba(0,0,0,0.07);
-  border-color: rgba(0,0,0,0.18);
-  box-shadow: 0 0 8px rgba(0,0,0,0.06);
+  border-color: var(--text);
+  box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.05);
 }
 [data-theme="light"] .out-plot-wrap {
   background: #f5f5f7;
@@ -776,10 +777,10 @@ body::after {
   gap: 24px;
   width: 360px;
   padding: 40px 36px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 18px;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+  background: rgba(255,255,255,0.02);
+  border: 4px solid var(--text);
+  border-radius: 0;
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.4);
 }
 
 /* ── INIT LOGO — Pixelify Sans only, always ─────────────── */
@@ -809,25 +810,21 @@ body::after {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 .init-progress-track {
-  height: 2px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 2px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 3px solid var(--text);
+  border-radius: 0;
+  padding: 2px;
   overflow: hidden;
 }
 .init-progress-fill {
   height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, #fff 50%, rgba(255,255,255,0.4) 100%);
-  background-size: 200% 100%;
-  transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
-  animation: progressShimmer 1.8s linear infinite;
-}
-@keyframes progressShimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  border-radius: 0;
+  background: var(--text);
+  transition: width 0.15s steps(15);
 }
 .init-progress-label {
   font-family: var(--font-mono);
@@ -849,7 +846,7 @@ body::after {
   font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.05);
   color: var(--text-dim);
@@ -858,9 +855,9 @@ body::after {
 }
 .init-pill.loaded {
   background: rgba(255,255,255,0.07);
-  border-color: rgba(255,255,255,0.18);
-  color: var(--text-muted);
-  box-shadow: 0 0 8px rgba(255,255,255,0.06);
+  border: 1px solid var(--text);
+  color: var(--text);
+  box-shadow: 2px 2px 0px 0px rgba(0,0,0,0.15);
 }
 
 /* -- FULLSCREEN CONTROLS ----------------------------------- */
