@@ -9,37 +9,68 @@ app = Flask(__name__)
 app.name = "run01"
 app.secret_key = os.environ.get("SECRET_KEY", "run01-dev-secret-key-change-in-prod")
 
-# ── MongoDB Database Connection ────────────────────────────────────────────────
+# ── Session Configuration ──────────────────────────────────────────────────────
+# Critical for Vercel (HTTPS, cross-origin, serverless cold starts).
+app.config['SESSION_COOKIE_SECURE'] = True           # Only send over HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True         # Prevent JS access
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'       # Allow cross-site requests
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
+
+# ── MongoDB Database Connection (persistent, module-level client) ──────────────
+# Cache the MongoClient at module scope so warm Lambda invocations reuse the
+# existing TCP connection instead of opening a new one every request.
+_mongo_client = None
+_mongo_db = None
+
 def get_db():
+    global _mongo_client, _mongo_db
+    if _mongo_db is not None:
+        try:
+            _mongo_client.admin.command("ping")
+            return _mongo_db
+        except Exception:
+            _mongo_client = None
+            _mongo_db = None
+
     mongodb_uri = os.environ.get("MONGODB_URI")
     if not mongodb_uri:
+        app.logger.warning("MONGODB_URI environment variable is not set.")
         return None
+
     try:
         from pymongo import MongoClient
-        client_kwargs = {"serverSelectionTimeoutMS": 5000}
-        
+        client_kwargs = {
+            "serverSelectionTimeoutMS": 5000,
+            "connectTimeoutMS": 5000,
+            "socketTimeoutMS": 10000,
+        }
         try:
             import certifi
             client_kwargs["tlsCAFile"] = certifi.where()
         except Exception:
             pass
 
-        client = MongoClient(mongodb_uri, **client_kwargs)
-        db = client.get_default_database()
-        if db is None or db.name == "admin":
-            db = client["run01"]
-        return db
+        _mongo_client = MongoClient(mongodb_uri, **client_kwargs)
+        # URI should include /run01 database name (e.g. .../run01).
+        # get_default_database() returns it; fall back to "run01" if not specified.
+        _mongo_db = _mongo_client.get_default_database()
+        if _mongo_db is None or _mongo_db.name in ("admin", "test"):
+            _mongo_db = _mongo_client["run01"]
+        return _mongo_db
     except Exception as e:
-        app.logger.warning(f"Standard SSL connection attempt: {e}. Trying SSL fallback...")
+        app.logger.warning(f"Standard SSL connection failed: {e}. Trying SSL fallback...")
         try:
             from pymongo import MongoClient
-            client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
-            db = client.get_default_database()
-            if db is None or db.name == "admin":
-                db = client["run01"]
-            return db
+            _mongo_client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000,
+                                        tlsAllowInvalidCertificates=True)
+            _mongo_db = _mongo_client.get_default_database()
+            if _mongo_db is None or _mongo_db.name in ("admin", "test"):
+                _mongo_db = _mongo_client["run01"]
+            return _mongo_db
         except Exception as err2:
             app.logger.error(f"MongoDB connection error: {err2}")
+            _mongo_client = None
+            _mongo_db = None
             return None
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
@@ -59,32 +90,32 @@ def auth_config():
 @app.route("/api/auth/me", methods=["GET"])
 def auth_me():
     user_id = session.get("user_id")
-    if not user_id:
-        if session.get("user"):
-            return jsonify({"authenticated": True, "user": session.get("user")})
+    cached_user = session.get("user")
+
+    if not user_id and not cached_user:
         return jsonify({"authenticated": False, "user": None})
-    
+
     db = get_db()
-    if db is not None:
+    if db is not None and user_id:
         try:
             from bson import ObjectId
             user = db.users.find_one({"_id": ObjectId(user_id)})
             if user:
-                return jsonify({
-                    "authenticated": True,
-                    "user": {
-                        "id": str(user["_id"]),
-                        "email": user.get("email"),
-                        "name": user.get("name", ""),
-                        "picture": user.get("picture", ""),
-                        "auth_provider": user.get("auth_provider", "password")
-                    }
-                })
+                user_info = {
+                    "id": str(user["_id"]),
+                    "email": user.get("email"),
+                    "name": user.get("name", ""),
+                    "picture": user.get("picture", ""),
+                    "auth_provider": user.get("auth_provider", "password")
+                }
+                session["user"] = user_info  # Refresh cached user in session
+                return jsonify({"authenticated": True, "user": user_info})
         except Exception as exc:
             app.logger.error(f"Error fetching user in auth_me: {exc}")
-    
-    if session.get("user"):
-        return jsonify({"authenticated": True, "user": session.get("user")})
+
+    # Fallback: return the cached user from the session cookie
+    if cached_user:
+        return jsonify({"authenticated": True, "user": cached_user})
 
     return jsonify({"authenticated": False, "user": None})
 
@@ -130,6 +161,7 @@ def auth_signup():
             "auth_provider": "password"
         }
 
+        session.permanent = True
         session["user_id"] = user_id
         session["user"] = user_info
 
@@ -171,6 +203,7 @@ def auth_login():
             "auth_provider": user.get("auth_provider", "password")
         }
 
+        session.permanent = True
         session["user_id"] = user_id
         session["user"] = user_info
 
@@ -257,6 +290,7 @@ def auth_google():
                 "picture": picture,
                 "auth_provider": "google"
             }
+            session.permanent = True
             session["user_id"] = user_id
         except Exception as exc:
             app.logger.error(f"Google auth DB error: {exc}")
@@ -276,6 +310,7 @@ def auth_google():
             "auth_provider": "google"
         }
 
+    session.permanent = True
     session["user"] = user_info
     return jsonify({"success": True, "user": user_info})
 

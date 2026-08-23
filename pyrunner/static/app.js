@@ -3430,10 +3430,31 @@ document.addEventListener('click', (e) => {
   const authAlert = document.getElementById('authAlert');
   const googleBtnContainer = document.getElementById('googleBtnContainer');
 
+  const STORAGE_KEY = 'run01_user';
+
   let currentUser = null;
   let googleClientId = '';
+  let googleInitialized = false;
 
-  // Toggle user dropdown menu
+  // ── LocalStorage helpers ─────────────────────────────────────────
+  function saveUserLocally(user) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } catch (e) {}
+  }
+
+  function loadUserLocally() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function clearUserLocally() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  }
+
+  // ── Toggle user dropdown menu ────────────────────────────────────
   if (btnUserMenu && userDropdown) {
     btnUserMenu.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -3444,7 +3465,7 @@ document.addEventListener('click', (e) => {
     });
   }
 
-  // Open Auth Modal
+  // ── Open / Close Auth Modal ──────────────────────────────────────
   if (btnOpenAuth && authModalOverlay) {
     btnOpenAuth.addEventListener('click', () => {
       openAuthModal('signin');
@@ -3509,42 +3530,57 @@ document.addEventListener('click', (e) => {
     authAlert.textContent = '';
   }
 
+  // ── Set / clear UI auth state ────────────────────────────────────
   function setAuthState(user) {
     currentUser = user;
     if (user) {
       if (btnOpenAuth) btnOpenAuth.classList.add('hidden');
       if (userMenuWrap) userMenuWrap.classList.remove('hidden');
-      
+
       const nameStr = user.name || user.email.split('@')[0];
       const initial = nameStr.charAt(0).toUpperCase();
-      
+
       if (userAvatar) userAvatar.textContent = initial;
       if (userName) userName.textContent = nameStr;
       if (userDropdownName) userDropdownName.textContent = nameStr;
       if (userDropdownEmail) userDropdownEmail.textContent = user.email;
+
+      // Always persist to localStorage so the next page load is instant
+      saveUserLocally(user);
     } else {
       if (btnOpenAuth) btnOpenAuth.classList.remove('hidden');
       if (userMenuWrap) userMenuWrap.classList.add('hidden');
+      clearUserLocally();
     }
   }
 
-  // Check Current Session on load
+  // ── Instant restore from localStorage (no network, no flash) ─────
+  // Show the user immediately from the local cache, then verify with
+  // the server in the background.  If the server says "not authenticated"
+  // (e.g. session cookie truly expired) we clear the cached user.
+  const cachedUser = loadUserLocally();
+  if (cachedUser) {
+    setAuthState(cachedUser);
+  }
+
+  // ── Check server session (background verification) ───────────────
   async function checkSession() {
     try {
       const res = await fetch('/api/auth/me');
       const data = await res.json();
       if (data.authenticated && data.user) {
-        setAuthState(data.user);
+        setAuthState(data.user);  // Refresh with latest data from DB
       } else {
+        // Server session expired; clear local cache to force re-login
         setAuthState(null);
       }
     } catch (err) {
-      console.warn('[Auth] Session check failed:', err);
-      setAuthState(null);
+      console.warn('[Auth] Session check failed (network?):', err);
+      // Keep the locally cached user — don't log them out on network error
     }
   }
 
-  // Fetch Auth Config (Google Client ID)
+  // ── Fetch Google Client ID from server ───────────────────────────
   async function fetchConfig() {
     try {
       const res = await fetch('/api/auth/config');
@@ -3558,16 +3594,23 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  // Initialize Google Identity Services SDK
+  // ── Initialize Google Identity Services SDK ──────────────────────
   function initGoogleAuth() {
     if (!googleBtnContainer) return;
+    if (googleInitialized && googleClientId) return; // Already done
+
     if (window.google && window.google.accounts && window.google.accounts.id) {
       try {
         if (googleClientId) {
           google.accounts.id.initialize({
             client_id: googleClientId,
             callback: handleGoogleCredentialResponse,
+            auto_select: true,           // Silently sign in returning users
+            cancel_on_tap_outside: false,
           });
+          googleInitialized = true;
+
+          // Render the button in the modal container
           googleBtnContainer.innerHTML = '';
           google.accounts.id.renderButton(googleBtnContainer, {
             theme: 'outline',
@@ -3576,6 +3619,11 @@ document.addEventListener('click', (e) => {
             text: 'continue_with',
             shape: 'rectangular',
           });
+
+          // Prompt One Tap if user is not already signed in
+          if (!currentUser) {
+            google.accounts.id.prompt();
+          }
         } else {
           googleBtnContainer.innerHTML = `
             <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:8px;">
@@ -3591,6 +3639,7 @@ document.addEventListener('click', (e) => {
     }
   }
 
+  // ── Handle Google credential response ───────────────────────────
   async function handleGoogleCredentialResponse(response) {
     try {
       hideAlert();
@@ -3611,7 +3660,7 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  // Sign In Form Submit
+  // ── Sign In Form Submit ──────────────────────────────────────────
   if (formSignIn) {
     formSignIn.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3645,7 +3694,7 @@ document.addEventListener('click', (e) => {
     });
   }
 
-  // Sign Up Form Submit
+  // ── Sign Up Form Submit ──────────────────────────────────────────
   if (formSignUp) {
     formSignUp.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3680,7 +3729,7 @@ document.addEventListener('click', (e) => {
     });
   }
 
-  // Logout Click
+  // ── Logout Click ─────────────────────────────────────────────────
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {
       try {
@@ -3688,14 +3737,16 @@ document.addEventListener('click', (e) => {
       } catch (err) {
         console.warn('[Auth] Logout error:', err);
       } finally {
+        // Always clear local state regardless of server response
         setAuthState(null);
         if (userDropdown) userDropdown.classList.remove('visible');
       }
     });
   }
 
-  // Run initial checks
-  checkSession();
-  fetchConfig();
+  // ── Run initial checks ───────────────────────────────────────────
+  checkSession();   // Background server verification
+  fetchConfig();    // Load Google Client ID and trigger One Tap
 })();
+
 
