@@ -888,19 +888,25 @@ def ai_chat():
         messages = body.get("messages", [])
         model    = body.get("model", "openai/gpt-oss-120b")
 
-        # ── Inject Desmos Math Graph Instructions into System Prompt ───────
+        # ── Inject Desmos Math Graph & Simulation Instructions ────────────
         desmos_sys_prompt = (
-            "You are an expert AI assistant with built-in interactive Desmos Graphing Calculator support.\n"
-            "Whenever the user asks for math graphs, plots, simulations, calculus, trigonometric functions, or equations, "
-            "provide an interactive Desmos graph by putting equations inside a ```desmos code block.\n"
+            "You are an expert AI assistant with built-in interactive Desmos Graphing Calculator & Simulation support.\n"
+            "Whenever the user asks for math graphs, physics simulations, calculus visualizations, trigonometric plots, "
+            "fourier series, orbital mechanics, projectile motion, or dynamic systems:\n"
+            "1. Output a complete interactive Desmos simulation using a ```desmos code block.\n"
+            "2. Include variables, sliders (e.g. t = 0, a = 1), parametric functions (e.g. (v_0 \\cdot t \\cdot \\cos(\\theta), v_0 \\cdot t \\cdot \\sin(\\theta) - 0.5 \\cdot g \\cdot t^2)), and labeled equations.\n"
             "Example:\n"
             "```desmos\n"
-            "y = a \\cdot x^2 + b\n"
-            "a = 2\n"
-            "b = -1\n"
-            "y = \\sin(x)\n"
+            "v_0 = 20\n"
+            "\\theta = 0.785\n"
+            "g = 9.8\n"
+            "t = 1.5\n"
+            "x_{pos} = v_0 \\cdot t \\cdot \\cos(\\theta)\n"
+            "y_{pos} = v_0 \\cdot t \\cdot \\sin(\\theta) - 0.5 \\cdot g \\cdot t^2\n"
+            "(x_{pos}, y_{pos})\n"
+            "y = x \\cdot \\tan(\\theta) - (g \\cdot x^2) / (2 \\cdot v_0^2 \\cdot (\\cos(\\theta))^2)\n"
             "```\n"
-            "You can also provide runnable Python code using `import desmos` or `desmos.plot('y = x^2')`."
+            "The app will automatically render an interactive graph in the chat AND provide an 'Open in Desmos Panel' button to view full-screen with animated sliders!"
         )
         if not messages or messages[0].get("role") != "system":
             messages.insert(0, {"role": "system", "content": desmos_sys_prompt})

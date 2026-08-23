@@ -2974,15 +2974,31 @@ document.addEventListener('keydown', (e) => {
         return;
       }
 
-      // ── Desmos math graph block ──────────────────────────────────
+      // ── Desmos math graph & simulation block ───────────────────────
       if (part.startsWith('```desmos')) {
         const desmosCode = part.replace(/^```desmos\n?/, '').replace(/\n?```$/, '').trim();
         const container = document.createElement('div');
         container.className = 'desmos-chat-card';
 
+        const lines = desmosCode.split('\n').map(l => l.trim()).filter(Boolean);
+
         const header = document.createElement('div');
         header.className = 'desmos-chat-header';
-        header.innerHTML = '<span><span class="desmos-badge">DESMOS</span> Interactive Math Graph</span>';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.innerHTML = '<span class="desmos-badge">DESMOS</span> Interactive Simulation';
+
+        const openPanelBtn = document.createElement('button');
+        openPanelBtn.className = 'ai-code-btn';
+        openPanelBtn.style.color = '#38bdf8';
+        openPanelBtn.style.fontWeight = 'bold';
+        openPanelBtn.innerHTML = '📊 Open in Desmos Panel';
+        openPanelBtn.addEventListener('click', () => {
+          window.loadIntoDesmosPanel(lines, 'AI Math Simulation');
+        });
+
+        header.appendChild(titleSpan);
+        header.appendChild(openPanelBtn);
 
         const calcEl = document.createElement('div');
         calcEl.className = 'desmos-chat-container';
@@ -3000,7 +3016,6 @@ document.addEventListener('keydown', (e) => {
               settingsMenu: false,
               zoomButtons: true
             });
-            const lines = desmosCode.split('\n').map(l => l.trim()).filter(Boolean);
             lines.forEach((line, idx) => {
               calculator.setExpression({ id: 'chat_expr_' + idx, latex: line });
             });
@@ -3525,10 +3540,49 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     });
   }
 
+  // Open and load expressions directly into the main Desmos panel
+  window.loadIntoDesmosPanel = function(linesOrExpressions, title = 'Math Simulation') {
+    if (!desmosModalOverlay) return;
+    desmosModalOverlay.classList.remove('hidden');
+
+    const titleEl = document.getElementById('desmosModalTitle');
+    if (titleEl) {
+      titleEl.innerHTML = `<span class="desmos-badge">DESMOS</span> ${title}`;
+    }
+
+    const target = document.getElementById('desmosMainCalculator');
+    if (!target) return;
+
+    if (!desmosMainCalculator && window.Desmos) {
+      desmosMainCalculator = Desmos.GraphingCalculator(target, {
+        keypad: true,
+        expressions: true,
+        settingsMenu: true,
+        zoomButtons: true,
+      });
+    }
+
+    if (desmosMainCalculator) {
+      desmosMainCalculator.setBlank();
+      if (Array.isArray(linesOrExpressions)) {
+        linesOrExpressions.forEach((item, idx) => {
+          if (typeof item === 'string') {
+            desmosMainCalculator.setExpression({ id: 'panel_expr_' + idx, latex: item });
+          } else if (typeof item === 'object') {
+            desmosMainCalculator.setExpression(item);
+          }
+        });
+      }
+    }
+  };
+
   // Output Console callback for Python desmos.plot() / show_desmos()
   window._renderDesmosGraphInOutput = function(exprJson, title = 'Desmos Math Graph') {
     const outputEl = document.getElementById('output');
     if (!outputEl) return;
+
+    let parsedExprs = [];
+    try { parsedExprs = JSON.parse(exprJson); } catch(e) {}
 
     const card = document.createElement('div');
     card.className = 'desmos-chat-card';
@@ -3536,7 +3590,21 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
 
     const header = document.createElement('div');
     header.className = 'desmos-chat-header';
-    header.innerHTML = `<span><span class="desmos-badge">DESMOS</span> ${title}</span>`;
+    
+    const titleSpan = document.createElement('span');
+    titleSpan.innerHTML = `<span class="desmos-badge">DESMOS</span> ${title}`;
+
+    const openPanelBtn = document.createElement('button');
+    openPanelBtn.className = 'ai-code-btn';
+    openPanelBtn.style.color = '#38bdf8';
+    openPanelBtn.style.fontWeight = 'bold';
+    openPanelBtn.innerHTML = '📊 Open in Desmos Panel';
+    openPanelBtn.addEventListener('click', () => {
+      window.loadIntoDesmosPanel(parsedExprs, title);
+    });
+
+    header.appendChild(titleSpan);
+    header.appendChild(openPanelBtn);
 
     const calcDiv = document.createElement('div');
     calcDiv.className = 'desmos-chat-container';
@@ -3555,16 +3623,13 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
           settingsMenu: false,
           zoomButtons: true
         });
-        try {
-          const expressions = JSON.parse(exprJson);
-          expressions.forEach((exp, idx) => {
-            if (typeof exp === 'string') {
-              calc.setExpression({ id: 'py_expr_' + idx, latex: exp });
-            } else if (typeof exp === 'object') {
-              calc.setExpression(exp);
-            }
-          });
-        } catch(e) { console.error('Desmos parse error:', e); }
+        parsedExprs.forEach((exp, idx) => {
+          if (typeof exp === 'string') {
+            calc.setExpression({ id: 'py_expr_' + idx, latex: exp });
+          } else if (typeof exp === 'object') {
+            calc.setExpression(exp);
+          }
+        });
       }
     }, 150);
   };
