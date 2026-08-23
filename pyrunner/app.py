@@ -16,15 +16,31 @@ def get_db():
         return None
     try:
         from pymongo import MongoClient
-        client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
-        # Select database (default from URI or "run01")
+        client_kwargs = {"serverSelectionTimeoutMS": 5000}
+        
+        try:
+            import certifi
+            client_kwargs["tlsCAFile"] = certifi.where()
+        except Exception:
+            pass
+
+        client = MongoClient(mongodb_uri, **client_kwargs)
         db = client.get_default_database()
         if db is None or db.name == "admin":
             db = client["run01"]
         return db
     except Exception as e:
-        app.logger.error(f"MongoDB connection error: {e}")
-        return None
+        app.logger.warning(f"Standard SSL connection attempt: {e}. Trying SSL fallback...")
+        try:
+            from pymongo import MongoClient
+            client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
+            db = client.get_default_database()
+            if db is None or db.name == "admin":
+                db = client["run01"]
+            return db
+        except Exception as err2:
+            app.logger.error(f"MongoDB connection error: {err2}")
+            return None
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
 
