@@ -31,6 +31,9 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 
+  <!-- Google Identity Services for Gmail OAuth Login -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <!-- Monaco AMD require config -->
   <script>
     var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } };
@@ -147,6 +150,41 @@
       <button class="btn btn-ghost btn-ai" id="btnAI" title="AI Assistant (Ctrl+K)" aria-label="Toggle AI Assistant">
         AI
       </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
+      <!-- Auth Controls -->
+      <div class="auth-wrap" id="authWrap">
+        <!-- Logged out state button -->
+        <button class="btn btn-ghost btn-auth" id="btnOpenAuth" title="Sign In or Sign Up">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Sign In
+        </button>
+
+        <!-- Logged in state dropdown -->
+        <div class="user-menu-wrap hidden" id="userMenuWrap">
+          <button class="btn btn-ghost user-menu-btn" id="btnUserMenu" aria-haspopup="true" aria-expanded="false">
+            <span class="user-avatar" id="userAvatar">U</span>
+            <span class="user-name" id="userName">User</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="user-dropdown" id="userDropdown" role="menu">
+            <div class="user-dropdown-header">
+              <div class="user-dropdown-name" id="userDropdownName">User</div>
+              <div class="user-dropdown-email" id="userDropdownEmail">user@example.com</div>
+            </div>
+            <div class="user-dropdown-divider"></div>
+            <button class="user-dropdown-item" id="btnLogout" role="menuitem">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
@@ -353,6 +391,70 @@
         <span class="init-pill" id="ip-mpl">Matplotlib</span>
         <span class="init-pill" id="ip-sns">Seaborn</span>
         <span class="init-pill" id="ip-plotly">Plotly</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ AUTH MODAL ═════════════════════════════════════════════════ -->
+  <div class="auth-modal-overlay hidden" id="authModalOverlay">
+    <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <button class="auth-modal-close" id="btnCloseAuthModal" aria-label="Close modal">&times;</button>
+      
+      <div class="auth-modal-header">
+        <h2 class="auth-modal-title" id="authModalTitle">Welcome to RUN01</h2>
+        <p class="auth-modal-subtitle">Sign in to save your workspace & manage your account.</p>
+      </div>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tabSignIn" role="tab" aria-selected="true">Sign In</button>
+        <button class="auth-tab" id="tabSignUp" role="tab" aria-selected="false">Sign Up</button>
+      </div>
+
+      <!-- Auth Alert message container -->
+      <div class="auth-alert hidden" id="authAlert"></div>
+
+      <!-- Sign In Form -->
+      <form class="auth-form" id="formSignIn">
+        <div class="form-group">
+          <label for="signInEmail">Email address</label>
+          <input type="email" id="signInEmail" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="signInPassword">Password</label>
+          <input type="password" id="signInPassword" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <button type="submit" class="btn btn-primary auth-submit-btn" id="btnSubmitSignIn">
+          Sign In
+        </button>
+      </form>
+
+      <!-- Sign Up Form (hidden by default) -->
+      <form class="auth-form hidden" id="formSignUp">
+        <div class="form-group">
+          <label for="signUpName">Full Name</label>
+          <input type="text" id="signUpName" placeholder="Alex Morgan" required autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label for="signUpEmail">Email address</label>
+          <input type="email" id="signUpEmail" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="signUpPassword">Password (6+ characters)</label>
+          <input type="password" id="signUpPassword" placeholder="••••••••" minlength="6" required autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn btn-primary auth-submit-btn" id="btnSubmitSignUp">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-divider">
+        <span>OR</span>
+      </div>
+
+      <!-- Gmail / Google Sign-In button container -->
+      <div class="google-auth-wrap">
+        <div id="googleBtnContainer"></div>
       </div>
     </div>
   </div>

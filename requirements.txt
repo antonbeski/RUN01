@@ -1,2 +1,7 @@
 flask==3.0.3
 yfinance>=1.4.1
+pymongo>=4.6.0
+dnspython>=2.6.0
+google-auth>=2.0.0
+pyjwt>=2.8.0
+requests>=2.31.0

@@ -3407,3 +3407,295 @@ document.addEventListener('click', (e) => {
   setTimeout(() => ripple.remove(), 600);
 });
 
+// ══════════════════════════════════════════════════════════════════
+// AUTHENTICATION & GMAIL OAUTH MODULE
+// ══════════════════════════════════════════════════════════════════
+(function initAuth() {
+  const btnOpenAuth = document.getElementById('btnOpenAuth');
+  const userMenuWrap = document.getElementById('userMenuWrap');
+  const btnUserMenu = document.getElementById('btnUserMenu');
+  const userDropdown = document.getElementById('userDropdown');
+  const userAvatar = document.getElementById('userAvatar');
+  const userName = document.getElementById('userName');
+  const userDropdownName = document.getElementById('userDropdownName');
+  const userDropdownEmail = document.getElementById('userDropdownEmail');
+  const btnLogout = document.getElementById('btnLogout');
+
+  const authModalOverlay = document.getElementById('authModalOverlay');
+  const btnCloseAuthModal = document.getElementById('btnCloseAuthModal');
+  const tabSignIn = document.getElementById('tabSignIn');
+  const tabSignUp = document.getElementById('tabSignUp');
+  const formSignIn = document.getElementById('formSignIn');
+  const formSignUp = document.getElementById('formSignUp');
+  const authAlert = document.getElementById('authAlert');
+  const googleBtnContainer = document.getElementById('googleBtnContainer');
+
+  let currentUser = null;
+  let googleClientId = '';
+
+  // Toggle user dropdown menu
+  if (btnUserMenu && userDropdown) {
+    btnUserMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('visible');
+    });
+    document.addEventListener('click', () => {
+      userDropdown.classList.remove('visible');
+    });
+  }
+
+  // Open Auth Modal
+  if (btnOpenAuth && authModalOverlay) {
+    btnOpenAuth.addEventListener('click', () => {
+      openAuthModal('signin');
+    });
+  }
+
+  if (btnCloseAuthModal && authModalOverlay) {
+    btnCloseAuthModal.addEventListener('click', () => {
+      closeAuthModal();
+    });
+    authModalOverlay.addEventListener('click', (e) => {
+      if (e.target === authModalOverlay) closeAuthModal();
+    });
+  }
+
+  function openAuthModal(tab = 'signin') {
+    hideAlert();
+    authModalOverlay.classList.remove('hidden');
+    switchAuthTab(tab);
+    initGoogleAuth();
+  }
+
+  function closeAuthModal() {
+    authModalOverlay.classList.add('hidden');
+    hideAlert();
+  }
+
+  function switchAuthTab(tab) {
+    hideAlert();
+    if (tab === 'signin') {
+      tabSignIn.classList.add('active');
+      tabSignIn.setAttribute('aria-selected', 'true');
+      tabSignUp.classList.remove('active');
+      tabSignUp.setAttribute('aria-selected', 'false');
+      formSignIn.classList.remove('hidden');
+      formSignUp.classList.add('hidden');
+    } else {
+      tabSignUp.classList.add('active');
+      tabSignUp.setAttribute('aria-selected', 'true');
+      tabSignIn.classList.remove('active');
+      tabSignIn.setAttribute('aria-selected', 'false');
+      formSignUp.classList.remove('hidden');
+      formSignIn.classList.add('hidden');
+    }
+  }
+
+  if (tabSignIn && tabSignUp) {
+    tabSignIn.addEventListener('click', () => switchAuthTab('signin'));
+    tabSignUp.addEventListener('click', () => switchAuthTab('signup'));
+  }
+
+  function showAlert(message, type = 'error') {
+    if (!authAlert) return;
+    authAlert.textContent = message;
+    authAlert.className = `auth-alert ${type}`;
+    authAlert.classList.remove('hidden');
+  }
+
+  function hideAlert() {
+    if (!authAlert) return;
+    authAlert.classList.add('hidden');
+    authAlert.textContent = '';
+  }
+
+  function setAuthState(user) {
+    currentUser = user;
+    if (user) {
+      if (btnOpenAuth) btnOpenAuth.classList.add('hidden');
+      if (userMenuWrap) userMenuWrap.classList.remove('hidden');
+      
+      const nameStr = user.name || user.email.split('@')[0];
+      const initial = nameStr.charAt(0).toUpperCase();
+      
+      if (userAvatar) userAvatar.textContent = initial;
+      if (userName) userName.textContent = nameStr;
+      if (userDropdownName) userDropdownName.textContent = nameStr;
+      if (userDropdownEmail) userDropdownEmail.textContent = user.email;
+    } else {
+      if (btnOpenAuth) btnOpenAuth.classList.remove('hidden');
+      if (userMenuWrap) userMenuWrap.classList.add('hidden');
+    }
+  }
+
+  // Check Current Session on load
+  async function checkSession() {
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (data.authenticated && data.user) {
+        setAuthState(data.user);
+      } else {
+        setAuthState(null);
+      }
+    } catch (err) {
+      console.warn('[Auth] Session check failed:', err);
+      setAuthState(null);
+    }
+  }
+
+  // Fetch Auth Config (Google Client ID)
+  async function fetchConfig() {
+    try {
+      const res = await fetch('/api/auth/config');
+      const data = await res.json();
+      googleClientId = data.google_client_id || '';
+      if (googleClientId) {
+        initGoogleAuth();
+      }
+    } catch (err) {
+      console.warn('[Auth] Fetch config error:', err);
+    }
+  }
+
+  // Initialize Google Identity Services SDK
+  function initGoogleAuth() {
+    if (!googleBtnContainer) return;
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        if (googleClientId) {
+          google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleCredentialResponse,
+          });
+          googleBtnContainer.innerHTML = '';
+          google.accounts.id.renderButton(googleBtnContainer, {
+            theme: 'outline',
+            size: 'large',
+            width: 320,
+            text: 'continue_with',
+            shape: 'rectangular',
+          });
+        } else {
+          googleBtnContainer.innerHTML = `
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:8px;">
+              <span>Google Sign-In ready. Set <code>GOOGLE_CLIENT_ID</code> in Vercel Env to activate.</span>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.warn('[Auth] Google GIS init warning:', err);
+      }
+    } else {
+      setTimeout(initGoogleAuth, 500);
+    }
+  }
+
+  async function handleGoogleCredentialResponse(response) {
+    try {
+      hideAlert();
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAuthState(data.user);
+        closeAuthModal();
+      } else {
+        showAlert(data.error || 'Google Sign-In failed.');
+      }
+    } catch (err) {
+      showAlert('Google Sign-In error: ' + err.message);
+    }
+  }
+
+  // Sign In Form Submit
+  if (formSignIn) {
+    formSignIn.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const email = document.getElementById('signInEmail').value;
+      const password = document.getElementById('signInPassword').value;
+      const btn = document.getElementById('btnSubmitSignIn');
+
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setAuthState(data.user);
+          closeAuthModal();
+        } else {
+          showAlert(data.error || 'Invalid credentials.');
+        }
+      } catch (err) {
+        showAlert('Network error during login: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  }
+
+  // Sign Up Form Submit
+  if (formSignUp) {
+    formSignUp.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+      const name = document.getElementById('signUpName').value;
+      const email = document.getElementById('signUpEmail').value;
+      const password = document.getElementById('signUpPassword').value;
+      const btn = document.getElementById('btnSubmitSignUp');
+
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setAuthState(data.user);
+          closeAuthModal();
+        } else {
+          showAlert(data.error || 'Failed to create account.');
+        }
+      } catch (err) {
+        showAlert('Network error during signup: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  }
+
+  // Logout Click
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (err) {
+        console.warn('[Auth] Logout error:', err);
+      } finally {
+        setAuthState(null);
+        if (userDropdown) userDropdown.classList.remove('visible');
+      }
+    });
+  }
+
+  // Run initial checks
+  checkSession();
+  fetchConfig();
+})();
+

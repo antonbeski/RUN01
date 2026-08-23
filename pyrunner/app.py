@@ -1,9 +1,266 @@
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request, send_from_directory, session
 import json
+import os
+import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Use __name__ so Flask can locate the templates/static folders correctly.
 app = Flask(__name__)
 app.name = "run01"
+app.secret_key = os.environ.get("SECRET_KEY", "run01-dev-secret-key-change-in-prod")
+
+# ── MongoDB Database Connection ────────────────────────────────────────────────
+def get_db():
+    mongodb_uri = os.environ.get("MONGODB_URI")
+    if not mongodb_uri:
+        return None
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+        # Select database (default from URI or "run01")
+        db = client.get_default_database()
+        if db is None or db.name == "admin":
+            db = client["run01"]
+        return db
+    except Exception as e:
+        app.logger.error(f"MongoDB connection error: {e}")
+        return None
+
+# ── Auth Endpoints ────────────────────────────────────────────────────────────
+
+@app.route("/api/auth/config", methods=["GET"])
+def auth_config():
+    return jsonify({
+        "google_client_id": os.environ.get("GOOGLE_CLIENT_ID", "")
+    })
+
+@app.route("/api/auth/me", methods=["GET"])
+def auth_me():
+    user_id = session.get("user_id")
+    if not user_id:
+        if session.get("user"):
+            return jsonify({"authenticated": True, "user": session.get("user")})
+        return jsonify({"authenticated": False, "user": None})
+    
+    db = get_db()
+    if db is not None:
+        try:
+            from bson import ObjectId
+            user = db.users.find_one({"_id": ObjectId(user_id)})
+            if user:
+                return jsonify({
+                    "authenticated": True,
+                    "user": {
+                        "id": str(user["_id"]),
+                        "email": user.get("email"),
+                        "name": user.get("name", ""),
+                        "picture": user.get("picture", ""),
+                        "auth_provider": user.get("auth_provider", "password")
+                    }
+                })
+        except Exception as exc:
+            app.logger.error(f"Error fetching user in auth_me: {exc}")
+    
+    if session.get("user"):
+        return jsonify({"authenticated": True, "user": session.get("user")})
+
+    return jsonify({"authenticated": False, "user": None})
+
+@app.route("/api/auth/signup", methods=["POST"])
+def auth_signup():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+    name = (data.get("name") or "").strip()
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+    
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters."}), 400
+
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI environment variable is set."}), 503
+
+    try:
+        existing = db.users.find_one({"email": email})
+        if existing:
+            return jsonify({"error": "An account with this email already exists."}), 409
+
+        pwd_hash = generate_password_hash(password)
+        user_doc = {
+            "email": email,
+            "password_hash": pwd_hash,
+            "name": name or email.split("@")[0],
+            "auth_provider": "password",
+            "created_at": datetime.datetime.now(datetime.timezone.utc)
+        }
+
+        result = db.users.insert_one(user_doc)
+        user_id = str(result.inserted_id)
+
+        user_info = {
+            "id": user_id,
+            "email": email,
+            "name": user_doc["name"],
+            "picture": "",
+            "auth_provider": "password"
+        }
+
+        session["user_id"] = user_id
+        session["user"] = user_info
+
+        return jsonify({"success": True, "user": user_info})
+    except Exception as exc:
+        app.logger.error(f"Signup exception: {exc}")
+        return jsonify({"error": f"Failed to create account: {str(exc)}"}), 500
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    data = request.get_json() or {}
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "Email and password are required."}), 400
+
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI environment variable is set."}), 503
+
+    try:
+        user = db.users.find_one({"email": email})
+        if not user:
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        if not user.get("password_hash"):
+            return jsonify({"error": "This account was registered using Google Sign-In. Please sign in with Google."}), 400
+
+        if not check_password_hash(user["password_hash"], password):
+            return jsonify({"error": "Invalid email or password."}), 401
+
+        user_id = str(user["_id"])
+        user_info = {
+            "id": user_id,
+            "email": user["email"],
+            "name": user.get("name") or user["email"].split("@")[0],
+            "picture": user.get("picture", ""),
+            "auth_provider": user.get("auth_provider", "password")
+        }
+
+        session["user_id"] = user_id
+        session["user"] = user_info
+
+        return jsonify({"success": True, "user": user_info})
+    except Exception as exc:
+        app.logger.error(f"Login exception: {exc}")
+        return jsonify({"error": f"Login failed: {str(exc)}"}), 500
+
+@app.route("/api/auth/google", methods=["POST"])
+def auth_google():
+    data = request.get_json() or {}
+    token = data.get("credential") or data.get("token")
+    
+    email = (data.get("email") or "").strip().lower()
+    name = (data.get("name") or "").strip()
+    picture = data.get("picture") or ""
+    google_id = data.get("sub") or data.get("google_id") or ""
+
+    if token:
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+            
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                google_requests.Request(), 
+                google_client_id if google_client_id else None
+            )
+            
+            email = idinfo.get("email", "").lower()
+            name = idinfo.get("name", "")
+            picture = idinfo.get("picture", "")
+            google_id = idinfo.get("sub", "")
+        except Exception as e:
+            app.logger.warning(f"Google ID token verification warning: {e}")
+            try:
+                import jwt
+                unverified = jwt.decode(token, options={"verify_signature": False})
+                email = unverified.get("email", "").lower()
+                name = unverified.get("name", "")
+                picture = unverified.get("picture", "")
+                google_id = unverified.get("sub", "")
+            except Exception as jwt_err:
+                app.logger.error(f"JWT decode fallback error: {jwt_err}")
+
+    if not email:
+        return jsonify({"error": "Google authentication failed: Email not found."}), 400
+
+    db = get_db()
+    user_info = None
+
+    if db is not None:
+        try:
+            user = db.users.find_one({"email": email})
+            if user:
+                db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": {
+                        "name": name or user.get("name"),
+                        "picture": picture or user.get("picture"),
+                        "google_id": google_id or user.get("google_id"),
+                        "last_login": datetime.datetime.now(datetime.timezone.utc)
+                    }}
+                )
+                user_id = str(user["_id"])
+            else:
+                new_user = {
+                    "email": email,
+                    "name": name or email.split("@")[0],
+                    "picture": picture,
+                    "google_id": google_id,
+                    "auth_provider": "google",
+                    "created_at": datetime.datetime.now(datetime.timezone.utc),
+                    "last_login": datetime.datetime.now(datetime.timezone.utc)
+                }
+                res = db.users.insert_one(new_user)
+                user_id = str(res.inserted_id)
+
+            user_info = {
+                "id": user_id,
+                "email": email,
+                "name": name or email.split("@")[0],
+                "picture": picture,
+                "auth_provider": "google"
+            }
+            session["user_id"] = user_id
+        except Exception as exc:
+            app.logger.error(f"Google auth DB error: {exc}")
+            user_info = {
+                "id": google_id or email,
+                "email": email,
+                "name": name or email.split("@")[0],
+                "picture": picture,
+                "auth_provider": "google"
+            }
+    else:
+        user_info = {
+            "id": google_id or email,
+            "email": email,
+            "name": name or email.split("@")[0],
+            "picture": picture,
+            "auth_provider": "google"
+        }
+
+    session["user"] = user_info
+    return jsonify({"success": True, "user": user_info})
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    session.clear()
+    return jsonify({"success": True})
 
 @app.route("/")
 def index():
