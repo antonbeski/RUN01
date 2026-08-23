@@ -217,6 +217,22 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as _mpl_plt
 import plotly.io as _pio
 
+# ── Desmos Math Graphing Module ──────────────────────────────
+class _DesmosModule:
+    def plot(self, *expressions, title="Desmos Math Graph"):
+        import json, js
+        expr_list = []
+        for idx, exp in enumerate(expressions):
+            if isinstance(exp, str):
+                expr_list.append({"id": f"expr_{idx+1}", "latex": exp})
+            elif isinstance(exp, dict):
+                expr_list.append(exp)
+        js.window._renderDesmosGraphInOutput(json.dumps(expr_list), title)
+
+desmos = _DesmosModule()
+def show_desmos(*expressions, title="Desmos Math Graph"):
+    desmos.plot(*expressions, title=title)
+
 # ── yf_download: fetch OHLCV via Run01 server proxy ────────
 async def yf_download(ticker, period="1mo", interval="1d"):
     """Fetch stock OHLCV data via Run01 proxy (bypasses browser CORS).
@@ -2844,8 +2860,8 @@ document.addEventListener('keydown', (e) => {
   }
 
   function renderMarkdown(element, text) {
-    // Split on code fences AND surgical edit blocks
-    const parts = text.split(/(```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
+    // Split on code fences, desmos blocks AND surgical edit blocks
+    const parts = text.split(/(```desmos[\s\S]*?```|```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
     element.innerHTML = '';
     parts.forEach(part => {
       // ── Surgical edit diff block ──────────────────────────────────
@@ -2950,6 +2966,41 @@ document.addEventListener('keydown', (e) => {
           rejectBtn.disabled = true;
         });
 
+        return;
+      }
+
+      // ── Desmos math graph block ──────────────────────────────────
+      if (part.startsWith('```desmos')) {
+        const desmosCode = part.replace(/^```desmos\n?/, '').replace(/\n?```$/, '').trim();
+        const container = document.createElement('div');
+        container.className = 'desmos-chat-card';
+
+        const header = document.createElement('div');
+        header.className = 'desmos-chat-header';
+        header.innerHTML = '<span><span class="desmos-badge">DESMOS</span> Interactive Math Graph</span>';
+
+        const calcEl = document.createElement('div');
+        calcEl.className = 'desmos-chat-container';
+        calcEl.id = 'desmos_chat_' + Math.random().toString(36).substr(2, 9);
+
+        container.appendChild(header);
+        container.appendChild(calcEl);
+        element.appendChild(container);
+
+        setTimeout(() => {
+          if (window.Desmos) {
+            const calculator = Desmos.GraphingCalculator(calcEl, {
+              expressions: true,
+              keypad: false,
+              settingsMenu: false,
+              zoomButtons: true
+            });
+            const lines = desmosCode.split('\n').map(l => l.trim()).filter(Boolean);
+            lines.forEach((line, idx) => {
+              calculator.setExpression({ id: 'chat_expr_' + idx, latex: line });
+            });
+          }
+        }, 150);
         return;
       }
 
@@ -3406,6 +3457,113 @@ document.addEventListener('click', (e) => {
   target.appendChild(ripple);
   setTimeout(() => ripple.remove(), 600);
 });
+
+// ══════════════════════════════════════════════════════════════════
+// DESMOS GRAPHING CALCULATOR & MATH SIMULATION MODULE
+// ══════════════════════════════════════════════════════════════════
+let desmosMainCalculator = null;
+let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
+
+(function initDesmos() {
+  const btnDesmos = document.getElementById('btnDesmos');
+  const desmosModalOverlay = document.getElementById('desmosModalOverlay');
+  const btnCloseDesmosModal = document.getElementById('btnCloseDesmosModal');
+
+  // Fetch Desmos API key from /api/desmos/config and load Desmos JS API
+  async function loadDesmosScript() {
+    try {
+      const res = await fetch('/api/desmos/config');
+      const data = await res.json();
+      if (data.apiKey) desmosApiKey = data.apiKey;
+    } catch (e) {
+      console.warn('[Desmos] Config fetch fallback to default key');
+    }
+
+    if (!window.Desmos) {
+      const script = document.createElement('script');
+      script.src = `https://www.desmos.com/api/v1.9/calculator.js?apiKey=${desmosApiKey}`;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }
+  loadDesmosScript();
+
+  function openDesmosModal() {
+    if (!desmosModalOverlay) return;
+    desmosModalOverlay.classList.remove('hidden');
+
+    if (!desmosMainCalculator && window.Desmos) {
+      const target = document.getElementById('desmosMainCalculator');
+      if (target) {
+        desmosMainCalculator = Desmos.GraphingCalculator(target, {
+          keypad: true,
+          expressions: true,
+          settingsMenu: true,
+          zoomButtons: true,
+        });
+        desmosMainCalculator.setExpression({ id: 'sample1', latex: 'y=a\\cdot x^2+b' });
+        desmosMainCalculator.setExpression({ id: 'sample2', latex: 'a=1' });
+        desmosMainCalculator.setExpression({ id: 'sample3', latex: 'b=0' });
+      }
+    }
+  }
+
+  function closeDesmosModal() {
+    if (desmosModalOverlay) desmosModalOverlay.classList.add('hidden');
+  }
+
+  if (btnDesmos) btnDesmos.addEventListener('click', openDesmosModal);
+  if (btnCloseDesmosModal) btnCloseDesmosModal.addEventListener('click', closeDesmosModal);
+  if (desmosModalOverlay) {
+    desmosModalOverlay.addEventListener('click', (e) => {
+      if (e.target === desmosModalOverlay) closeDesmosModal();
+    });
+  }
+
+  // Output Console callback for Python desmos.plot() / show_desmos()
+  window._renderDesmosGraphInOutput = function(exprJson, title = 'Desmos Math Graph') {
+    const outputEl = document.getElementById('output');
+    if (!outputEl) return;
+
+    const card = document.createElement('div');
+    card.className = 'desmos-chat-card';
+    card.style.margin = '12px 0';
+
+    const header = document.createElement('div');
+    header.className = 'desmos-chat-header';
+    header.innerHTML = `<span><span class="desmos-badge">DESMOS</span> ${title}</span>`;
+
+    const calcDiv = document.createElement('div');
+    calcDiv.className = 'desmos-chat-container';
+    calcDiv.id = 'desmos_out_' + Math.random().toString(36).substr(2, 9);
+
+    card.appendChild(header);
+    card.appendChild(calcDiv);
+    outputEl.appendChild(card);
+    outputEl.scrollTop = outputEl.scrollHeight;
+
+    setTimeout(() => {
+      if (window.Desmos) {
+        const calc = Desmos.GraphingCalculator(calcDiv, {
+          expressions: true,
+          keypad: false,
+          settingsMenu: false,
+          zoomButtons: true
+        });
+        try {
+          const expressions = JSON.parse(exprJson);
+          expressions.forEach((exp, idx) => {
+            if (typeof exp === 'string') {
+              calc.setExpression({ id: 'py_expr_' + idx, latex: exp });
+            } else if (typeof exp === 'object') {
+              calc.setExpression(exp);
+            }
+          });
+        } catch(e) { console.error('Desmos parse error:', e); }
+      }
+    }, 150);
+  };
+})();
 
 // ══════════════════════════════════════════════════════════════════
 // AUTHENTICATION & GMAIL OAUTH MODULE

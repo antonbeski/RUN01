@@ -146,6 +146,20 @@
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
 
+      <!-- Desmos Graphing Calculator toggle -->
+      <button class="btn btn-ghost btn-desmos" id="btnDesmos" title="Desmos Graphing Calculator & Math Simulations" aria-label="Toggle Desmos Calculator">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3v18h18"/>
+          <path d="M18 17V7"/>
+          <path d="M13 17V11"/>
+          <path d="M8 17v-3"/>
+        </svg>
+        Desmos
+      </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
       <!-- AI Assistant toggle -->
       <button class="btn btn-ghost btn-ai" id="btnAI" title="AI Assistant (Ctrl+K)" aria-label="Toggle AI Assistant">
         AI
@@ -455,6 +469,22 @@
       <!-- Gmail / Google Sign-In button container -->
       <div class="google-auth-wrap">
         <div id="googleBtnContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DESMOS GRAPHING CALCULATOR MODAL ═══════════════════════════ -->
+  <div class="desmos-modal-overlay hidden" id="desmosModalOverlay" role="dialog" aria-modal="true" aria-labelledby="desmosModalTitle">
+    <div class="desmos-modal-card">
+      <div class="desmos-modal-header">
+        <div class="desmos-modal-title" id="desmosModalTitle">
+          <span class="desmos-badge">DESMOS</span>
+          Interactive Graphing Calculator & Math Simulations
+        </div>
+        <button class="desmos-modal-close" id="btnCloseDesmosModal" aria-label="Close calculator">&times;</button>
+      </div>
+      <div class="desmos-modal-body">
+        <div id="desmosMainCalculator" style="width: 100%; height: 520px; border-radius: 8px; overflow: hidden; background: #fff;"></div>
       </div>
     </div>
   </div>

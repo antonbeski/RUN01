@@ -87,6 +87,18 @@ def auth_config():
         "google_client_id": get_google_client_id()
     })
 
+def get_desmos_api_key():
+    key = (os.environ.get("DESMOS_API_KEY") or "").strip().strip('"').strip("'")
+    if not key or "your_desmos_api_key" in key.lower():
+        return "dca3170180db492b4eb4508460839bad"
+    return key
+
+@app.route("/api/desmos/config", methods=["GET"])
+def desmos_config():
+    return jsonify({
+        "apiKey": get_desmos_api_key()
+    })
+
 @app.route("/api/auth/me", methods=["GET"])
 def auth_me():
     user_id = session.get("user_id")
@@ -875,6 +887,25 @@ def ai_chat():
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
         model    = body.get("model", "openai/gpt-oss-120b")
+
+        # ── Inject Desmos Math Graph Instructions into System Prompt ───────
+        desmos_sys_prompt = (
+            "You are an expert AI assistant with built-in interactive Desmos Graphing Calculator support.\n"
+            "Whenever the user asks for math graphs, plots, simulations, calculus, trigonometric functions, or equations, "
+            "provide an interactive Desmos graph by putting equations inside a ```desmos code block.\n"
+            "Example:\n"
+            "```desmos\n"
+            "y = a \\cdot x^2 + b\n"
+            "a = 2\n"
+            "b = -1\n"
+            "y = \\sin(x)\n"
+            "```\n"
+            "You can also provide runnable Python code using `import desmos` or `desmos.plot('y = x^2')`."
+        )
+        if not messages or messages[0].get("role") != "system":
+            messages.insert(0, {"role": "system", "content": desmos_sys_prompt})
+        else:
+            messages[0]["content"] = desmos_sys_prompt + "\n\n" + messages[0]["content"]
 
         # ── Collect available keys ──────────────────────────────────────────
         key_primary   = os.environ.get("GROQ_API_KEY",   "").strip()
