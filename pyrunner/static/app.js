@@ -2818,9 +2818,9 @@ document.addEventListener('keydown', (e) => {
     aiTextarea.style.height = Math.min(aiTextarea.scrollHeight, 120) + 'px';
   });
 
-  // Handle Ctrl+Enter to send message
+  // Handle Enter to send message (Shift+Enter for newline)
   aiTextarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendUserMessage();
     }
@@ -3542,11 +3542,30 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     });
   }
 
-  // Clean LaTeX helper to strip any comments
+  // Clean LaTeX helper to convert raw math text into valid Desmos LaTeX syntax
   function cleanDesmosLatex(rawLine) {
     if (!rawLine || typeof rawLine !== 'string') return rawLine;
     let line = rawLine.trim();
+
+    // Strip comments (#... or //...)
     line = line.replace(/(#|\/\/).*$/, '').trim();
+    if (!line) return '';
+
+    // Convert Unicode Greek symbols to LaTeX commands
+    line = line.replace(/θ/g, '\\theta');
+    line = line.replace(/π/g, '\\pi');
+    line = line.replace(/α/g, '\\alpha');
+    line = line.replace(/β/g, '\\beta');
+
+    // Replace raw asterisks * with LaTeX \cdot
+    line = line.replace(/\*/g, ' \\cdot ');
+
+    // Replace function parameter definitions like x(t) = ... or y(t) = ...
+    line = line.replace(/^[a-zA-Z]\([a-zA-Z]\)\s*=\s*/, '');
+
+    // Normalize whitespace
+    line = line.replace(/\s+/g, ' ').trim();
+
     return line;
   }
 
