@@ -2561,15 +2561,22 @@ const paneEditor  = document.querySelector('.pane-editor');
 const paneOutput  = document.querySelector('.pane-output');
 const paneAI      = document.getElementById('paneAI');
 
-function toggleFullscreen(pane) {
-  if (workspaceEl.classList.contains('has-fullscreen')) {
+function exitFullscreen() {
+  if (workspaceEl && workspaceEl.classList.contains('has-fullscreen')) {
     workspaceEl.classList.remove('has-fullscreen');
-    pane.classList.remove('pane-fullscreen');
-  } else {
+    document.querySelectorAll('.pane-fullscreen').forEach(p => p.classList.remove('pane-fullscreen'));
+    if (monacoEditor) setTimeout(() => monacoEditor.layout(), 50);
+  }
+}
+
+function toggleFullscreen(pane) {
+  if (!workspaceEl || !pane) return;
+  const isCurrentlyFullscreen = pane.classList.contains('pane-fullscreen');
+  exitFullscreen();
+  if (!isCurrentlyFullscreen) {
     workspaceEl.classList.add('has-fullscreen');
     pane.classList.add('pane-fullscreen');
   }
-  // Trigger layout recalculation for Monaco
   if (monacoEditor) {
     setTimeout(() => monacoEditor.layout(), 50);
   }
@@ -2794,6 +2801,8 @@ document.addEventListener('keydown', (e) => {
       btnAI.classList.add('active');
       aiTextarea.focus();
     } else {
+      // Always exit fullscreen mode before hiding AI pane
+      exitFullscreen();
       paneAI.style.display = 'none';
       handleAI.style.display = 'none';
       btnAI.classList.remove('active');
