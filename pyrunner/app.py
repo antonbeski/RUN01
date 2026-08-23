@@ -44,10 +44,16 @@ def get_db():
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
 
+def get_google_client_id():
+    cid = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip().strip('"').strip("'")
+    if not cid or "your_google_client_id" in cid.lower():
+        return ""
+    return cid
+
 @app.route("/api/auth/config", methods=["GET"])
 def auth_config():
     return jsonify({
-        "google_client_id": os.environ.get("GOOGLE_CLIENT_ID", "")
+        "google_client_id": get_google_client_id()
     })
 
 @app.route("/api/auth/me", methods=["GET"])
@@ -187,7 +193,7 @@ def auth_google():
         try:
             from google.oauth2 import id_token
             from google.auth.transport import requests as google_requests
-            google_client_id = os.environ.get("GOOGLE_CLIENT_ID")
+            google_client_id = get_google_client_id()
             
             idinfo = id_token.verify_oauth2_token(
                 token, 
