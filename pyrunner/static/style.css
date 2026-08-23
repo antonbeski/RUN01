@@ -883,13 +883,24 @@ body::after {
 
 /* Fullscreen state */
 .workspace.has-fullscreen .pane:not(.pane-fullscreen) {
-  display: none;
+  display: none !important;
 }
 .workspace.has-fullscreen .resize-handle {
-  display: none;
+  display: none !important;
 }
 .workspace.has-fullscreen .pane-fullscreen {
   flex: 1 1 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.pane-ai.pane-fullscreen .ai-chat-container {
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* ══════════════════════════════════════════════════════════

@@ -2980,7 +2980,9 @@ document.addEventListener('keydown', (e) => {
         const container = document.createElement('div');
         container.className = 'desmos-chat-card';
 
-        const lines = desmosCode.split('\n').map(l => l.trim()).filter(Boolean);
+        const lines = desmosCode.split('\n')
+          .map(l => l.replace(/(#|\/\/).*$/, '').trim())
+          .filter(Boolean);
 
         const header = document.createElement('div');
         header.className = 'desmos-chat-header';
@@ -2992,7 +2994,7 @@ document.addEventListener('keydown', (e) => {
         openPanelBtn.className = 'ai-code-btn';
         openPanelBtn.style.color = '#38bdf8';
         openPanelBtn.style.fontWeight = 'bold';
-        openPanelBtn.innerHTML = '📊 Open in Desmos Panel';
+        openPanelBtn.innerHTML = 'Open in Desmos Panel';
         openPanelBtn.addEventListener('click', () => {
           window.loadIntoDesmosPanel(lines, 'AI Math Simulation');
         });
@@ -3540,6 +3542,14 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     });
   }
 
+  // Clean LaTeX helper to strip any comments
+  function cleanDesmosLatex(rawLine) {
+    if (!rawLine || typeof rawLine !== 'string') return rawLine;
+    let line = rawLine.trim();
+    line = line.replace(/(#|\/\/).*$/, '').trim();
+    return line;
+  }
+
   // Open and load expressions directly into the main Desmos panel
   window.loadIntoDesmosPanel = function(linesOrExpressions, title = 'Math Simulation') {
     if (!desmosModalOverlay) return;
@@ -3567,8 +3577,12 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
       if (Array.isArray(linesOrExpressions)) {
         linesOrExpressions.forEach((item, idx) => {
           if (typeof item === 'string') {
-            desmosMainCalculator.setExpression({ id: 'panel_expr_' + idx, latex: item });
-          } else if (typeof item === 'object') {
+            const clean = cleanDesmosLatex(item);
+            if (clean) {
+              desmosMainCalculator.setExpression({ id: 'panel_expr_' + idx, latex: clean });
+            }
+          } else if (typeof item === 'object' && item !== null) {
+            if (item.latex) item.latex = cleanDesmosLatex(item.latex);
             desmosMainCalculator.setExpression(item);
           }
         });
@@ -3598,7 +3612,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     openPanelBtn.className = 'ai-code-btn';
     openPanelBtn.style.color = '#38bdf8';
     openPanelBtn.style.fontWeight = 'bold';
-    openPanelBtn.innerHTML = '📊 Open in Desmos Panel';
+    openPanelBtn.innerHTML = 'Open in Desmos Panel';
     openPanelBtn.addEventListener('click', () => {
       window.loadIntoDesmosPanel(parsedExprs, title);
     });
