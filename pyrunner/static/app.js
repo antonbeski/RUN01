@@ -2556,8 +2556,10 @@ function highlightSyntax(code) {
 const workspaceEl = document.querySelector('.workspace');
 const fsEditorBtn = document.getElementById('fsEditorBtn');
 const fsOutputBtn = document.getElementById('fsOutputBtn');
+const fsAIBtn     = document.getElementById('fsAIBtn');
 const paneEditor  = document.querySelector('.pane-editor');
 const paneOutput  = document.querySelector('.pane-output');
+const paneAI      = document.getElementById('paneAI');
 
 function toggleFullscreen(pane) {
   if (workspaceEl.classList.contains('has-fullscreen')) {
@@ -2578,6 +2580,9 @@ if (fsEditorBtn && paneEditor) {
 }
 if (fsOutputBtn && paneOutput) {
   fsOutputBtn.addEventListener('click', () => toggleFullscreen(paneOutput));
+}
+if (fsAIBtn && paneAI) {
+  fsAIBtn.addEventListener('click', () => toggleFullscreen(paneAI));
 }
 
 // ── Global keyboard shortcuts ─────────────────────────────

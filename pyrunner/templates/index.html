@@ -274,18 +274,20 @@
            aria-label="Drag to resize AI assistant" tabindex="0"></div>
 
       <!-- AI Assistant Pane -->
-      <section class="pane pane-ai" id="paneAI" style="display:none" aria-label="AI assistant">
+      <section class="pane pane-ai" id="paneAI" style="display:none" aria-label="AI pane">
         <div class="pane-header">
           <span class="pane-label">
             <span class="pill pill-ai" style="background: linear-gradient(135deg, #ffffff, #e5e5e5); color: #000; font-weight: bold; border: none;">AI</span>
-            assistant
           </span>
           <div class="pane-right-meta">
             <!-- Model selector -->
             <select class="ai-model-select" id="aiModelSelect" aria-label="Select AI model">
               <!-- Dynamically populated -->
             </select>
-            <button class="pane-fs-btn" id="closeAIBtn" title="Close assistant" aria-label="Close assistant">
+            <button class="pane-fs-btn" id="fsAIBtn" title="Toggle Fullscreen" aria-label="Toggle Fullscreen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            </button>
+            <button class="pane-fs-btn" id="closeAIBtn" title="Close AI pane" aria-label="Close AI pane">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
