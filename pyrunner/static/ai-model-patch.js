@@ -22,14 +22,14 @@
   // Groq second as a fast automatic fallback. Mirrors MODEL_CATALOG in app.py.
   // Verified against build.nvidia.com / console.groq.com docs, Aug 2026.
   const MODEL_CATALOG = [
-    { id: 'deepseek-ai/deepseek-v4-flash-0731',      name: 'DeepSeek V4 Flash — Fastest & Cheapest', provider: 'NVIDIA NIM' },
-    { id: 'nvidia/llama-3.1-nemotron-70b-instruct',  name: 'Nemotron 70B — High Quality',            provider: 'NVIDIA NIM' },
-    { id: 'qwen/qwen2.5-coder-32b-instruct',         name: 'Qwen 2.5 Coder 32B — Code Specialist',   provider: 'NVIDIA NIM' },
+    { id: 'deepseek-ai/deepseek-v4-flash-0731',      name: 'DeepSeek V4 Flash', provider: 'NVIDIA NIM' },
+    { id: 'nvidia/llama-3.1-nemotron-70b-instruct',  name: 'Nemotron 70B',            provider: 'NVIDIA NIM' },
+    { id: 'qwen/qwen2.5-coder-32b-instruct',         name: 'Qwen 2.5 Coder 32B',   provider: 'NVIDIA NIM' },
     { id: 'meta/llama-3.3-70b-instruct',             name: 'Llama 3.3 70B',                          provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',  name: 'GPT-OSS 120B — Fastest',  provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',   name: 'GPT-OSS 20B — Balanced',  provider: 'Groq' },
+    { id: 'openai/gpt-oss-120b',  name: 'GPT-OSS 120B',  provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',   name: 'GPT-OSS 20B',  provider: 'Groq' },
     { id: 'qwen/qwen3.6-27b',     name: 'Qwen 3.6 27B',            provider: 'Groq' },
-    { id: 'groq/compound',        name: 'Groq Compound (Agentic)', provider: 'Groq' },
+    { id: 'groq/compound',        name: 'Groq Compound', provider: 'Groq' },
     { id: 'groq/compound-mini',   name: 'Groq Compound Mini',      provider: 'Groq' },
   ];
 
