@@ -140,7 +140,7 @@ def auth_signup():
 
     if not email or not password:
         return jsonify({"error": "Email and password are required."}), 400
-    
+
     if len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters."}), 400
 
@@ -228,7 +228,7 @@ def auth_login():
 def auth_google():
     data = request.get_json() or {}
     token = data.get("credential") or data.get("token")
-    
+
     email = (data.get("email") or "").strip().lower()
     name = (data.get("name") or "").strip()
     picture = data.get("picture") or ""
@@ -239,13 +239,13 @@ def auth_google():
             from google.oauth2 import id_token
             from google.auth.transport import requests as google_requests
             google_client_id = get_google_client_id()
-            
+
             idinfo = id_token.verify_oauth2_token(
-                token, 
-                google_requests.Request(), 
+                token,
+                google_requests.Request(),
                 google_client_id if google_client_id else None
             )
-            
+
             email = idinfo.get("email", "").lower()
             name = idinfo.get("name", "")
             picture = idinfo.get("picture", "")
@@ -411,7 +411,7 @@ def yf_category_proxy(ticker, category):
         import yfinance as yf
         import pandas as pd
         import numpy as np
-        
+
         t = yf.Ticker(ticker.upper())
         category = category.lower()
 
@@ -443,7 +443,7 @@ def yf_category_proxy(ticker, category):
             data = getattr(t, f"get_{category}")
         else:
             return jsonify({"error": f"Unsupported or invalid category: {category}"}), 400
-            
+
         if callable(data):
             kwargs = {k: v for k, v in request.args.items() if k not in ("period", "interval")}
             try:
@@ -462,7 +462,7 @@ def yf_category_proxy(ticker, category):
             # Handle NaNs
             df = df.replace({np.nan: None})
             return jsonify(json_clean(df.to_dict(orient="records")))
-        
+
         elif isinstance(data, dict) or isinstance(data, list):
             return jsonify(json_clean(data))
         else:
@@ -596,7 +596,6 @@ def yf_search_proxy():
         s = yf.Search(q)
         return jsonify(json_clean({"quotes": getattr(s, "quotes", []), "news": getattr(s, "news", [])}))
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
         return jsonify({"error": str(exc)}), 500
 
 @app.route("/api/yf/lookup")
@@ -827,28 +826,85 @@ def run_code():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# ── AI Coding Assistant endpoints (Groq API — dual-key fallback) ─────────────
-# Model list is sourced from console.groq.com/docs/deprecations — Aug 2026 verified.
-# llama-3.3-70b-versatile and llama-3.1-8b-instant were shut down on Aug 16, 2026.
+# ══════════════════════════════════════════════════════════════════════════
+# AI Coding Assistant — multi-provider model catalog + dual-key fallback
+#
+# Two OpenAI-compatible providers are supported out of the box:
+#   • NVIDIA NIM   (https://integrate.api.nvidia.com/v1)  — env: NVIDIA_API_KEY[_2]
+#   • Groq         (https://api.groq.com/openai/v1)       — env: GROQ_API_KEY[_2]
+#
+# NVIDIA NIM is listed first because it gives access to very token-efficient,
+# high-quality MoE models (e.g. DeepSeek V4 Flash — only ~13B active params,
+# long-context, tuned for coding/agentic tasks) at NVIDIA's free/dev-credit
+# tier. Groq remains configured as a fast automatic fallback if NVIDIA is
+# rate-limited, out of credits, or its key isn't set.
+# ══════════════════════════════════════════════════════════════════════════
+
+# Model list is sourced from build.nvidia.com and console.groq.com/docs —
+# verified Aug 2026. Deprecated Groq models (llama-3.3-70b-versatile,
+# llama-3.1-8b-instant, shut down Aug 16 2026) are excluded.
+MODEL_CATALOG = [
+    # ── NVIDIA NIM — token-efficient + high quality ──────────────────────
+    {"id": "deepseek-ai/deepseek-v4-flash-0731",     "name": "DeepSeek V4 Flash — Fastest & Cheapest (MoE, 13B active)", "provider": "NVIDIA NIM"},
+    {"id": "nvidia/llama-3.1-nemotron-70b-instruct", "name": "Nemotron 70B — High Quality",                             "provider": "NVIDIA NIM"},
+    {"id": "qwen/qwen2.5-coder-32b-instruct",        "name": "Qwen 2.5 Coder 32B — Code Specialist",                    "provider": "NVIDIA NIM"},
+    {"id": "meta/llama-3.3-70b-instruct",            "name": "Llama 3.3 70B",                                          "provider": "NVIDIA NIM"},
+    # ── Groq — fast automatic fallback ───────────────────────────────────
+    {"id": "openai/gpt-oss-120b",  "name": "GPT-OSS 120B — Fastest",  "provider": "Groq"},
+    {"id": "openai/gpt-oss-20b",   "name": "GPT-OSS 20B — Balanced",  "provider": "Groq"},
+    {"id": "qwen/qwen3.6-27b",     "name": "Qwen 3.6 27B",            "provider": "Groq"},
+    {"id": "groq/compound",        "name": "Groq Compound (Agentic)", "provider": "Groq"},
+    {"id": "groq/compound-mini",   "name": "Groq Compound Mini",      "provider": "Groq"},
+]
+
+# Provider connection details + in-provider fallback chain (tried in order if
+# the requested model 404s / rate-limits / 5xx's on that provider).
+PROVIDER_CONFIG = {
+    "NVIDIA NIM": {
+        "base_url": "https://integrate.api.nvidia.com/v1/chat/completions",
+        "key_env":  ["NVIDIA_API_KEY", "NVIDIA_API_KEY_2"],
+        "fallback_chain": [
+            "deepseek-ai/deepseek-v4-flash-0731",
+            "nvidia/llama-3.1-nemotron-70b-instruct",
+            "qwen/qwen2.5-coder-32b-instruct",
+            "meta/llama-3.3-70b-instruct",
+        ],
+    },
+    "Groq": {
+        "base_url": "https://api.groq.com/openai/v1/chat/completions",
+        "key_env":  ["GROQ_API_KEY", "GROQ_API_KEY_2"],
+        "fallback_chain": [
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b",
+            "groq/compound-mini",
+        ],
+    },
+}
+
+
+def _model_provider(model_id):
+    """Look up which provider a model id belongs to. Defaults to NVIDIA NIM
+    for unknown model ids (any 'namespace/model-name' slug is almost always
+    an NVIDIA NIM catalog entry), and Groq only for known Groq-style ids."""
+    for m in MODEL_CATALOG:
+        if m["id"] == model_id:
+            return m["provider"]
+    return "Groq" if model_id.startswith(("openai/gpt-oss", "groq/", "qwen/qwen3.")) else "NVIDIA NIM"
+
+
 @app.route("/api/ai/models")
 def ai_models():
-    models = [
-        {"id": "openai/gpt-oss-120b",  "name": "GPT-OSS 120B — Fastest",  "provider": "Groq"},
-        {"id": "openai/gpt-oss-20b",   "name": "GPT-OSS 20B — Balanced",  "provider": "Groq"},
-        {"id": "qwen/qwen3.6-27b",     "name": "Qwen 3.6 27B",            "provider": "Groq"},
-        {"id": "groq/compound",        "name": "Groq Compound (Agentic)", "provider": "Groq"},
-        {"id": "groq/compound-mini",   "name": "Groq Compound Mini",      "provider": "Groq"},
-    ]
-    return jsonify(models)
+    return jsonify(MODEL_CATALOG)
 
 
-def _call_groq(api_key, model, messages, payload_extra=None):
-    """Make a single (non-streaming) attempt to the Groq API.
+def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
+    """Make a single streaming attempt against an OpenAI-compatible chat
+    completions endpoint (works for both NVIDIA NIM and Groq).
 
-    Returns (requests.Response, error_str).  error_str is None on success.
+    Returns (requests.Response, error_str). error_str is None on success.
     """
     import requests
-    url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -857,28 +913,34 @@ def _call_groq(api_key, model, messages, payload_extra=None):
     if payload_extra:
         payload.update(payload_extra)
     try:
-        res = requests.post(url, headers=headers, json=payload, stream=True, timeout=60)
+        res = requests.post(url=base_url, headers=headers, json=payload, stream=True, timeout=60)
         return res, None
     except Exception as exc:
         return None, str(exc)
 
 
-# Status codes that warrant an automatic fallback to the secondary key.
-# 404 = model not found / no access to model on this key — try the other key.
+# Status codes that warrant an automatic fallback to the next key/model/provider.
+# 404 = model not found / no access to model on this key — try the next option.
 _FALLBACK_STATUS_CODES = {404, 429, 500, 502, 503, 504}
 
 
 @app.route("/api/ai/chat", methods=["POST"])
 def ai_chat():
-    """Chat endpoint with automatic dual-key fallback.
+    """Chat endpoint with automatic dual-provider, dual-key fallback.
 
     Env vars:
-        GROQ_API_KEY   – primary key (required)
-        GROQ_API_KEY_2 – secondary / backup key (optional)
+        NVIDIA_API_KEY   – NVIDIA NIM primary key (recommended — best $/token)
+        NVIDIA_API_KEY_2 – NVIDIA NIM secondary / backup key (optional)
+        GROQ_API_KEY     – Groq primary key (fast fallback)
+        GROQ_API_KEY_2   – Groq secondary / backup key (optional)
 
-    On a rate-limit (HTTP 429) or server error (5xx) from the primary key the
-    request is transparently retried with the secondary key.  If the secondary
-    key is also unavailable or fails, a descriptive error is returned.
+    Resolution order:
+        1. Try the requested model on its own provider (all configured keys).
+        2. On failure, try that provider's other curated models (all keys).
+        3. If the whole provider is exhausted (or has no key configured),
+           fall through to the OTHER provider's curated model chain.
+    Only a genuinely non-retryable error (e.g. 400 Bad Request) is returned
+    to the client immediately without trying further options.
     """
     try:
         import os
@@ -886,7 +948,7 @@ def ai_chat():
 
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model    = body.get("model", "openai/gpt-oss-120b")
+        model    = body.get("model", "deepseek-ai/deepseek-v4-flash-0731")
 
         # ── Inject Desmos Math Graph & Simulation Instructions ────────────
         desmos_sys_prompt = (
@@ -922,75 +984,79 @@ def ai_chat():
         else:
             messages[0]["content"] = desmos_sys_prompt + "\n\n" + messages[0]["content"]
 
-        # ── Collect available keys ──────────────────────────────────────────
-        key_primary   = os.environ.get("GROQ_API_KEY",   "").strip()
-        key_secondary = os.environ.get("GROQ_API_KEY_2", "").strip()
+        # ── Resolve which provider each candidate model belongs to ────────
+        requested_provider = _model_provider(model)
+        provider_order = [requested_provider] + [p for p in PROVIDER_CONFIG if p != requested_provider]
 
-        if not key_primary and not key_secondary:
+        configured_keys = {
+            p: [os.environ.get(k, "").strip() for k in cfg["key_env"] if os.environ.get(k, "").strip()]
+            for p, cfg in PROVIDER_CONFIG.items()
+        }
+
+        if not any(configured_keys.values()):
             return jsonify({
-                "error": "No Groq API key is configured. "
-                         "Set GROQ_API_KEY (and optionally GROQ_API_KEY_2) "
-                         "in your Vercel environment settings."
+                "error": "No AI provider API key is configured. Set NVIDIA_API_KEY "
+                         "(recommended) and/or GROQ_API_KEY — each with an optional "
+                         "_2 backup key — in your Vercel environment settings."
             }), 400
-
-        # Build an ordered list of keys to try: primary first, then secondary.
-        keys_to_try = [k for k in [key_primary, key_secondary] if k]
-
-        # Build an ordered fallback chain of models.
-        # If the requested model fails on all keys (404/429/5xx), the next model is tried.
-        # All models listed here are confirmed active on Groq as of Aug 2026.
-        _FALLBACK_CHAIN = [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
-            "groq/compound-mini",
-        ]
-        # Always try the requested model first, then the chain (deduped, preserving order)
-        models_to_try = [model] + [m for m in _FALLBACK_CHAIN if m != model]
 
         res = None
         last_error = None
         success = False
 
-        for target_model in models_to_try:
-            for idx, api_key in enumerate(keys_to_try):
-                label = "primary" if idx == 0 else "secondary"
-                res, network_err = _call_groq(api_key, target_model, messages)
+        for provider in provider_order:
+            keys_to_try = configured_keys.get(provider) or []
+            if not keys_to_try:
+                continue  # this provider has no key configured — skip it entirely
 
-                if network_err:
-                    # Network-level failure — try next key
-                    last_error = f"[{label} key, model {target_model}] Network error: {network_err}"
-                    res = None
-                    continue
+            cfg = PROVIDER_CONFIG[provider]
+            base_url = cfg["base_url"]
 
-                if res.status_code == 200:
-                    success = True
-                    break  # Success — stream this response
+            # Requested model first (if it belongs to this provider), then this
+            # provider's curated fallback chain, deduped, preserving order.
+            if provider == requested_provider:
+                models_to_try = [model] + [m for m in cfg["fallback_chain"] if m != model]
+            else:
+                models_to_try = list(cfg["fallback_chain"])
 
-                # Parse error response details
-                try:
-                    err_data = res.json()
-                    err_msg  = err_data.get("error", {}).get("message", res.text)
-                except Exception:
-                    err_msg = res.text
+            for target_model in models_to_try:
+                for idx, api_key in enumerate(keys_to_try):
+                    label = "primary" if idx == 0 else "secondary"
+                    res, network_err = _call_chat_provider(base_url, api_key, target_model, messages)
 
-                last_error = f"[{label} key, model {target_model}] HTTP {res.status_code}: {err_msg}"
+                    if network_err:
+                        last_error = f"[{provider} {label} key, model {target_model}] Network error: {network_err}"
+                        res = None
+                        continue
 
-                # If this status code warrants fallback (404, 429, 5xx), try the next key/model
-                if res.status_code in _FALLBACK_STATUS_CODES:
-                    res = None
-                    continue
-                else:
-                    # Non-retryable error (e.g., 400 Bad Request, etc.)
-                    return jsonify({"error": f"Groq API Error ({res.status_code}): {err_msg}"}), res.status_code
+                    if res.status_code == 200:
+                        success = True
+                        break  # Success — stream this response
 
+                    try:
+                        err_data = res.json()
+                        err_msg  = err_data.get("error", {}).get("message", res.text)
+                    except Exception:
+                        err_msg = res.text
+
+                    last_error = f"[{provider} {label} key, model {target_model}] HTTP {res.status_code}: {err_msg}"
+
+                    if res.status_code in _FALLBACK_STATUS_CODES:
+                        res = None
+                        continue
+                    else:
+                        # Non-retryable error (e.g. 400 Bad Request) — surface immediately.
+                        return jsonify({"error": f"{provider} API Error ({res.status_code}): {err_msg}"}), res.status_code
+
+                if success:
+                    break
             if success:
                 break
 
-        # All keys and fallback models exhausted without a successful response
+        # All providers, keys, and fallback models exhausted without success.
         if res is None or not success:
             return jsonify({
-                "error": f"Failed to connect to Groq API. All keys/models failed. Last error: {last_error}"
+                "error": f"Failed to connect to any configured AI provider. Last error: {last_error}"
             }), 503
 
         # ── Stream the successful response back to the browser ─────────────
