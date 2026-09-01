@@ -696,90 +696,88 @@
     </div>
   </div>
 
-  <!-- â•â• DESMOS GRAPHING CALCULATOR MODAL â•â•â•â•â•â•â•â•â•â•â•â�          <select class="physics-preset-select" id="physicsPresetSelect" aria-label="Select Physics Preset">
-            <optgroup label="Mechanics & Kinematics">
-              <option value="mechanics_double_pendulum">Double Pendulum (Non-Linear Chaos & Energy)</option>
+
+
+  <!-- ══ DESMOS GRAPHING CALCULATOR MODAL ═════════════════════════════════════ -->
+  <div class="desmos-modal-overlay hidden" id="desmosModalOverlay" role="dialog"
+       aria-modal="true" aria-labelledby="desmosModalTitle">
+    <div class="desmos-modal-card">
+      <div class="desmos-modal-header">
+        <span class="desmos-modal-title" id="desmosModalTitle">
+          <span class="desmos-badge">DESMOS</span> Graphing Calculator
+        </span>
+        <button class="desmos-modal-close" id="btnCloseDesmosModal"
+                aria-label="Close Desmos Calculator">&times;</button>
+      </div>
+            <div class="desmos-modal-body">
+        <div id="desmosMainCalculator" style="flex:1;width:100%;height:100%;min-height:0;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PHYSICS SIMULATION STUDIO MODAL ═══════════════════════════════════════ -->
+  <div class="physics-modal-overlay hidden" id="physicsModalOverlay" role="dialog"
+       aria-modal="true" aria-labelledby="physicsModalTitle">
+    <div class="physics-modal-card">
+
+      <!-- Header -->
+      <div class="physics-modal-header">
+        <div class="physics-modal-header-left">
+          <span class="physics-modal-title" id="physicsModalTitle">Physics Simulation Studio</span>
+          <select class="physics-preset-select" id="physicsPresetSelect"
+                  aria-label="Select Physics Preset">
+            <optgroup label="Mechanics &amp; Kinematics">
+              <option value="mechanics_double_pendulum">Double Pendulum — Non-Linear Chaos &amp; Energy</option>
               <option value="mechanics_pulley_crane">Block-and-Tackle Pulley Crane (MA = 4x)</option>
               <option value="mechanics_coupled_springs">Coupled 3-Mass Spring Harmonic Oscillator</option>
             </optgroup>
-            <optgroup label="Fluids & Aerodynamics">
-              <option value="fluid_hollow_cylinder_drop">Solid Sphere vs Hollow Cylinder Terminal Drag & Water Buoyancy</option>
+            <optgroup label="Fluids &amp; Aerodynamics">
+              <option value="fluid_hollow_cylinder_drop">Solid Sphere vs Hollow Cylinder — Terminal Drag &amp; Buoyancy</option>
             </optgroup>
-            <optgroup label="Geometric Optics & Lenses">
-              <option value="optics_convex_concave_lens">Biconvex & Biconcave Lens System (Focal Ray Path)</option>
-              <option value="optics_prism_dispersion">Glass Prism Chromatic Dispersion & Rainbow Spectrum</option>
-              <option value="optics_parabolic_mirror">Parabolic Mirror Reflection & Focal Point Caustic</option>
+            <optgroup label="Geometric Optics &amp; Lenses">
+              <option value="optics_convex_concave_lens">Biconvex &amp; Biconcave Lens System (Focal Ray Path)</option>
+              <option value="optics_prism_dispersion">Glass Prism — Chromatic Dispersion &amp; Rainbow Spectrum</option>
+              <option value="optics_parabolic_mirror">Parabolic Mirror — Reflection &amp; Focal Point Caustic</option>
             </optgroup>
           </select>
-          <button class="physics-modal-close" id="btnClosePhysicsModal" aria-label="Close Physics Studio">&times;</button>
         </div>
+        <button class="physics-modal-close" id="btnClosePhysicsModal"
+                aria-label="Close Physics Studio">&times;</button>
       </div>
 
+      <!-- Body -->
       <div class="physics-modal-body">
-        <!-- Main 3D Canvas Viewport with Telemetry Overlay -->
+
+        <!-- 3D Viewport -->
         <div class="physics-viewport-wrap">
           <div id="physicsMainViewport" class="physics-canvas-container"></div>
-          
-          <!-- Live Telemetry Floating HUD -->
+
+          <!-- HUD -->
           <div class="physics-telemetry-hud" id="physicsTelemetryHud">
             <div class="hud-item"><span class="hud-label">FPS</span><span class="hud-value" id="hudFps">60</span></div>
-            <div class="hud-item"><span class="hud-label">Energy Drift</span><span class="hud-value hud-pass" id="hudEnergy">E: 14.2 J</span></div>
+            <div class="hud-item"><span class="hud-label">Energy Drift</span><span class="hud-value hud-pass" id="hudEnergy">E: --</span></div>
             <div class="hud-item"><span class="hud-label">Solver</span><span class="hud-value" id="hudSolver">Verlet Symplectic</span></div>
             <div class="hud-item"><span class="hud-label">Invariants</span><span class="hud-value hud-pass" id="hudInvariants">CONSERVED</span></div>
           </div>
 
-          <!-- Transport Controls Toolbar -->
+          <!-- Transport Controls -->
           <div class="physics-transport-bar">
             <button class="btn btn-physics-control" id="btnPhysicsPlay" title="Play / Pause">
               <span id="physicsPlayIcon">Pause</span>
             </button>
-            <button class="btn btn-physics-control" id="btnPhysicsReset" title="Reset State">
-              Reset
-            </button>
-            <button class="btn btn-physics-control" id="btnPhysicsImpulse" title="Apply Perturbation Force">
-              Perturb
-            </button>
+            <button class="btn btn-physics-control" id="btnPhysicsReset" title="Reset State">Reset</button>
+            <button class="btn btn-physics-control" id="btnPhysicsImpulse" title="Apply Perturbation Force">Perturb</button>
             <div class="physics-speed-wrap">
               <label for="physicsSpeedRange">Speed:</label>
               <input type="range" id="physicsSpeedRange" min="0.1" max="2.0" step="0.1" value="1.0">
               <span id="physicsSpeedLabel">1.0x</span>
             </div>
-            <button class="btn btn-physics-action" id="btnPhysicsVerifyNow" title="Run Headless Physics Proof">
-              Verify Proof
-            </button>
-            <button class="btn btn-physics-action" id="btnPhysicsPlotDesmos" title="Plot Analytical Proof in Desmos">
-              Desmos Proof
-            </button>
-          </div>>
-            <div class="hud-item"><span class="hud-label">Invariants</span><span class="hud-value hud-pass" id="hudInvariants">PROVEN </span></div>
-          </div>
-
-          <!-- Transport Controls Toolbar -->
-          <div class="physics-transport-bar">
-            <button class="btn btn-physics-control" id="btnPhysicsPlay" title="Play / Pause">
-              <span id="physicsPlayIcon">â¸</span> Pause
-            </button>
-            <button class="btn btn-physics-control" id="btnPhysicsReset" title="Reset State">
-               Reset
-            </button>
-            <button class="btn btn-physics-control" id="btnPhysicsImpulse" title="Apply Perturbation Force">
-               Perturb / Kick
-            </button>
-            <div class="physics-speed-wrap">
-              <label for="physicsSpeedRange">Speed:</label>
-              <input type="range" id="physicsSpeedRange" min="0.1" max="2.0" step="0.1" value="1.0">
-              <span id="physicsSpeedLabel">1.0x</span>
-            </div>
-            <button class="btn btn-physics-action" id="btnPhysicsVerifyNow" title="Run Headless Physics Proof">
-               Verify Proof
-            </button>
-            <button class="btn btn-physics-action" id="btnPhysicsPlotDesmos" title="Plot Analytical vs Simulated in Desmos">
-               Desmos Proof
-            </button>
+            <button class="btn btn-physics-action" id="btnPhysicsVerifyNow" title="Run Headless Physics Proof">Verify Proof</button>
+            <button class="btn btn-physics-action" id="btnPhysicsPlotDesmos" title="Plot Analytical Proof in Desmos">Desmos Proof</button>
           </div>
         </div>
 
-        <!-- Verification Proof & Specification Tabs -->
+        <!-- Proof + Spec Tabs -->
         <div class="physics-details-pane">
           <div class="physics-tabs">
             <button class="physics-tab active" id="tabPhysProof" data-tab="proof">Verification Proof</button>
@@ -789,17 +787,17 @@
           <div class="physics-tab-content active" id="panePhysProof">
             <div class="proof-card" id="physicsProofCard">
               <div class="proof-header">
-                <span class="proof-status-badge pass"> PHYSICAL LAWS VERIFIED</span>
+                <span class="proof-status-badge pass">PHYSICAL LAWS VERIFIED</span>
                 <span class="proof-engine-label" id="proofEngineLabel">MuJoCo WASM Engine</span>
               </div>
               <div class="proof-metrics-grid" id="proofMetricsGrid">
                 <div class="proof-metric">
                   <div class="metric-name">Energy Conservation</div>
-                  <div class="metric-val text-green" id="mEnergyVal">PASS (dE < 0.01%)</div>
+                  <div class="metric-val text-green" id="mEnergyVal">PASS (dE &lt; 0.01%)</div>
                 </div>
                 <div class="proof-metric">
                   <div class="metric-name">Kinematic Constraints</div>
-                  <div class="metric-val text-green" id="mConstraintVal">PASS (|residual| < 1e-5)</div>
+                  <div class="metric-val text-green" id="mConstraintVal">PASS (|residual| &lt; 1e-5)</div>
                 </div>
                 <div class="proof-metric">
                   <div class="metric-name">Analytical Correlation</div>
@@ -811,19 +809,21 @@
                 </div>
               </div>
               <div class="proof-description" id="proofDescription">
-                Simulation computed 1500 headless steps with symplectic Runge-Kutta 4th-order integration. Total mechanical Hamiltonian is conserved within physical numerical tolerance.
+                Simulation computed 1500 headless steps with symplectic Runge-Kutta 4th-order integration.
+                Total mechanical Hamiltonian is conserved within physical numerical tolerance.
               </div>
             </div>
           </div>
 
           <div class="physics-tab-content" id="panePhysSpec">
             <textarea class="physics-spec-editor" id="physicsSpecEditor" spellcheck="false"></textarea>
-            <button class="btn btn-primary btn-apply-spec" id="btnApplyPhysicsSpec">Apply Model & Re-simulate</button>
+            <button class="btn btn-primary btn-apply-spec" id="btnApplyPhysicsSpec">Apply Model &amp; Re-simulate</button>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
+
+      </div><!-- /.physics-modal-body -->
+    </div><!-- /.physics-modal-card -->
+  </div><!-- /#physicsModalOverlay -->
 
   <!-- â•â• SCRIPTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
   <!-- Three.js for 3D Physics Viewports and Visual Simulations -->

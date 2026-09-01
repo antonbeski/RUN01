@@ -4341,4 +4341,45 @@ html {
 }
 
 
+/* ── Physics Modal Header Layout ────────────────────────────────── */
+.physics-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── IDE-only modals: never show on landing page ─────────────────
+   When ideView is hidden the modals are already .hidden via JS.
+   This CSS provides a hard safety net so they can never paint
+   over the landing page under any circumstance.                   */
+body:has(#ideView.hidden) .desmos-modal-overlay,
+body:has(#ideView.hidden) .physics-modal-overlay {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* ── Desmos full-screen layout fix ─────────────────────────────── */
+.desmos-modal-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+.desmos-modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+#desmosMainCalculator {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  background: #fff;
+}
 
