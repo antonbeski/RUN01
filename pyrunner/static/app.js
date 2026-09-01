@@ -861,24 +861,41 @@ async function initPyodide() {
   setProgress(100, 'Ready!');
 }
 
-const pyodideReady = initPyodide().catch((err) => {
-  console.error('Pyodide init failed:', err);
-  setStatus('error', 'Python init failed — check console');
-  appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
-});
+let pyodideInitPromise = null;
+function startPyodideInit() {
+  if (pyodideInitPromise) return pyodideInitPromise;
 
-// ── Wait for Monaco + Pyodide, then unlock UI ─────────────
-Promise.all([monacoReady, pyodideReady]).then(() => {
-  setStatus('ready', 'Ready — all packages loaded');
-  btnRun.disabled = false;
-  hideOverlay();
-  clearOutput();
-  appendWelcome();
-}).catch((err) => {
-  console.error('Startup error:', err);
-  hideOverlay();
-  setStatus('error', 'Startup failed — check console');
-});
+  pyodideInitPromise = initPyodide().catch((err) => {
+    console.error('Pyodide init failed:', err);
+    setStatus('error', 'Python init failed — check console');
+    appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
+  });
+
+  Promise.all([monacoReady, pyodideInitPromise]).then(() => {
+    setStatus('ready', 'Ready — all packages loaded');
+    btnRun.disabled = false;
+    hideOverlay();
+    clearOutput();
+    appendWelcome();
+  }).catch((err) => {
+    console.error('Startup error:', err);
+    hideOverlay();
+    setStatus('error', 'Startup failed — check console');
+  });
+
+  return pyodideInitPromise;
+}
+
+// Automatically start Pyodide if #ide is active, or defer to idle time
+if (window.location.hash === '#ide') {
+  startPyodideInit();
+} else {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => { setTimeout(startPyodideInit, 1200); }, { timeout: 3000 });
+  } else {
+    setTimeout(startPyodideInit, 1500);
+  }
+}
 
 // ── Language tabs ─────────────────────────────────────────
 langTabsEl.addEventListener('click', () => { /* Python only */ });
@@ -4236,6 +4253,7 @@ window.ViewManager = (function() {
   const navBrand = document.getElementById('navBrand');
 
   function showLanding() {
+    document.body.classList.remove('in-ide');
     if (landingView) landingView.classList.remove('hidden');
     if (ideView) ideView.classList.add('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4245,9 +4263,13 @@ window.ViewManager = (function() {
   }
 
   function showIDE() {
+    document.body.classList.add('in-ide');
     if (landingView) landingView.classList.add('hidden');
     if (ideView) ideView.classList.remove('hidden');
     window.location.hash = 'ide';
+    if (typeof startPyodideInit === 'function') {
+      startPyodideInit();
+    }
     if (window.monacoEditor) {
       setTimeout(() => {
         try {
