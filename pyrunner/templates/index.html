@@ -34,6 +34,11 @@
   <!-- Google Identity Services for Gmail OAuth Login -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+  <!-- Favicon & Branding -->
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='run01-logo.jpg') }}" />
+  <link rel="shortcut icon" href="{{ url_for('static', filename='run01-logo.jpg') }}" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='run01-logo.jpg') }}" />
+
   <!-- Monaco AMD require config -->
   <script>
     var require = { paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs' } };
@@ -48,13 +53,12 @@
     <!-- SITE HEADER -->
     <header class="site-header" role="banner">
       <a href="#top" class="landing-logo" aria-label="RUN01 home">
-        <div class="logo-crop">
-          <span class="logo-pixel-text">RUN01</span>
-        </div>
+        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01 Logo" class="brand-logo-img" />
       </a>
       <nav aria-label="Primary navigation" class="landing-nav hidden-mobile">
         <a href="#landingEngine">ENGINE</a>
         <a href="#landingStack">STACK</a>
+        <a href="#landingFeatures">FEATURES</a>
         <a href="#landingWhy">WHY RUN01</a>
       </nav>
       <div class="landing-header-actions">
@@ -79,7 +83,7 @@
         </div>
         <div class="eyebrow"><span class="status-dot"></span> PYTHON // ONLINE</div>
         <h1>IDEAS IN.<br><span>MODELS OUT.</span></h1>
-        <p class="hero-lede">A full data science stack in your browser. No installation. No server. No waiting.</p>
+        <p class="hero-lede">A full data science stack, physics studio &amp; live financial engine in your browser. Zero setup. Zero latency. Zero server compute costs.</p>
         <div class="flex-actions">
           <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnHeroLaunchIDE">
             START RUNNING
@@ -100,53 +104,40 @@
       <div class="hero-visual">
         <div class="corner-code">[ 01 ]<br>LOCAL_EXEC</div>
         
-        <!-- Interactive IDE Code Mockup -->
-        <div class="hero-code-mockup">
-          <div class="mockup-header">
-            <div class="mockup-dots"><span></span><span></span><span></span></div>
-            <div class="mockup-tab">main.py <span class="tab-py">PY</span></div>
-            <div class="mockup-badge">LOCAL WASM</div>
-          </div>
-          <div class="mockup-editor-lines">
-            <div class="m-line"><span class="m-ln">1</span><span class="m-kw">import</span> numpy <span class="m-kw">as</span> np</div>
-            <div class="m-line"><span class="m-ln">2</span><span class="m-kw">import</span> pandas <span class="m-kw">as</span> pd</div>
-            <div class="m-line"><span class="m-ln">3</span><span class="m-kw">import</span> plotly.graph_objects <span class="m-kw">as</span> go</div>
-            <div class="m-line"><span class="m-ln">4</span></div>
-            <div class="m-line"><span class="m-ln">5</span><span class="m-cm"># Fetch market data from yfinance proxy</span></div>
-            <div class="m-line"><span class="m-ln">6</span>t = np.linspace(0, 10, 200)</div>
-            <div class="m-line"><span class="m-ln">7</span>signal = np.sin(t) * np.exp(-t * 0.1)</div>
-            <div class="m-line"><span class="m-ln">8</span>fig = go.Figure(data=go.Scatter(y=signal, mode=<span class="m-str">'lines'</span>))</div>
-            <div class="m-line"><span class="m-ln">9</span>fig.show()</div>
-          </div>
-          <div class="mockup-sparkline">
-            <svg viewBox="0 0 300 60" preserveAspectRatio="none">
-              <path d="M0,45 Q30,5 60,35 T120,20 T180,40 T240,15 T300,30" fill="none" stroke="currentColor" stroke-width="2.5" />
-            </svg>
-          </div>
+        <!-- Original Uncropped Product Image Showcase -->
+        <div class="hero-product-container">
+          <img src="{{ url_for('static', filename='run01-product.png') }}"
+               alt="RUN01 Full Python IDE & Data Science Interface"
+               class="hero-product-img"
+               loading="eager" />
         </div>
 
         <div class="glass-stat glass-stat-a">
-          <span>RUNTIME</span>
-          <strong>LOCAL</strong>
+          <span>COMPUTE</span>
+          <strong>0ms SERVER TIME</strong>
         </div>
         <div class="glass-stat glass-stat-b">
-          <span>COMPUTE</span>
-          <strong>0.00</strong>
+          <span>DATA API</span>
+          <strong>YFINANCE &amp; FRED</strong>
+        </div>
+        <div class="glass-stat glass-stat-c">
+          <span>SIMULATION</span>
+          <strong>MUJOCO &amp; RAPIER</strong>
         </div>
       </div>
     </section>
 
     <!-- MANIFESTO BAND -->
     <section id="landingEngine" class="manifesto-band">
-      <div class="section-index">01—03</div>
+      <div class="section-index">01—04</div>
       <div>
         <p class="kicker">THE ENGINE</p>
         <h2>PYTHON, WITHOUT<br>THE WAITING ROOM.</h2>
       </div>
       <div class="manifesto-copy">
-        <p>Python itself, compiled to WebAssembly. Your code executes 100% inside the browser—no server in the loop, no attack surface, no compute bill per run.</p>
+        <p>Python itself, compiled to WebAssembly via Pyodide v0.26.4. Your code executes 100% client-side inside browser memory—no server queues, zero security risks, and instant execution response times.</p>
         <div class="terminal-note">
-          <span>$</span> runtime.boot("pyodide")<br><span>&gt;</span> stack ready in browser_
+          <span>$</span> runtime.boot("pyodide") &amp; monaco.init()<br><span>&gt;</span> stack warm in 0.42s &bull; ServiceWorker cached_
         </div>
       </div>
     </section>
@@ -163,22 +154,70 @@
       <div class="capability-grid">
         <article class="capability-card">
           <div class="capability-number">01</div>
-          <h3>Full data science stack</h3>
-          <p>NumPy, Pandas, SciPy, Scikit-learn, Statsmodels, Matplotlib, Seaborn and Plotly.</p>
+          <h3>Full Data Science Stack</h3>
+          <p>NumPy, Pandas, SciPy, Scikit-learn, Statsmodels, Matplotlib, Seaborn, and Plotly.js pre-compiled for instant execution.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">10</div>
-          <h3>A data layer no one else built</h3>
-          <p>Live yfinance plus 930k+ FRED series, normalized into one clean API call.</p>
+          <h3>CORS-Bypassed Data Layer</h3>
+          <p>Live Yahoo Finance prices, options chains, news, financials + 930,000+ FRED macroeconomic series in one Python call.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">11</div>
-          <h3>AI that edits</h3>
-          <p>Surgical code edits applied live. Accept or reject, then run in one click.</p>
+          <h3>Multi-Language Execution</h3>
+          <p>Run Python (browser WASM), C++, C#, and Rust from single starter templates with real-time console streaming.</p>
           <div class="pixel-rule"></div>
         </article>
+        <article class="capability-card">
+          <div class="capability-number">100</div>
+          <h3>Desmos Graphing Engine</h3>
+          <p>Full 2D &amp; 3D Desmos Graphing Calculator overlay integrated alongside code for mathematical verification.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">101</div>
+          <h3>Physics Simulation Studio</h3>
+          <p>Universal MuJoCo MJCF &amp; Rapier3D Kinematics solver engine for articulated body dynamics and physical modeling.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">110</div>
+          <h3>Surgical AI Assistant</h3>
+          <p>Context-aware AI coding assistant for automated refactoring, bug fixing, explanations, and 1-click execution.</p>
+          <div class="pixel-rule"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- DETAILED APP ARCHITECTURE & SPECS SECTION -->
+    <section id="landingFeatures" class="features-detail-section">
+      <div class="section-heading">
+        <p class="kicker">SYSTEM SPECIFICATIONS</p>
+        <h2>ENGINEERED FROM THE GROUND UP.</h2>
+      </div>
+      <div class="features-detail-grid">
+        <div class="feature-detail-card">
+          <div class="feature-tag">PARALLEL BOOTSTRAP</div>
+          <h4>Monaco + Pyodide Concurrent Warmup</h4>
+          <p>Using Promise.all architecture, Monaco editor and Pyodide v0.26.4 WASM kernel boot simultaneously. ServiceWorker caches all CDN assets for near-instant repeat page loads.</p>
+        </div>
+        <div class="feature-detail-card">
+          <div class="feature-tag">FINANCIAL PROXY</div>
+          <h4>Serverless Financial Data Ingestion</h4>
+          <p>Bypasses browser CORS restrictions to deliver live stock ticks, option chains, sector benchmarks, and FRED economic indicators directly into Pandas DataFrames via <code>await yf_download()</code>.</p>
+        </div>
+        <div class="feature-detail-card">
+          <div class="feature-tag">VISUAL OUTPUT ENGINE</div>
+          <h4>PNG &amp; Vector Chart Renderer</h4>
+          <p>Renders Matplotlib and Seaborn plots directly as high-DPI inline PNGs, while Plotly graphs are converted into interactive web vector objects directly in the console pane.</p>
+        </div>
+        <div class="feature-detail-card">
+          <div class="feature-tag">KINEMATICS SOLVER</div>
+          <h4>MuJoCo &amp; Rapier Kinematics Studio</h4>
+          <p>Generalized articulated joint solvers and rigid body physics simulation workspace embedded into the IDE for engineering, robotics, and physical verification tasks.</p>
+        </div>
       </div>
     </section>
 
@@ -283,8 +322,8 @@
 
     <!-- FOOTER -->
     <footer class="landing-footer">
-      <div class="logo-crop footer-logo">
-        <span class="logo-pixel-text">RUN01</span>
+      <div class="footer-logo-wrap">
+        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="footer-logo-img" />
       </div>
       <p>PYTHON &times; WASM &times; YOUR BROWSER</p>
       <p>&copy; 2026 RUN01</p>
@@ -303,7 +342,10 @@
       Landing
     </button>
 
-    <div class="nav-brand" id="navBrand" role="button" title="RUN01" aria-label="Run01">RUN01</div>
+    <div class="nav-brand" id="navBrand" role="button" title="RUN01" aria-label="Run01">
+      <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="nav-brand-logo" />
+      <span>RUN01</span>
+    </div>
 
     <div class="nav-status" id="navStatus" role="status" aria-live="polite">
       <span class="status-dot loading" id="statusDot"></span>
@@ -693,6 +735,7 @@
       <button class="auth-modal-close" id="btnCloseAuthModal" aria-label="Close modal">&times;</button>
       
       <div class="auth-modal-header">
+        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="auth-modal-logo" />
         <h2 class="auth-modal-title" id="authModalTitle">Welcome to RUN01</h2>
         <p class="auth-modal-subtitle">Sign in to save your workspace & manage your account.</p>
       </div>

@@ -4428,4 +4428,174 @@ body::after {
   .landing-footer { flex-direction: column; gap: 16px; align-items: flex-start; }
 }
 
+/* ── Branding Logos (Original Ratio & High-Contrast) ─────── */
+.brand-logo-img {
+  height: 40px;
+  width: 40px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  box-shadow: 2px 2px 0 rgba(255,255,255,0.2);
+  transition: transform 0.15s ease;
+  display: block;
+}
+
+.brand-logo-img:hover {
+  transform: scale(1.05);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-brand-logo {
+  height: 22px;
+  width: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.footer-logo-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.footer-logo-img {
+  height: 48px;
+  width: 48px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  box-shadow: 3px 3px 0 rgba(255,255,255,0.15);
+}
+
+.auth-modal-logo {
+  height: 52px;
+  width: 52px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.25);
+  margin: 0 auto 16px auto;
+  display: block;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+/* ── Original Widescreen Product Image Showcase ──────────── */
+.hero-product-container {
+  width: 100%;
+  max-width: 880px;
+  position: relative;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.28);
+  background: #050505;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.85), 8px 8px 0 rgba(255,255,255,0.15);
+  overflow: hidden;
+  z-index: 2;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-product-container:hover {
+  transform: translate3d(0, -6px, 0);
+  box-shadow: 0 32px 75px rgba(0,0,0,0.95), 12px 12px 0 rgba(255,255,255,0.22);
+}
+
+.hero-product-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  aspect-ratio: 1024 / 472;
+}
+
+.glass-stat-c {
+  left: 35%;
+  bottom: 6%;
+  animation: glass-float 5s 2.4s ease-in-out infinite;
+}
+
+/* ── Detailed App Specs Grid ─────────────────────────────── */
+.features-detail-section {
+  padding: clamp(60px, 7vw, 110px) clamp(24px, 6vw, 90px);
+  background: #040404;
+  border-bottom: 2px solid rgba(255,255,255,0.18);
+  content-visibility: auto;
+}
+
+.features-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 48px;
+}
+
+.feature-detail-card {
+  padding: 28px 24px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  box-shadow: 4px 4px 0 rgba(255,255,255,0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.feature-detail-card:hover {
+  transform: translate3d(0, -4px, 0);
+  border-color: rgba(255,255,255,0.4);
+}
+
+.feature-tag {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #000000;
+  background: #ffffff;
+  display: inline-block;
+  padding: 3px 8px;
+  margin-bottom: 16px;
+  border-radius: 2px;
+}
+
+.feature-detail-card h4 {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.feature-detail-card p {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.7);
+  font-family: 'DM Mono', monospace;
+}
+
+.feature-detail-card code {
+  color: #ffffff;
+  background: rgba(255,255,255,0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* ── Hardware Acceleration & Smoothness Optimizations ────── */
+#landingView, #landingView * {
+  -webkit-font-smoothing: antialiased;
+}
+
+.floating-pixels i, .status-dot, .glass-stat, .pixel-cube, .compute-core, .data-orbit {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+
 
