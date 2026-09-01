@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com"    crossorigin />
   <link rel="dns-prefetch" href="https://unpkg.com" />
 
-  <!-- â”€â”€ Preload critical assets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ────────────────────────────────────────────────────────────────── -->
   <link rel="preload"
         href="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"
         as="script" crossorigin />
@@ -26,7 +26,7 @@
         href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
         as="script" crossorigin />
 
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
@@ -41,9 +41,269 @@
 </head>
 <body>
 
-  <!-- â•â• TOP NAV â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ════════════════════════════════════════════════════════════════
+       LANDING PAGE VIEW (pixel-run-zero retro-pixel design)
+       ════════════════════════════════════════════════════════════════ -->
+  <div id="landingView" class="landing-container">
+    <!-- SITE HEADER -->
+    <header class="site-header" role="banner">
+      <a href="#top" class="landing-logo" aria-label="RUN01 home">
+        <div class="logo-crop">
+          <span class="logo-pixel-text">RUN01</span>
+        </div>
+      </a>
+      <nav aria-label="Primary navigation" class="landing-nav hidden-mobile">
+        <a href="#landingEngine">ENGINE</a>
+        <a href="#landingStack">STACK</a>
+        <a href="#landingWhy">WHY RUN01</a>
+      </nav>
+      <div class="landing-header-actions">
+        <button class="pixel-button pixel-button-ghost btn-landing-auth" id="btnLandingAuth" title="Sign In or Sign Up">SIGN IN</button>
+        <button class="pixel-button pixel-button-dark btn-launch-ide" id="btnLandingLaunchIDE" title="Launch RUN01 IDE">
+          RUN IDE
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- BINARY RAIL -->
+    <div class="binary-rail" aria-hidden="true">
+      01001010&nbsp;11010100&nbsp;00110101&nbsp;RUN01&nbsp;01101001&nbsp;10010110&nbsp;00101101&nbsp;PYTHON.WASM&nbsp;01010110
+    </div>
+
+    <!-- HERO GRID -->
+    <section id="top" class="hero-grid">
+      <div class="hero-copy">
+        <div class="floating-pixels" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="eyebrow"><span class="status-dot"></span> PYTHON // ONLINE</div>
+        <h1>IDEAS IN.<br><span>MODELS OUT.</span></h1>
+        <p class="hero-lede">A full data science stack in your browser. No installation. No server. No waiting.</p>
+        <div class="flex-actions">
+          <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnHeroLaunchIDE">
+            START RUNNING
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </button>
+          <a class="text-link" href="#landingWhy">
+            HOW IT WORKS
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          </a>
+        </div>
+        <div class="boot-line">
+          <span>SYS.READY</span>
+          <span>PYODIDE.WASM</span>
+          <span>0ms SERVER TIME</span>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="corner-code">[ 01 ]<br>LOCAL_EXEC</div>
+        
+        <!-- Interactive IDE Code Mockup -->
+        <div class="hero-code-mockup">
+          <div class="mockup-header">
+            <div class="mockup-dots"><span></span><span></span><span></span></div>
+            <div class="mockup-tab">main.py <span class="tab-py">PY</span></div>
+            <div class="mockup-badge">LOCAL WASM</div>
+          </div>
+          <div class="mockup-editor-lines">
+            <div class="m-line"><span class="m-ln">1</span><span class="m-kw">import</span> numpy <span class="m-kw">as</span> np</div>
+            <div class="m-line"><span class="m-ln">2</span><span class="m-kw">import</span> pandas <span class="m-kw">as</span> pd</div>
+            <div class="m-line"><span class="m-ln">3</span><span class="m-kw">import</span> plotly.graph_objects <span class="m-kw">as</span> go</div>
+            <div class="m-line"><span class="m-ln">4</span></div>
+            <div class="m-line"><span class="m-ln">5</span><span class="m-cm"># Fetch market data from yfinance proxy</span></div>
+            <div class="m-line"><span class="m-ln">6</span>t = np.linspace(0, 10, 200)</div>
+            <div class="m-line"><span class="m-ln">7</span>signal = np.sin(t) * np.exp(-t * 0.1)</div>
+            <div class="m-line"><span class="m-ln">8</span>fig = go.Figure(data=go.Scatter(y=signal, mode=<span class="m-str">'lines'</span>))</div>
+            <div class="m-line"><span class="m-ln">9</span>fig.show()</div>
+          </div>
+          <div class="mockup-sparkline">
+            <svg viewBox="0 0 300 60" preserveAspectRatio="none">
+              <path d="M0,45 Q30,5 60,35 T120,20 T180,40 T240,15 T300,30" fill="none" stroke="currentColor" stroke-width="2.5" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="glass-stat glass-stat-a">
+          <span>RUNTIME</span>
+          <strong>LOCAL</strong>
+        </div>
+        <div class="glass-stat glass-stat-b">
+          <span>COMPUTE</span>
+          <strong>0.00</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- MANIFESTO BAND -->
+    <section id="landingEngine" class="manifesto-band">
+      <div class="section-index">01—03</div>
+      <div>
+        <p class="kicker">THE ENGINE</p>
+        <h2>PYTHON, WITHOUT<br>THE WAITING ROOM.</h2>
+      </div>
+      <div class="manifesto-copy">
+        <p>Python itself, compiled to WebAssembly. Your code executes 100% inside the browser—no server in the loop, no attack surface, no compute bill per run.</p>
+        <div class="terminal-note">
+          <span>$</span> runtime.boot("pyodide")<br><span>&gt;</span> stack ready in browser_
+        </div>
+      </div>
+    </section>
+
+    <!-- CAPABILITIES SECTION -->
+    <section id="landingStack" class="capabilities-section">
+      <div class="cube-scene" aria-hidden="true">
+        <div class="pixel-cube"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="section-heading">
+        <p class="kicker">BUILT FOR THINKERS</p>
+        <h2>EVERYTHING BETWEEN<br>QUESTION &amp; ANSWER.</h2>
+      </div>
+      <div class="capability-grid">
+        <article class="capability-card">
+          <div class="capability-number">01</div>
+          <h3>Full data science stack</h3>
+          <p>NumPy, Pandas, SciPy, Scikit-learn, Statsmodels, Matplotlib, Seaborn and Plotly.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">10</div>
+          <h3>A data layer no one else built</h3>
+          <p>Live yfinance plus 930k+ FRED series, normalized into one clean API call.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">11</div>
+          <h3>AI that edits</h3>
+          <p>Surgical code edits applied live. Accept or reject, then run in one click.</p>
+          <div class="pixel-rule"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PIPELINE SECTION -->
+    <section class="pipeline-section" aria-labelledby="pipeline-title">
+      <div class="pipeline-visual">
+        <div class="pipeline-sticky">
+          <div class="pipeline-label">
+            <span>RUN01://PIPELINE</span>
+            <span>SCROLL_TO_COMPUTE</span>
+          </div>
+          <div class="compute-model" aria-hidden="true">
+            <div class="data-orbit orbit-a"><i></i><i></i><i></i><i></i></div>
+            <div class="data-orbit orbit-b"><i></i><i></i><i></i><i></i></div>
+            <div class="compute-core">
+              <span>PY</span><span>WASM</span><span>LOCAL</span><span>01</span><span>RUN</span><span>DATA</span>
+            </div>
+            <div class="chart-plane">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div class="code-planes">
+              <span>+ model.fit()</span>
+              <span>&rarr; result.plot()</span>
+              <span>&#10003; output.ready</span>
+            </div>
+            <div class="model-shadow"></div>
+          </div>
+          <div class="pipeline-readout">
+            <span>INPUT</span><strong>IDEA</strong>
+            <span>OUTPUT</span><strong>MODEL</strong>
+          </div>
+        </div>
+      </div>
+      <div class="pipeline-copy">
+        <div class="pipeline-intro">
+          <p class="kicker">ONE CONTINUOUS WORKFLOW</p>
+          <h2 id="pipeline-title">THOUGHT BECOMES<br>COMPUTE.</h2>
+        </div>
+        <article class="pipeline-step">
+          <span>01</span>
+          <div><h3>ASK</h3><p>Start with a question, a dataset, or a rough Python idea.</p></div>
+        </article>
+        <article class="pipeline-step">
+          <span>10</span>
+          <div><h3>COMPUTE</h3><p>A real Python runtime executes locally through WebAssembly.</p></div>
+        </article>
+        <article class="pipeline-step">
+          <span>11</span>
+          <div><h3>SEE</h3><p>Charts, tables, and statistical output appear in the same workspace.</p></div>
+        </article>
+        <article class="pipeline-step">
+          <span>100</span>
+          <div><h3>REFINE</h3><p>AI applies precise edits while you stay in control of the code.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PROOF SECTION -->
+    <section id="landingWhy" class="proof-section">
+      <div class="proof-terminal" aria-label="RUN01 system benefits">
+        <div class="terminal-bar">
+          <span>RUN01://ADVANTAGE</span>
+          <span>● ● ●</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>ZERO_COMPUTE_COST</strong>
+          <span>Python runs client-side. Near-100% margins.</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>ZERO_INSTALL</strong>
+          <span>Open a tab. The full stack is ready.</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>FAST_VISUAL_LOOP</strong>
+          <span>Inline charts, live graphing and AI-assisted code.</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>FREE_TO_SCALE</strong>
+          <span>The free tier can grow without burning cash.</span>
+        </div>
+      </div>
+
+      <div class="proof-copy">
+        <p class="kicker">WHY RUN01</p>
+        <h2>THE FASTEST PATH FROM IDEA TO WORKING MODEL.</h2>
+        <p>Built for people who would rather test the thought than configure the environment.</p>
+        <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnProofLaunchIDE">
+          OPEN RUN01
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- BINARY RAIL -->
+    <div class="binary-rail" aria-hidden="true">
+      01001010&nbsp;11010100&nbsp;00110101&nbsp;RUN01&nbsp;01101001&nbsp;10010110&nbsp;00101101&nbsp;PYTHON.WASM&nbsp;01010110
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="landing-footer">
+      <div class="logo-crop footer-logo">
+        <span class="logo-pixel-text">RUN01</span>
+      </div>
+      <p>PYTHON &times; WASM &times; YOUR BROWSER</p>
+      <p>&copy; 2026 RUN01</p>
+    </footer>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       IDE WORKSPACE VIEW (Browser-based Python IDE)
+       ════════════════════════════════════════════════════════════════ -->
+  <div id="ideView" class="ide-view hidden">
+
+  <!-- ══ TOP NAV ══════════════════════════════════════════════════════════════ -->
   <header class="nav" role="banner">
-    <div class="nav-brand" aria-label="Run01">RUN01</div>
+    <button class="btn btn-ghost btn-landing-home" id="btnLandingHome" title="Back to Landing Page">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Landing
+    </button>
+
+    <div class="nav-brand" id="navBrand" role="button" title="RUN01" aria-label="Run01">RUN01</div>
 
     <div class="nav-status" id="navStatus" role="status" aria-live="polite">
       <span class="status-dot loading" id="statusDot"></span>
@@ -425,7 +685,9 @@
     </div>
   </div>
 
-  <!-- â•â• AUTH MODAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  </div><!-- /#ideView -->
+
+  <!-- â• â•  AUTH MODAL â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â•  -->
   <div class="auth-modal-overlay hidden" id="authModalOverlay">
     <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
       <button class="auth-modal-close" id="btnCloseAuthModal" aria-label="Close modal">&times;</button>

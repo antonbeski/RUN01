@@ -4125,6 +4125,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
       if (res.ok && data.success) {
         setAuthState(data.user);
         closeAuthModal();
+        if (window.ViewManager) window.ViewManager.showIDE();
       } else {
         showAlert(data.error || 'Google Sign-In failed.');
       }
@@ -4155,6 +4156,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
         if (res.ok && data.success) {
           setAuthState(data.user);
           closeAuthModal();
+          if (window.ViewManager) window.ViewManager.showIDE();
         } else {
           showAlert(data.error || 'Invalid credentials.');
         }
@@ -4190,6 +4192,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
         if (res.ok && data.success) {
           setAuthState(data.user);
           closeAuthModal();
+          if (window.ViewManager) window.ViewManager.showIDE();
         } else {
           showAlert(data.error || 'Failed to create account.');
         }
@@ -4220,6 +4223,84 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   // ── Run initial checks ───────────────────────────────────────────
   checkSession();   // Background server verification
   fetchConfig();    // Load Google Client ID and trigger One Tap
+})();
+
+// ══════════════════════════════════════════════════════════════════
+// VIEW MANAGER: LANDING PAGE & IDE WORKSPACE TOGGLE
+// ══════════════════════════════════════════════════════════════════
+window.ViewManager = (function() {
+  const landingView = document.getElementById('landingView');
+  const ideView = document.getElementById('ideView');
+  const btnLandingAuth = document.getElementById('btnLandingAuth');
+  const btnLandingHome = document.getElementById('btnLandingHome');
+  const navBrand = document.getElementById('navBrand');
+
+  function showLanding() {
+    if (landingView) landingView.classList.remove('hidden');
+    if (ideView) ideView.classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (window.location.hash === '#ide') {
+      history.replaceState(null, null, window.location.pathname);
+    }
+  }
+
+  function showIDE() {
+    if (landingView) landingView.classList.add('hidden');
+    if (ideView) ideView.classList.remove('hidden');
+    window.location.hash = 'ide';
+    if (window.monacoEditor) {
+      setTimeout(() => {
+        try {
+          window.monacoEditor.layout();
+          window.monacoEditor.focus();
+        } catch (e) {}
+      }, 60);
+    }
+  }
+
+  // Bind all CTA launch buttons
+  document.querySelectorAll('.btn-launch-ide').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showIDE();
+    });
+  });
+
+  if (btnLandingAuth) {
+    btnLandingAuth.addEventListener('click', (e) => {
+      e.preventDefault();
+      const authOverlay = document.getElementById('authModalOverlay');
+      if (authOverlay) authOverlay.classList.remove('hidden');
+    });
+  }
+
+  if (btnLandingHome) {
+    btnLandingHome.addEventListener('click', (e) => {
+      e.preventDefault();
+      showLanding();
+    });
+  }
+
+  if (navBrand) {
+    navBrand.style.cursor = 'pointer';
+    navBrand.addEventListener('click', (e) => {
+      e.preventDefault();
+      showLanding();
+    });
+  }
+
+  // Handle URL hash on initial page load
+  const hash = window.location.hash;
+  if (hash === '#ide' || hash === '#workspace') {
+    showIDE();
+  } else {
+    showLanding();
+  }
+
+  return {
+    showLanding,
+    showIDE
+  };
 })();
 
 // ══════════════════════════════════════════════════════════════════
