@@ -1,5 +1,5 @@
-/* ============================================================
-   Run01 — Premium Monochrome Glassmorphic Theme  (v2)
+﻿/* ============================================================
+   Run01 â€” Premium Monochrome Glassmorphic Theme  (v2)
    Full design system: Black / White / Gray palette.
    New in v2: language tabs, init overlay, plot/chart output.
    ============================================================ */
@@ -11,7 +11,7 @@
 }
 
 :root {
-  /* ── Palette ─────────────────────── */
+  /* â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --bg:                  #050505;
   --glass-bg:            rgba(255,255,255,0.02);
   --glass-bg-hover:      rgba(255,255,255,0.05);
@@ -27,18 +27,18 @@
   --white:               #FFFFFF;
   --black:               #000000;
 
-  /* ── Typography ─────────────────── */
+  /* â”€â”€ Typography â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --font-ui:   'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-logo: 'Pixelify Sans', sans-serif;
 
-  /* ── Layout ─────────────────────── */
+  /* â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   --nav-h:    56px;
   --radius:   12px;
   --radius-sm: 6px;
 }
 
-/* ── LIGHT THEME ────────────────────────────────────────── */
+/* â”€â”€ LIGHT THEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 [data-theme="light"] {
   --bg:                  #F2F2F7;
   --glass-bg:            rgba(255,255,255,0.75);
@@ -126,7 +126,7 @@
   border: 1px solid rgba(0,0,0,0.15);
 }
 
-/* ── BASE ───────────────────────────────────────────────── */
+/* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 html, body {
   height: 100%;
   background: var(--bg);
@@ -140,7 +140,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ambient glow — top-left */
+/* Ambient glow â€” top-left */
 body::before {
   content: '';
   position: fixed;
@@ -150,7 +150,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-/* Ambient glow — bottom-right */
+/* Ambient glow â€” bottom-right */
 body::after {
   content: '';
   position: fixed;
@@ -161,7 +161,7 @@ body::after {
   z-index: 0;
 }
 
-/* ── NAV ────────────────────────────────────────────────── */
+/* â”€â”€ NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .nav {
   height: var(--nav-h);
   margin: 14px 14px 7px;
@@ -180,7 +180,7 @@ body::after {
   transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
-/* ── LOGO — Pixelify Sans only, always ──────────────────── */
+/* â”€â”€ LOGO â€” Pixelify Sans only, always â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .nav-brand {
   display: flex;
   align-items: center;
@@ -193,7 +193,7 @@ body::after {
   color: var(--white);
 }
 
-/* ── NAV STATUS ─────────────────────────────────────────── */
+/* â”€â”€ NAV STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .nav-status {
   display: flex;
   align-items: center;
@@ -255,7 +255,7 @@ body::after {
   text-overflow: ellipsis;
 }
 
-/* ── NAV ACTIONS / BUTTONS ───────────────────────────────── */
+/* â”€â”€ NAV ACTIONS / BUTTONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -318,7 +318,7 @@ body::after {
   margin-left: 2px;
 }
 
-/* ── DATA DROPDOWN ───────────────────────────────────────── */
+/* â”€â”€ DATA DROPDOWN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .data-dropdown-wrap {
   position: relative;
 }
@@ -442,7 +442,7 @@ body::after {
 [data-theme="light"] .ds-name { color: #1D1D1F; }
 [data-theme="light"] .ds-desc { color: #8E8E93; }
 
-/* ── WORKSPACE OUTER (column: editor row on top, dex panel below) ─ */
+/* â”€â”€ WORKSPACE OUTER (column: editor row on top, dex panel below) â”€ */
 .workspace-outer {
   display: flex;
   flex-direction: column;
@@ -452,7 +452,7 @@ body::after {
   z-index: 10;
 }
 
-/* ── WORKSPACE (horizontal editor | output row) ─────────────── */
+/* â”€â”€ WORKSPACE (horizontal editor | output row) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .workspace {
   display: flex;
   flex: 1 1 auto;
@@ -468,7 +468,7 @@ body::after {
   z-index: 10;
 }
 
-/* ── PANES ───────────────────────────────────────────────── */
+/* â”€â”€ PANES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pane {
   display: flex;
   flex-direction: column;
@@ -503,7 +503,7 @@ body::after {
   padding: 0 16px;
 }
 
-/* ── LANGUAGE TABS ───────────────────────────────────────── */
+/* â”€â”€ LANGUAGE TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .lang-tabs {
   display: flex;
   align-items: stretch;
@@ -571,7 +571,7 @@ body::after {
   color: var(--text-muted);
 }
 
-/* ── PILLS ───────────────────────────────────────────────── */
+/* â”€â”€ PILLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pill {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -593,7 +593,7 @@ body::after {
   opacity: 0.65;
 }
 
-/* ── EDITOR MOUNT ────────────────────────────────────────── */
+/* â”€â”€ EDITOR MOUNT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .editor-mount {
   flex: 1;
   overflow: hidden;
@@ -605,7 +605,7 @@ body::after {
   background: #ffffff;
 }
 
-/* ── RESIZE HANDLE ───────────────────────────────────────── */
+/* â”€â”€ RESIZE HANDLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .resize-handle {
   width: 1px;
   background: var(--glass-border);
@@ -622,7 +622,7 @@ body::after {
   width: 3px;
 }
 
-/* ── OUTPUT MOUNT ────────────────────────────────────────── */
+/* â”€â”€ OUTPUT MOUNT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .output-mount {
   flex: 1;
   overflow-y: auto;
@@ -659,7 +659,7 @@ body::after {
   color: var(--text);
 }
 
-/* ── OUTPUT LINES ────────────────────────────────────────── */
+/* â”€â”€ OUTPUT LINES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .out-line {
   white-space: pre-wrap;
   word-break: break-word;
@@ -712,7 +712,7 @@ body::after {
   font-family: var(--font-mono);
 }
 
-/* ── INLINE PLOT OUTPUT ──────────────────────────────────── */
+/* â”€â”€ INLINE PLOT OUTPUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .out-plot-wrap {
   margin: 12px 0;
   border-radius: 10px;
@@ -731,7 +731,7 @@ body::after {
   border-radius: 10px;
 }
 
-/* ── INLINE PLOTLY OUTPUT ────────────────────────────────── */
+/* â”€â”€ INLINE PLOTLY OUTPUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .out-plotly-wrap {
   margin: 12px 0;
   border-radius: 10px;
@@ -743,16 +743,16 @@ body::after {
   background: #0a0a0a;
 }
 
-/* ── GLOBAL SCROLLBARS ───────────────────────────────────── */
+/* â”€â”€ GLOBAL SCROLLBARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 * { scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent; }
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--glass-border-hover); }
 
-/* ══════════════════════════════════════════════════════════
-   INIT OVERLAY — full-screen loading splash
-   ══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   INIT OVERLAY â€” full-screen loading splash
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .init-overlay {
   position: fixed;
   inset: 0;
@@ -783,7 +783,7 @@ body::after {
   box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.4);
 }
 
-/* ── INIT LOGO — Pixelify Sans only, always ─────────────── */
+/* â”€â”€ INIT LOGO â€” Pixelify Sans only, always â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .init-logo {
   display: flex;
   align-items: center;
@@ -903,9 +903,9 @@ body::after {
   margin: 0 auto;
 }
 
-/* ══════════════════════════════════════════════════════════
-   DATA EXPLORER — BOTTOM PANEL
-   ══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DATA EXPLORER â€” BOTTOM PANEL
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Horizontal drag handle (sits between workspace and dex-panel) */
 .resize-handle-h {
@@ -925,7 +925,7 @@ body::after {
   background: rgba(99,102,241,0.35);
 }
 
-/* Bottom panel — inline inside workspace-outer */
+/* Bottom panel â€” inline inside workspace-outer */
 .dex-panel {
   flex-shrink: 0;
   display: flex;
@@ -940,7 +940,7 @@ body::after {
   min-height: 0;
 }
 
-/* Fullscreen bottom panel — expand to cover the entire workspace-outer */
+/* Fullscreen bottom panel â€” expand to cover the entire workspace-outer */
 .workspace-outer.bottom-fullscreen .workspace {
   display: none;
 }
@@ -1088,7 +1088,7 @@ body::after {
   color: #7aa4ff;
 }
 
-/* Body — split into tree + preview */
+/* Body â€” split into tree + preview */
 .dex-body {
   flex: 1;
   display: flex;
@@ -1267,7 +1267,7 @@ body::after {
   border-color: rgba(0,0,0,0.08);
 }
 
-/* ── TREE NODES ──────────────────────────────────────────── */
+/* â”€â”€ TREE NODES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .dex-node {
   user-select: none;
 }
@@ -1426,7 +1426,7 @@ body::after {
   flex-shrink: 0;
 }
 
-/* ── LIGHT MODE overrides ─────────────────────────────────── */
+/* â”€â”€ LIGHT MODE overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 [data-theme="light"] .dex-panel {
   background: rgba(248,248,252,0.99);
   border-color: rgba(0,0,0,0.10);
@@ -1449,7 +1449,7 @@ body::after {
 [data-theme="light"] .dex-backdrop { background: rgba(0,0,0,0.35); }
 [data-theme="light"] .dex-stats { border-top-color: rgba(0,0,0,0.07); }
 
-/* ── AI Assistant styling ─────────────────────────────────── */
+/* â”€â”€ AI Assistant styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .pane-ai {
   flex: 1 1 350px;
   max-width: 500px;
@@ -1476,7 +1476,7 @@ body::after {
   background: rgba(0, 0, 0, 0.05) !important;
 }
 
-/* ── Model Select (dark mode fix) ──────────────────────────── */
+/* â”€â”€ Model Select (dark mode fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ai-model-select {
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1516,10 +1516,10 @@ body::after {
   color: #1d1d1f;
 }
 
-/* ── Quick Actions Toolbar ─ REMOVED ──────────────────────────── */
+/* â”€â”€ Quick Actions Toolbar â”€ REMOVED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* .ai-quick-actions and .btn-ai-action styles retained for reference only     */
 
-/* ── AI Input Wrap ─────────────────────────────────────────── */
+/* â”€â”€ AI Input Wrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ai-input-wrap {
   padding: 10px 12px 12px;
   background: rgba(0, 0, 0, 0.18);
@@ -1531,7 +1531,7 @@ body::after {
   background: rgba(0, 0, 0, 0.03);
 }
 
-/* ── Code Action Bar (shows inside input area after code generated) ── */
+/* â”€â”€ Code Action Bar (shows inside input area after code generated) â”€â”€ */
 .ai-code-action-bar {
   display: none;
   align-items: center;
@@ -1571,7 +1571,7 @@ body::after {
 }
 .ai-code-action-dismiss:hover { opacity: 1; }
 
-/* ── Textarea Row ──────────────────────────────────────────── */
+/* â”€â”€ Textarea Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ai-textarea-row {
   display: flex;
   gap: 8px;
@@ -1840,7 +1840,7 @@ body::after {
   color: #ef5350;
 }
 
-/* ── Liquid Metal Shimmer & Ripple Click Effects ────────────────── */
+/* â”€â”€ Liquid Metal Shimmer & Ripple Click Effects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes liquid-metal-shimmer {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -1866,7 +1866,7 @@ body::after {
   transform: scale(0.96) translateY(1px) !important;
 }
 
-/* ⚡ Agree & Run */
+/* âš¡ Agree & Run */
 .btn-ai-run-primary {
   background: linear-gradient(135deg, rgba(34,197,94,0.28), rgba(16,185,129,0.18), rgba(5,150,105,0.28));
   background-size: 200% 200%;
@@ -1897,7 +1897,7 @@ body::after {
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
 }
 
-/* ▶ Apply Code */
+/* â–¶ Apply Code */
 .btn-ai-apply-primary {
   background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05), rgba(255,255,255,0.15));
   background-size: 200% 200%;
@@ -1938,7 +1938,7 @@ body::after {
   transform: translate(-50%, -50%) scale(0);
 }
 
-/* ── Surgical Diff Edit Card ──────────────────────────────────────── */
+/* â”€â”€ Surgical Diff Edit Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ai-diff-card {
   margin: 8px 0;
   border-radius: 8px;
@@ -2092,10 +2092,10 @@ body::after {
 [data-theme="light"] .monaco-pending-edit-glyph {
   background: rgba(0, 0, 0, 0.25);
 }
-/* ══════════════════════════════════════════════════════════════════
-   AI CHAT — RICH MARKDOWN BODY  (.ai-md-body)
-   Renders marked.js output like ChatGPT / Claude — clean & structured
-   ══════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   AI CHAT â€” RICH MARKDOWN BODY  (.ai-md-body)
+   Renders marked.js output like ChatGPT / Claude â€” clean & structured
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .ai-md-body {
   font-size: 13px;
@@ -2188,7 +2188,7 @@ body::after {
   color: #555;
 }
 
-/* ── Tables ────────────────────────────────────────────────────── */
+/* â”€â”€ Tables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ai-md-body table {
   width: 100%;
   border-collapse: collapse;
@@ -2265,9 +2265,9 @@ body::after {
 [data-theme="light"] .ai-md-body strong { color: #0d0d0f; }
 [data-theme="light"] .ai-md-body em { color: #444; }
 
-/* ══════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    AUTHENTICATION & USER PROFILE STYLING
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Top Nav Auth Controls */
 .auth-wrap {
@@ -2642,9 +2642,9 @@ body::after {
   justify-content: center;
 }
 
-/* ══════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    DESMOS GRAPHING CALCULATOR STYLING
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .btn-desmos {
   color: #38bdf8;
   font-weight: 600;
@@ -2657,16 +2657,19 @@ body::after {
   color: #7dd3fc !important;
 }
 
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DESMOS GRAPHING CALCULATOR â€” FULL-SCREEN MODAL
+   Black & White monochrome theme, covers entire viewport
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
 .desmos-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  z-index: 9999;
+  background: #000000;
+  z-index: 9998;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  flex-direction: column;
+  overflow: hidden;
 }
 .desmos-modal-overlay.hidden {
   display: none;
@@ -2675,85 +2678,124 @@ body::after {
 .desmos-modal-card {
   position: relative;
   width: 100%;
-  max-width: 900px;
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.7);
-  animation: ai-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  height: 100%;
+  background: #000000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 [data-theme="light"] .desmos-modal-card {
   background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
 }
 
 .desmos-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  padding: 14px 20px;
+  background: #000000;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  flex-shrink: 0;
+  gap: 12px;
+}
+[data-theme="light"] .desmos-modal-header {
+  background: #ffffff;
+  border-bottom-color: rgba(0,0,0,0.12);
 }
 
 .desmos-modal-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--white, #fff);
+  color: #ffffff;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.02em;
 }
-[data-theme="light"] .desmos-modal-title { color: #1d1d1f; }
+[data-theme="light"] .desmos-modal-title { color: #000000; }
 
 .desmos-badge {
-  background: linear-gradient(135deg, #0284c7, #38bdf8);
-  color: #fff;
+  background: #ffffff;
+  color: #000000;
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
+}
+[data-theme="light"] .desmos-badge {
+  background: #000000;
+  color: #ffffff;
 }
 
 .desmos-modal-close {
   background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7);
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  font-weight: 300;
+  flex-shrink: 0;
 }
 .desmos-modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.5);
+  color: #ffffff;
+}
+[data-theme="light"] .desmos-modal-close {
+  border-color: rgba(0,0,0,0.2);
+  color: rgba(0,0,0,0.6);
+}
+[data-theme="light"] .desmos-modal-close:hover {
+  background: rgba(0,0,0,0.07);
+  border-color: rgba(0,0,0,0.4);
+  color: #000;
+}
+
+.desmos-modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#desmosMainCalculator {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: #fff;
 }
 
 /* Desmos block in AI Chat */
 .desmos-chat-card {
   margin: 10px 0;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0a0a0a;
 }
 .desmos-chat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: rgba(56, 189, 248, 0.1);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   font-size: 11px;
   font-weight: 600;
-  color: #7dd3fc;
+  color: #cccccc;
 }
 .desmos-chat-container {
   width: 100%;
@@ -2761,235 +2803,325 @@ body::after {
   background: #ffffff;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   MUJOCO & RAPIER PHYSICS SIMULATION STUDIO & VERIFICATION STYLING
-   ══════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   PHYSICS SIMULATION STUDIO â€” FULL-SCREEN MODAL
+   Strict Black & White monochrome theme.
+   No colour accents. Covers entire viewport. Nothing overflows.
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/* Nav button â€” monochrome */
 .btn-physics {
-  color: #10b981;
+  color: var(--text);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 .btn-physics:hover {
-  background: rgba(16, 185, 129, 0.12) !important;
-  color: #34d399 !important;
+  background: rgba(255,255,255,0.08) !important;
+  color: #ffffff !important;
+}
+[data-theme="light"] .btn-physics:hover {
+  background: rgba(0,0,0,0.07) !important;
+  color: #000000 !important;
 }
 
 .physics-badge {
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: #fff;
+  background: #ffffff;
+  color: #000000;
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+}
+[data-theme="light"] .physics-badge {
+  background: #000000;
+  color: #ffffff;
 }
 
+/* â”€â”€ Full-screen overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.82);
-  backdrop-filter: blur(10px);
+  background: #000000;
   z-index: 9999;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
+  overflow: hidden;
 }
 .physics-modal-overlay.hidden {
   display: none;
 }
 
+/* â”€â”€ Modal card fills the entire screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-modal-card {
-  position: relative;
   width: 100%;
-  max-width: 1100px;
-  max-height: 92vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0f172a;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8);
-  animation: ai-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #000000;
   overflow: hidden;
+  animation: ps-fade-in 0.18s ease;
 }
 [data-theme="light"] .physics-modal-card {
   background: #ffffff;
-  border-color: rgba(16, 185, 129, 0.3);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
 }
 
+@keyframes ps-fade-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* â”€â”€ Header bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  padding: 12px 20px;
+  background: #000000;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
   gap: 12px;
+}
+[data-theme="light"] .physics-modal-header {
+  background: #ffffff;
+  border-bottom-color: rgba(0,0,0,0.1);
 }
 
 .physics-modal-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--white, #fff);
+  color: #ffffff;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
-[data-theme="light"] .physics-modal-title { color: #1d1d1f; }
+[data-theme="light"] .physics-modal-title { color: #000000; }
 
 .physics-header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .physics-preset-select {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e2e8f0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #e8e8e8;
   font-size: 12px;
   font-weight: 500;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 6px;
   outline: none;
   cursor: pointer;
+  max-width: 280px;
+}
+.physics-preset-select option {
+  background: #111111;
+  color: #e8e8e8;
 }
 [data-theme="light"] .physics-preset-select {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: #f5f5f5;
+  border-color: rgba(0,0,0,0.2);
+  color: #111111;
+}
+[data-theme="light"] .physics-preset-select option {
+  background: #ffffff;
+  color: #111111;
 }
 
 .physics-modal-close {
   background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7);
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  font-weight: 300;
+  flex-shrink: 0;
 }
 .physics-modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.5);
+  color: #ffffff;
+}
+[data-theme="light"] .physics-modal-close {
+  border-color: rgba(0,0,0,0.2);
+  color: rgba(0,0,0,0.6);
+}
+[data-theme="light"] .physics-modal-close:hover {
+  background: rgba(0,0,0,0.07);
+  border-color: rgba(0,0,0,0.4);
+  color: #000;
 }
 
+/* â”€â”€ Body: 3D canvas left + details right â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-modal-body {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 14px;
+  grid-template-columns: 1.55fr 1fr;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .physics-modal-body {
     grid-template-columns: 1fr;
-    grid-template-rows: 320px 1fr;
+    grid-template-rows: 1fr auto;
     overflow-y: auto;
   }
 }
 
+/* â”€â”€ Left: 3D Viewport â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-viewport-wrap {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #020617;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: #080808;
+  border-right: 1px solid rgba(255,255,255,0.1);
   overflow: hidden;
-  min-height: 400px;
+  min-height: 0;
+}
+[data-theme="light"] .physics-viewport-wrap {
+  background: #f0f0f0;
+  border-right-color: rgba(0,0,0,0.1);
 }
 
 .physics-canvas-container {
   flex: 1;
   width: 100%;
-  height: 100%;
-  min-height: 320px;
+  min-height: 0;
   cursor: grab;
+  overflow: hidden;
+  position: relative;
+}
+.physics-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
 }
 .physics-canvas-container:active {
   cursor: grabbing;
 }
 
+/* â”€â”€ Floating Telemetry HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-telemetry-hud {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.14);
   border-radius: 8px;
   pointer-events: none;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
+  min-width: 190px;
+  z-index: 10;
 }
+[data-theme="light"] .physics-telemetry-hud {
+  background: rgba(255,255,255,0.88);
+  border-color: rgba(0,0,0,0.12);
+}
+
 .hud-item {
   display: flex;
   align-items: center;
   gap: 8px;
   justify-content: space-between;
 }
-.hud-label { color: #94a3b8; }
-.hud-value { color: #f8fafc; font-weight: 600; }
-.hud-pass { color: #34d399 !important; }
+.hud-label { color: rgba(255,255,255,0.48); }
+.hud-value { color: #ffffff; font-weight: 600; }
+.hud-pass  { color: #ffffff !important; }
+[data-theme="light"] .hud-label { color: rgba(0,0,0,0.4); }
+[data-theme="light"] .hud-value,
+[data-theme="light"] .hud-pass  { color: #000000 !important; }
 
+/* â”€â”€ Transport Controls Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-transport-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.9);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 16px;
+  background: #0c0c0c;
+  border-top: 1px solid rgba(255,255,255,0.1);
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+[data-theme="light"] .physics-transport-bar {
+  background: #f5f5f5;
+  border-top-color: rgba(0,0,0,0.09);
 }
 
 .btn-physics-control {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f1f5f9;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11.5px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.82);
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 .btn-physics-control:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.4);
+  color: #ffffff;
+}
+[data-theme="light"] .btn-physics-control {
+  border-color: rgba(0,0,0,0.2);
+  color: #222222;
+}
+[data-theme="light"] .btn-physics-control:hover {
+  background: rgba(0,0,0,0.06);
+  border-color: rgba(0,0,0,0.35);
 }
 
+/* Verify / Desmos action buttons â€” white filled */
 .btn-physics-action {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: #34d399;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: #000000;
+  padding: 5px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 .btn-physics-action:hover {
-  background: rgba(16, 185, 129, 0.25);
-  color: #6ee7b7;
+  background: rgba(255,255,255,0.82);
+}
+[data-theme="light"] .btn-physics-action {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+[data-theme="light"] .btn-physics-action:hover {
+  background: #222222;
 }
 
 .physics-speed-wrap {
@@ -2997,52 +3129,83 @@ body::after {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #94a3b8;
+  color: rgba(255,255,255,0.45);
   margin-left: auto;
+  white-space: nowrap;
 }
+[data-theme="light"] .physics-speed-wrap { color: rgba(0,0,0,0.4); }
 .physics-speed-wrap input[type="range"] {
-  width: 60px;
-  accent-color: #10b981;
+  width: 72px;
+  accent-color: #ffffff;
 }
+[data-theme="light"] .physics-speed-wrap input[type="range"] {
+  accent-color: #000000;
+}
+#physicsSpeedLabel {
+  font-weight: 600;
+  color: #ffffff;
+  min-width: 28px;
+}
+[data-theme="light"] #physicsSpeedLabel { color: #000000; }
 
-/* Physics Details Pane */
+/* â”€â”€ Right: Details Pane â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-details-pane {
   display: flex;
   flex-direction: column;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: #0a0a0a;
   overflow: hidden;
+  min-height: 0;
+}
+[data-theme="light"] .physics-details-pane {
+  background: #fafafa;
 }
 
+/* Tabs */
 .physics-tabs {
   display: flex;
-  background: rgba(0, 0, 0, 0.25);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #000000;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
+[data-theme="light"] .physics-tabs {
+  background: #ffffff;
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
 .physics-tab {
   flex: 1;
-  padding: 8px 12px;
+  padding: 11px 14px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: rgba(255,255,255,0.38);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
+  border-bottom: 2px solid transparent;
+  letter-spacing: 0.01em;
 }
 .physics-tab.active {
-  color: #10b981;
-  border-bottom: 2px solid #10b981;
-  background: rgba(16, 185, 129, 0.05);
+  color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+.physics-tab:hover:not(.active) {
+  color: rgba(255,255,255,0.65);
+}
+[data-theme="light"] .physics-tab { color: rgba(0,0,0,0.32); }
+[data-theme="light"] .physics-tab.active {
+  color: #000000;
+  border-bottom-color: #000000;
 }
 
+/* Tab content */
 .physics-tab-content {
   display: none;
   flex: 1;
-  padding: 12px;
+  padding: 16px;
   overflow-y: auto;
+  min-height: 0;
 }
 .physics-tab-content.active {
   display: flex;
@@ -3050,126 +3213,197 @@ body::after {
   gap: 12px;
 }
 
-/* Proof Card */
+/* â”€â”€ Proof Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .proof-card {
-  background: rgba(2, 6, 23, 0.6);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: 8px;
-  padding: 12px;
+  background: #111111;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
+[data-theme="light"] .proof-card {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.1);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+}
+
 .proof-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.proof-status-badge {
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-}
-.proof-status-badge.pass {
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid rgba(16, 185, 129, 0.5);
-  color: #34d399;
-}
-.proof-engine-label {
-  font-size: 11px;
-  color: #94a3b8;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
+.proof-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 5px;
+  letter-spacing: 0.05em;
+}
+.proof-status-badge.pass {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #ffffff;
+}
+[data-theme="light"] .proof-status-badge.pass {
+  background: rgba(0,0,0,0.07);
+  border-color: rgba(0,0,0,0.25);
+  color: #000000;
+}
+
+.proof-engine-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.38);
+  font-style: italic;
+}
+[data-theme="light"] .proof-engine-label { color: rgba(0,0,0,0.32); }
+
+/* Metrics 2Ã—2 grid */
 .proof-metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
 .proof-metric {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 7px;
+  padding: 8px 10px;
 }
+[data-theme="light"] .proof-metric {
+  background: #f5f5f5;
+  border-color: rgba(0,0,0,0.07);
+}
+
 .metric-name {
   font-size: 10.5px;
-  color: #94a3b8;
+  color: rgba(255,255,255,0.42);
+  margin-bottom: 4px;
 }
+[data-theme="light"] .metric-name { color: rgba(0,0,0,0.38); }
+
 .metric-val {
   font-size: 12px;
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
-  margin-top: 2px;
+  color: #ffffff;
+  word-break: break-all;
 }
-.text-green { color: #34d399; }
-.text-blue { color: #38bdf8; }
-.text-yellow { color: #facc15; }
+[data-theme="light"] .metric-val { color: #000000; }
+
+/* All metric values stay white (no coloured helpers) */
+.text-green,
+.text-blue,
+.text-yellow { color: #ffffff !important; }
+[data-theme="light"] .text-green,
+[data-theme="light"] .text-blue,
+[data-theme="light"] .text-yellow { color: #000000 !important; }
 
 .proof-description {
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 8px;
-  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.03);
+  padding: 10px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+[data-theme="light"] .proof-description {
+  color: rgba(0,0,0,0.48);
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.06);
 }
 
+/* â”€â”€ Model Spec Editor tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-spec-editor {
   width: 100%;
   flex: 1;
-  min-height: 220px;
-  background: #020617;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: #e2e8f0;
+  min-height: 200px;
+  background: #050505;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  color: rgba(255,255,255,0.82);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  padding: 8px;
+  font-size: 11.5px;
+  padding: 10px 12px;
   resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.physics-spec-editor:focus {
+  border-color: rgba(255,255,255,0.3);
+}
+[data-theme="light"] .physics-spec-editor {
+  background: #fafafa;
+  border-color: rgba(0,0,0,0.12);
+  color: #111111;
 }
 
 .btn-apply-spec {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
-  padding: 6px 12px;
+  padding: 7px 14px;
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: #000000;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: all 0.15s;
+}
+.btn-apply-spec:hover {
+  background: rgba(255,255,255,0.82);
+}
+[data-theme="light"] .btn-apply-spec {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+[data-theme="light"] .btn-apply-spec:hover {
+  background: #222222;
 }
 
-/* Physics Cards in AI Chat & Console */
+/* â”€â”€ Physics chat cards (AI messages) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .physics-chat-card {
   margin: 10px 0;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: #0a0f1d;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0a0a0a;
 }
 .physics-chat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
-  background: rgba(16, 185, 129, 0.12);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   font-size: 11px;
   font-weight: 600;
-  color: #6ee7b7;
+  color: rgba(255,255,255,0.68);
 }
 .physics-chat-container {
   width: 100%;
   height: 280px;
-  background: #020617;
+  background: #080808;
   position: relative;
+  overflow: hidden;
 }
 .physics-chat-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: rgba(2, 6, 23, 0.8);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0,0,0,0.88);
+  border-top: 1px solid rgba(255,255,255,0.06);
   font-size: 11px;
   gap: 8px;
 }
-
 
