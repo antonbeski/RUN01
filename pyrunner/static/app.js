@@ -1,5 +1,5 @@
 /* ============================================================
-   Run01 — app.js  (v2 — production-ready)
+   Run01 - app.js  (v2 - production-ready)
    Key improvements over v1:
      • Monaco + Pyodide initialise IN PARALLEL via Promise.all
      • Pyodide v0.26.4 (faster WASM JIT, better stdlib)
@@ -334,7 +334,7 @@ const DATA_SOURCE_CODES = {
 
 yfinance: `\
 # ╔═══════════════════════════════════════════════════════════╗
-# ║          Yahoo Finance — Full Data Tour                  ║
+# ║          Yahoo Finance - Full Data Tour                  ║
 # ║  OHLCV · Info · Financials · Options · Holders          ║
 # ╚═══════════════════════════════════════════════════════════╝
 import pandas as pd
@@ -344,7 +344,7 @@ from plotly.subplots import make_subplots
 ticker = "AAPL"
 
 # ── 1. OHLCV Price History ───────────────────────────────
-print(f"▶  Fetching {ticker} — 6 months of daily OHLCV…")
+print(f"▶  Fetching {ticker} - 6 months of daily OHLCV…")
 df = await yf_download(ticker, period="6mo", interval="1d")
 print(f"   {len(df)} sessions  |  columns: {list(df.columns)}")
 print(df.tail(5).to_string())
@@ -369,7 +369,7 @@ fig.add_trace(go.Bar(
                   for c, o in zip(df["Close"], df["Open"])],
 ), row=2, col=1)
 fig.update_layout(
-    title=dict(text=f"{ticker} — 6-Month Candlestick", font=dict(size=13)),
+    title=dict(text=f"{ticker} - 6-Month Candlestick", font=dict(size=13)),
     paper_bgcolor="#0a0a0a", plot_bgcolor="#111",
     font=dict(color="#aaa", family="JetBrains Mono"),
     xaxis=dict(rangeslider=dict(visible=False), gridcolor="#1a1a1a"),
@@ -390,12 +390,12 @@ print(f"   Daily volatility  : {returns.std()*100:.4f}%")
 print(f"   Annualised Sharpe : {(returns.mean()/returns.std())*np.sqrt(252):.3f}")
 print(f"   Max Drawdown      : {((df['Close']/df['Close'].cummax())-1).min()*100:.2f}%")
 print()
-print("✓ Done — try changing ticker to 'TSLA', 'MSFT', 'BTC-USD', 'GC=F'")
+print("✓ Done - try changing ticker to 'TSLA', 'MSFT', 'BTC-USD', 'GC=F'")
 `,
 
 fred: `\
 # ╔═══════════════════════════════════════════════════════════╗
-# ║   FRED — Federal Reserve Economic Data Tour              ║
+# ║   FRED - Federal Reserve Economic Data Tour              ║
 # ║   GDP · CPI · Fed Funds Rate · Unemployment             ║
 # ╚═══════════════════════════════════════════════════════════╝
 import pandas as pd
@@ -405,33 +405,33 @@ from plotly.subplots import make_subplots
 # ── 1. GDP (Gross Domestic Product) ─────────────────────
 print("▶  Fetching GDP (quarterly, last 40 quarters)…")
 gdp = await fred_download("GDP", limit=40, sort_order="asc")
-print(f"   Series : {gdp['series_id']} — {gdp['title']}")
+print(f"   Series : {gdp['series_id']} - {gdp['title']}")
 print(f"   Units  : {gdp['units']}  |  Freq: {gdp['frequency']}")
 print(gdp['df'].tail(5).to_string())
 print()
 
-# ── 2. CPI — Consumer Price Index ───────────────────────
+# ── 2. CPI - Consumer Price Index ───────────────────────
 print("▶  Fetching CPI (monthly, last 60 months)…")
 cpi = await fred_download("CPIAUCSL", limit=60, sort_order="asc")
-print(f"   Series : {cpi['series_id']} — {cpi['title']}")
+print(f"   Series : {cpi['series_id']} - {cpi['title']}")
 print(cpi['df'].tail(5).to_string())
 print()
 
 # ── 3. Fed Funds Rate ───────────────────────────────────
 print("▶  Fetching Federal Funds Rate (monthly, last 60 months)…")
 ffr = await fred_download("FEDFUNDS", limit=60, sort_order="asc")
-print(f"   Series : {ffr['series_id']} — {ffr['title']}")
+print(f"   Series : {ffr['series_id']} - {ffr['title']}")
 print(ffr['df'].tail(5).to_string())
 print()
 
 # ── 4. Unemployment Rate ────────────────────────────────
 print("▶  Fetching Unemployment Rate (monthly, last 60 months)…")
 unrate = await fred_download("UNRATE", limit=60, sort_order="asc")
-print(f"   Series : {unrate['series_id']} — {unrate['title']}")
+print(f"   Series : {unrate['series_id']} - {unrate['title']}")
 print(unrate['df'].tail(5).to_string())
 print()
 
-# ── 5. Dashboard — 4-panel economic overview ────────────
+# ── 5. Dashboard - 4-panel economic overview ────────────
 print("▶  Rendering economic dashboard…")
 fig = make_subplots(
     rows=2, cols=2,
@@ -465,7 +465,7 @@ for axis in ['xaxis','xaxis2','xaxis3','xaxis4','yaxis','yaxis2','yaxis3','yaxis
     fig.update_layout(**{axis: dict(gridcolor='#1a1a1a', showgrid=True)})
 fig.show()
 print()
-print("✓ Done — try series: 'M2SL' (Money Supply), 'T10Y2Y' (Yield Curve), 'DCOILWTICO' (Oil Price)")
+print("✓ Done - try series: 'M2SL' (Money Supply), 'T10Y2Y' (Yield Curve), 'DCOILWTICO' (Oil Price)")
 `,
 
 };
@@ -520,13 +520,13 @@ function hideOverlay() {
 // race-lose on slow connections; resolved after editor.main loads.
 const monacoReady = new Promise((resolve) => {
   const timeout = setTimeout(() => {
-    console.warn('[Monaco] Loading timed out (30s) — continuing without editor');
+    console.warn('[Monaco] Loading timed out (30s) - continuing without editor');
     resolve();
-  }, 30000); // was 5000 — too short for CDN cold-starts
+  }, 30000); // was 5000 - too short for CDN cold-starts
 
   function tryInit() {
     if (typeof require === 'undefined') {
-      // loader.js not yet parsed — retry in 50 ms
+      // loader.js not yet parsed - retry in 50 ms
       setTimeout(tryInit, 50);
       return;
     }
@@ -656,7 +656,7 @@ async function initPyodide() {
 
   pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
-  // Load all stdlib packages in ONE call — Pyodide resolves deps and
+  // Load all stdlib packages in ONE call - Pyodide resolves deps and
   // downloads them in parallel internally, which is much faster than
   // sequential awaits.
   setProgress(20, 'Loading core packages in parallel…');
@@ -680,7 +680,7 @@ async function initPyodide() {
 
   setProgress(90, 'Setting up environment helpers…');
   // FIX: runPythonAsync correctly handles the triple-quoted docstrings
-  // inside PYODIDE_SETUP — no more "unterminated string literal" error.
+  // inside PYODIDE_SETUP - no more "unterminated string literal" error.
   await pyodide.runPythonAsync(PYODIDE_SETUP);
 
   setProgress(100, 'Ready!');
@@ -692,12 +692,12 @@ function startPyodideInit() {
 
   pyodideInitPromise = initPyodide().catch((err) => {
     console.error('Pyodide init failed:', err);
-    setStatus('error', 'Python init failed — check console');
+    setStatus('error', 'Python init failed - check console');
     appendToOutput(` Failed to initialise Python:\n${err.message ?? err}`, 'err');
   });
 
   Promise.all([monacoReady, pyodideInitPromise]).then(() => {
-    setStatus('ready', 'Ready — all packages loaded');
+    setStatus('ready', 'Ready - all packages loaded');
     btnRun.disabled = false;
     hideOverlay();
     clearOutput();
@@ -705,7 +705,7 @@ function startPyodideInit() {
   }).catch((err) => {
     console.error('Startup error:', err);
     hideOverlay();
-    setStatus('error', 'Startup failed — check console');
+    setStatus('error', 'Startup failed - check console');
   });
 
   return pyodideInitPromise;
@@ -763,7 +763,7 @@ async function runPython() {
           + `Use the built-in async helper instead:\n\n`
           + `  df = await yf_download("AAPL", period="3mo")\n\n`
           + `yf_download() fetches data via the Run01 server proxy and returns\n`
-          + `a standard pandas DataFrame — no import needed.`;
+          + `a standard pandas DataFrame - no import needed.`;
     }
     processOutput(msg, true, block);
   }
@@ -973,7 +973,7 @@ function appendWelcome() {
     <div class="output-welcome">
       <div class="welcome-prompt">
         <span class="prompt-caret">❯</span>
-        Run01 ready — press <strong style="color:var(--white)">▶ Run</strong>
+        Run01 ready - press <strong style="color:var(--white)">▶ Run</strong>
         or <kbd class="welcome-kbd">⌘↵</kbd>
         to execute.
       </div>
@@ -1058,7 +1058,7 @@ const dexCloseBtn     = document.getElementById('dexCloseBtn');
 const fsBottomBtn     = document.getElementById('fsBottomBtn');
 const workspaceOuter  = document.getElementById('workspaceOuter');
 
-const DEX_DEFAULT_H = 320; // px — initial height when first opened
+const DEX_DEFAULT_H = 320; // px - initial height when first opened
 
 function openDataExplorer() {
   // Show the horizontal resize handle and the panel
@@ -1283,7 +1283,7 @@ const YF_TREE = {
       name: "SCREENER",
       type: "folder",
       children: [
-        { name: "predefined_screens.csv", type: "file", category: "predefined_screens", desc: "screen('day_gainers') — static preset, no ticker required. Downloads directly." }
+        { name: "predefined_screens.csv", type: "file", category: "predefined_screens", desc: "screen('day_gainers') - static preset, no ticker required. Downloads directly." }
       ]
     },
     {
@@ -1831,7 +1831,7 @@ let selectedNode = null;
 
 // ── STATIC / NO-INPUT DATASET DOWNLOADS ───────────────────────────────
 // Curated FRED macro series, FRED global metadata, and yfinance predefined
-// screens need no ticker/series lookup — fetch + download them directly
+// screens need no ticker/series lookup - fetch + download them directly
 // instead of just handing the user a code snippet.
 
 const FRED_META_ENDPOINTS = {
@@ -1870,7 +1870,7 @@ const FRED_META_ENDPOINTS = {
 function getStaticDownloadInfo(node) {
   if (node.type !== 'file') return null;
 
-  // FRED global metadata (releases / sources / tags / categories / series — no series id needed)
+  // FRED global metadata (releases / sources / tags / categories / series - no series id needed)
   if ((node.category === 'fred' || node.category === 'fred_meta') && FRED_META_ENDPOINTS[node.name]) {
     const ep = FRED_META_ENDPOINTS[node.name];
     return { url: `/api/fred/meta/${ep}`, key: `fredmeta_${ep.replace(/\//g, '_')}`, filename: node.name };
@@ -1881,7 +1881,7 @@ function getStaticDownloadInfo(node) {
     return { url: `/api/fred/${node.series_id}`, key: `fred_${node.series_id}`, filename: node.name };
   }
 
-  // yfinance predefined screener presets — no ticker required
+  // yfinance predefined screener presets - no ticker required
   if (node.category === 'predefined_screens') {
     return { url: `/api/yf/screen/day_gainers`, key: `yf_screen_day_gainers`, filename: node.name };
   }
@@ -1923,7 +1923,7 @@ function renderStaticDownloadStatus(staticInfo) {
   const el = document.getElementById('dexStaticStatus');
   if (!el) return;
   const stored = localStorage.getItem(`run01-dl-${staticInfo.key}`);
-  el.textContent = stored ? `✓ Downloaded — last saved ${formatTimestamp(stored)}` : 'Not downloaded yet';
+  el.textContent = stored ? `✓ Downloaded - last saved ${formatTimestamp(stored)}` : 'Not downloaded yet';
 }
 
 async function downloadStaticDataset(staticInfo, node) {
@@ -2206,7 +2206,7 @@ ticker = "AAPL"
 filings = await yf_fetch(ticker, "sec_filings")
 if isinstance(filings, list):
     for f in filings[:5]:
-        print(f"[{f.get('date','')}] {f.get('type','')} — {f.get('title','')}")
+        print(f"[{f.get('date','')}] {f.get('type','')} - {f.get('title','')}")
 else:
     print(filings)`;
 
@@ -2618,27 +2618,19 @@ document.addEventListener('keydown', (e) => {
 
   let messagesHistory = [];
 
-  // Curated model catalog — NVIDIA NIM (best $/token + high quality) first,
-  // Groq second as a fast automatic fallback. Mirrors MODEL_CATALOG in app.py.
-  // Verified against build.nvidia.com / console.groq.com docs, Aug 2026.
+    // Curated model catalog - NVIDIA NIM & Groq production IDs (Sept 2026)
   const MODEL_CATALOG = [
-    { id: 'deepseek-ai/deepseek-v4-flash-0731',      name: 'DeepSeek V4 Flash', provider: 'NVIDIA NIM' },
-    { id: 'deepseek-ai/deepseek-r1',                name: 'DeepSeek R1',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-ai/deepseek-v3',                name: 'DeepSeek V3',       provider: 'NVIDIA NIM' },
-    { id: 'nvidia/llama-3.1-nemotron-70b-instruct',  name: 'Nemotron 70B',      provider: 'NVIDIA NIM' },
-    { id: 'qwen/qwen2.5-coder-32b-instruct',         name: 'Qwen 2.5 Coder 32B', provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-3.3-70b-instruct',             name: 'Llama 3.3 70B',     provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',  name: 'GPT-OSS 120B',  provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',   name: 'GPT-OSS 20B',   provider: 'Groq' },
-    { id: 'qwen/qwen3.6-27b',     name: 'Qwen 3.6 27B',  provider: 'Groq' },
-    { id: 'groq/compound',        name: 'Groq Compound', provider: 'Groq' },
-    { id: 'groq/compound-mini',   name: 'Groq Compound Mini', provider: 'Groq' },
+    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
+    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
+    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
+    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
+    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
+    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
   ];
 
-  // Default model — DeepSeek V4 Flash on NVIDIA NIM: cheapest per-token,
-  // long context, tuned for coding/agentic use. Falls back to Groq
-  // automatically server-side if NVIDIA_API_KEY isn't set or is rate-limited.
-  const DEFAULT_MODEL = 'deepseek-ai/deepseek-v4-flash-0731';
+  // Default model - DeepSeek V4 Flash on NVIDIA NIM: 284B MoE, 1M context
+  const DEFAULT_MODEL = 'deepseek-v4-flash-0731';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.
@@ -2680,7 +2672,7 @@ document.addEventListener('keydown', (e) => {
       }
     } catch (err) {
       console.error('Failed to refresh AI models:', err);
-      // Static fallback already seeded — no action needed
+      // Static fallback already seeded - no action needed
     }
   }
   loadModels();
@@ -3165,7 +3157,7 @@ document.addEventListener('keydown', (e) => {
       return s;
     }
 
-    // Parse a GFM table row — splits on | respecting escaped pipes
+    // Parse a GFM table row - splits on | respecting escaped pipes
     function parseRow(rowLine) {
       return rowLine.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
     }
@@ -3891,7 +3883,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
       }
     } catch (err) {
       console.warn('[Auth] Session check failed (network?):', err);
-      // Keep the locally cached user — don't log them out on network error
+      // Keep the locally cached user - don't log them out on network error
     }
   }
 

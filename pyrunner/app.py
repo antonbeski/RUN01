@@ -335,7 +335,7 @@ def auth_logout():
 def index():
     return render_template("index.html")
 
-# ── Service Worker — must be served from / scope ──────────────────────────────
+# ── Service Worker - must be served from / scope ──────────────────────────────
 # Service Workers can only control pages within their scope. A SW at /static/sw.js
 # can only control /static/*, which excludes our root page at /. Serving it at /sw.js
 # gives it full-origin scope so it can cache Pyodide, Monaco, and Plotly CDN assets.
@@ -612,7 +612,7 @@ def yf_lookup_proxy():
 
 # ── Yahoo Finance predefined screener proxy ──────────────────────────────────
 # yf.screen() runs a *predefined* Yahoo query (day_gainers, most_actives, etc.)
-# — no ticker/user input needed, so it's served as a static, downloadable
+# - no ticker/user input needed, so it's served as a static, downloadable
 # dataset in the Data Explorer instead of an example the user has to edit.
 YF_SCREEN_PRESETS = {
     "day_gainers", "day_losers", "most_actives",
@@ -827,36 +827,32 @@ def run_code():
         return jsonify({"error": str(exc)}), 500
 
 # ══════════════════════════════════════════════════════════════════════════
-# AI Coding Assistant — multi-provider model catalog + dual-key fallback
+# AI Coding Assistant - multi-provider model catalog + dual-key fallback
 #
 # Two OpenAI-compatible providers are supported out of the box:
-#   • NVIDIA NIM   (https://integrate.api.nvidia.com/v1)  — env: NVIDIA_API_KEY[_2]
-#   • Groq         (https://api.groq.com/openai/v1)       — env: GROQ_API_KEY[_2]
+#   • NVIDIA NIM   (https://integrate.api.nvidia.com/v1)  - env: NVIDIA_API_KEY[_2]
+#   • Groq         (https://api.groq.com/openai/v1)       - env: GROQ_API_KEY[_2]
 #
 # NVIDIA NIM is listed first because it gives access to very token-efficient,
-# high-quality MoE models (e.g. DeepSeek V4 Flash — only ~13B active params,
+# high-quality MoE models (e.g. DeepSeek V4 Flash - only ~13B active params,
 # long-context, tuned for coding/agentic tasks) at NVIDIA's free/dev-credit
 # tier. Groq remains configured as a fast automatic fallback if NVIDIA is
 # rate-limited, out of credits, or its key isn't set.
 # ══════════════════════════════════════════════════════════════════════════
 
-# Model list is sourced from build.nvidia.com and console.groq.com/docs —
+# Model list is sourced from build.nvidia.com and console.groq.com/docs -
 # verified Aug 2026. Deprecated Groq models (llama-3.3-70b-versatile,
 # llama-3.1-8b-instant, shut down Aug 16 2026) are excluded.
 MODEL_CATALOG = [
-    # ── NVIDIA NIM — token-efficient + high quality ──────────────────────
-    {"id": "deepseek-ai/deepseek-v4-flash-0731",     "name": "DeepSeek V4 Flash ", "provider": "NVIDIA NIM"},
-    {"id": "deepseek-ai/deepseek-r1",                "name": "DeepSeek R1 ",       "provider": "NVIDIA NIM"},
-    {"id": "deepseek-ai/deepseek-v3",                "name": "DeepSeek V3 ",       "provider": "NVIDIA NIM"},
-    {"id": "nvidia/llama-3.1-nemotron-70b-instruct", "name": "Nemotron 70B ",                             "provider": "NVIDIA NIM"},
-    {"id": "qwen/qwen2.5-coder-32b-instruct",        "name": "Qwen 2.5 Coder 32B ",                    "provider": "NVIDIA NIM"},
-    {"id": "meta/llama-3.3-70b-instruct",            "name": "Llama 3.3 70B",                                          "provider": "NVIDIA NIM"},
-    # ── Groq — fast automatic fallback ───────────────────────────────────
-    {"id": "openai/gpt-oss-120b",  "name": "GPT-OSS 120B ",  "provider": "Groq"},
-    {"id": "openai/gpt-oss-20b",   "name": "GPT-OSS 20B ",  "provider": "Groq"},
-    {"id": "qwen/qwen3.6-27b",     "name": "Qwen 3.6 27B",            "provider": "Groq"},
-    {"id": "groq/compound",        "name": "Groq Compound ", "provider": "Groq"},
-    {"id": "groq/compound-mini",   "name": "Groq Compound Mini",      "provider": "Groq"},
+    # ── NVIDIA NIM ────────────────────────────────────────────────────────
+    {"id": "deepseek-v4-flash-0731",        "name": "NVIDIA - DeepSeek V4 Flash",       "provider": "NVIDIA NIM"},
+    {"id": "deepseek-v4-pro-0813",          "name": "NVIDIA - DeepSeek V4 Pro",         "provider": "NVIDIA NIM"},
+    {"id": "nemotron-3.5-lightning-30b-a3b","name": "NVIDIA - Nemotron 3.5 Lightning",  "provider": "NVIDIA NIM"},
+    # ── Groq ──────────────────────────────────────────────────────────────
+    {"id": "openai/gpt-oss-120b",           "name": "Groq - GPT-OSS 120B",              "provider": "Groq"},
+    {"id": "openai/gpt-oss-20b",            "name": "Groq - GPT-OSS 20B",               "provider": "Groq"},
+    {"id": "groq/compound",                 "name": "Groq - Compound",                  "provider": "Groq"},
+    {"id": "groq/compound-mini",            "name": "Groq - Compound Mini",             "provider": "Groq"},
 ]
 
 # Provider connection details + in-provider fallback chain (tried in order if
@@ -866,12 +862,9 @@ PROVIDER_CONFIG = {
         "base_url": "https://integrate.api.nvidia.com/v1/chat/completions",
         "key_env":  ["NVIDIA_API_KEY", "NVIDIA_API_KEY_2"],
         "fallback_chain": [
-            "deepseek-ai/deepseek-v4-flash-0731",
-            "deepseek-ai/deepseek-r1",
-            "deepseek-ai/deepseek-v3",
-            "nvidia/llama-3.1-nemotron-70b-instruct",
-            "qwen/qwen2.5-coder-32b-instruct",
-            "meta/llama-3.3-70b-instruct",
+            "deepseek-v4-flash-0731",
+            "deepseek-v4-pro-0813",
+            "nemotron-3.5-lightning-30b-a3b",
         ],
     },
     "Groq": {
@@ -880,8 +873,8 @@ PROVIDER_CONFIG = {
         "fallback_chain": [
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
             "groq/compound-mini",
+            "groq/compound",
         ],
     },
 }
@@ -924,7 +917,7 @@ def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
 
 
 # Status codes that warrant an automatic fallback to the next key/model/provider.
-# 404 = model not found / no access to model on this key — try the next option.
+# 404 = model not found / no access to model on this key - try the next option.
 _FALLBACK_STATUS_CODES = {404, 429, 500, 502, 503, 504}
 
 
@@ -933,7 +926,7 @@ def ai_chat():
     """Chat endpoint with automatic dual-provider, dual-key fallback.
 
     Env vars:
-        NVIDIA_API_KEY   – NVIDIA NIM primary key (recommended — best $/token)
+        NVIDIA_API_KEY   – NVIDIA NIM primary key (recommended - best $/token)
         NVIDIA_API_KEY_2 – NVIDIA NIM secondary / backup key (optional)
         GROQ_API_KEY     – Groq primary key (fast fallback)
         GROQ_API_KEY_2   – Groq secondary / backup key (optional)
@@ -952,7 +945,7 @@ def ai_chat():
 
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model    = body.get("model", "deepseek-ai/deepseek-v4-flash-0731")
+        model    = body.get("model", "deepseek-v4-flash-0731")
 
         # ── Inject Universal MuJoCo, Rapier & Desmos Simulation Instructions ───────
         physics_sys_prompt = (
@@ -1047,8 +1040,8 @@ def ai_chat():
         if not any(configured_keys.values()):
             return jsonify({
                 "error": "No AI provider API key is configured. Set NVIDIA_API_KEY "
-                         "(recommended) and/or GROQ_API_KEY — each with an optional "
-                         "_2 backup key — in your Vercel environment settings."
+                         "(recommended) and/or GROQ_API_KEY - each with an optional "
+                         "_2 backup key - in your Vercel environment settings."
             }), 400
 
         res = None
@@ -1058,7 +1051,7 @@ def ai_chat():
         for provider in provider_order:
             keys_to_try = configured_keys.get(provider) or []
             if not keys_to_try:
-                continue  # this provider has no key configured — skip it entirely
+                continue  # this provider has no key configured - skip it entirely
 
             cfg = PROVIDER_CONFIG[provider]
             base_url = cfg["base_url"]
@@ -1082,7 +1075,7 @@ def ai_chat():
 
                     if res.status_code == 200:
                         success = True
-                        break  # Success — stream this response
+                        break  # Success - stream this response
 
                     try:
                         err_data = res.json()
@@ -1096,7 +1089,7 @@ def ai_chat():
                         res = None
                         continue
                     else:
-                        # Non-retryable error (e.g. 400 Bad Request) — surface immediately.
+                        # Non-retryable error (e.g. 400 Bad Request) - surface immediately.
                         return jsonify({"error": f"{provider} API Error ({res.status_code}): {err_msg}"}), res.status_code
 
                 if success:
