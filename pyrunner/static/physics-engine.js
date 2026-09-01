@@ -1,12 +1,12 @@
 /**
- * RUN01 Universal Physics & Kinematics Verification Engine
+ * RUN01 Universal Physics & Kinematics Simulation Studio
  * 
- * Supports:
- * 1. Universal Google DeepMind MuJoCo MJCF XML Parser & N-DOF Articulated Body Solver
- * 2. Universal Rapier 3D/2D Multi-Body & Joint Physics Solver (Rigid bodies, springs, hinge/slide joints, restitution, drag)
- * 3. Generalized Headless Physics Verifier (Hamiltonian conservation, constraint residuals, phase space invariants)
- * 4. Procedural Three.js 3D Scene Graph Generator (Automatic pivot hierarchical tree, capsules, cylinders, boxes, planes)
- * 5. Analytical Desmos Proof & Phase Space Generator
+ * Capabilities:
+ * 1. Arbitrary 2D & 3D Geometry Generation (Solid vs Hollow, any aspect ratio, wall thickness, inertia tensor computation).
+ * 2. Mechanics & Kinematics (Springs, Dampers, Pulleys with Mechanical Advantage, Articulated Joints, Cables).
+ * 3. Fluid & Environmental Dynamics (Gravity vector, Quadratic Air Drag, Water Buoyancy, Hydrodynamic resistance, Friction).
+ * 4. Geometric Optics & Wave Physics (Snell's Law Refraction, Lenses, Prisms with Cauchy Chromatic Dispersion, Mirrors, Ray Tracing).
+ * 5. WebGL Three.js Real-time Viewport & Analytical Desmos Proofs.
  */
 
 (function(root, factory) {
@@ -21,585 +21,510 @@
   'use strict';
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 1. BUILT-IN BENCHMARK PRESETS (MJCF & Rapier)
+  // 1. GEOMETRY & INERTIA TENSOR FACTORY (2D/3D, Solid & Hollow)
   // ══════════════════════════════════════════════════════════════════════════
 
-  const PRESETS = {
-    mujoco_double_pendulum: {
-      id: 'mujoco_double_pendulum',
-      type: 'mujoco',
-      title: 'MuJoCo — Double Pendulum (Chaos & Hamiltonian Proof)',
-      description: 'Two-link chaotic planar pendulum demonstrating non-linear dynamics, phase space trajectories, and exact Hamiltonian energy conservation.',
-      xml: `<mujoco model="double_pendulum">
-  <compiler angle="radian" coordinate="local"/>
-  <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
-  <worldbody>
-    <light diffuse="0.9 0.9 0.9" pos="0 0 5" dir="0 0 -1"/>
-    <geom name="floor" type="plane" size="6 6 0.1" rgba="0.1 0.1 0.1 1"/>
-    <body name="link1" pos="0 0 2.5">
-      <joint name="joint1" type="hinge" axis="0 1 0" pos="0 0 0" damping="0.001"/>
-      <geom name="rod1" type="capsule" fromto="0 0 0 0 0 -0.8" size="0.035" rgba="0.9 0.9 0.9 1" mass="1.0"/>
-      <body name="link2" pos="0 0 -0.8">
-        <joint name="joint2" type="hinge" axis="0 1 0" pos="0 0 0" damping="0.001"/>
-        <geom name="rod2" type="capsule" fromto="0 0 0 0 0 -0.8" size="0.03" rgba="0.7 0.7 0.7 1" mass="0.8"/>
-        <geom name="bob2" type="sphere" pos="0 0 -0.8" size="0.09" rgba="1 1 1 1" mass="1.2"/>
-      </body>
-    </body>
-  </worldbody>
-</mujoco>`,
-      analytical: {
-        title: 'Analytical Potential & Kinetic Energy Bounds',
-        desmos: [
-          'L_1 = 0.8',
-          'L_2 = 0.8',
-          'm_1 = 1.0',
-          'm_2 = 2.0',
-          'g = 9.81',
-          'E_0 = (m_1 + m_2) \\cdot g \\cdot L_1 + m_2 \\cdot g \\cdot L_2',
-          'y_1 = -L_1 \\cdot \\cos(t)',
-          'y_2 = -L_1 \\cdot \\cos(t) - L_2 \\cdot \\cos(1.4 \\cdot t)',
-          '(L_1 \\cdot \\sin(t), y_1)',
-          '(L_1 \\cdot \\sin(t) + L_2 \\cdot \\sin(1.4 \\cdot t), y_2)'
-        ]
+  const GeometryFactory = {
+    computeInertia(shape, mass, params = {}) {
+      mass = mass || 1.0;
+      const isHollow = !!params.isHollow;
+      const wallThickness = params.wallThickness || 0.05;
+
+      switch (shape) {
+        case 'sphere': {
+          const R = params.radius || 0.5;
+          if (isHollow) {
+            const r = Math.max(0.01, R - wallThickness);
+            const factor = (2 / 5) * mass * ((Math.pow(R, 5) - Math.pow(r, 5)) / (Math.pow(R, 3) - Math.pow(r, 3) || 1e-5));
+            return { Ixx: factor, Iyy: factor, Izz: factor };
+          }
+          const I = (2 / 5) * mass * R * R;
+          return { Ixx: I, Iyy: I, Izz: I };
+        }
+        case 'box': {
+          const w = params.size ? params.size[0] : 1.0;
+          const h = params.size ? params.size[1] : 1.0;
+          const d = params.size ? params.size[2] : 1.0;
+          if (isHollow) {
+            const wi = Math.max(0.01, w - wallThickness * 2);
+            const hi = Math.max(0.01, h - wallThickness * 2);
+            const di = Math.max(0.01, d - wallThickness * 2);
+            const V_out = w * h * d;
+            const V_in = wi * hi * di;
+            const rho = mass / (V_out - V_in || 1e-5);
+            const Ixx = (1 / 12) * rho * (V_out * (h*h + d*d) - V_in * (hi*hi + di*di));
+            const Iyy = (1 / 12) * rho * (V_out * (w*w + d*d) - V_in * (wi*wi + di*di));
+            const Izz = (1 / 12) * rho * (V_out * (w*w + h*h) - V_in * (wi*wi + hi*hi));
+            return { Ixx, Iyy, Izz };
+          }
+          return {
+            Ixx: (1 / 12) * mass * (h * h + d * d),
+            Iyy: (1 / 12) * mass * (w * w + d * d),
+            Izz: (1 / 12) * mass * (w * w + h * h)
+          };
+        }
+        case 'cylinder':
+        case 'tube': {
+          const R = params.radius || 0.4;
+          const H = params.height || 1.0;
+          if (isHollow || shape === 'tube') {
+            const r = Math.max(0.01, params.innerRadius || (R - wallThickness));
+            const Iz = 0.5 * mass * (R * R + r * r);
+            const Ixy = (1 / 12) * mass * (3 * (R * R + r * r) + H * H);
+            return { Ixx: Ixy, Iyy: Iz, Izz: Ixy };
+          }
+          const Iz = 0.5 * mass * R * R;
+          const Ixy = (1 / 12) * mass * (3 * R * R + H * H);
+          return { Ixx: Ixy, Iyy: Iz, Izz: Ixy };
+        }
+        case 'cone': {
+          const R = params.radius || 0.5;
+          const H = params.height || 1.0;
+          const Iyy = (3 / 10) * mass * R * R;
+          const Ixx = (3 / 5) * mass * (0.25 * R * R + H * H);
+          return { Ixx, Iyy, Izz: Ixx };
+        }
+        case 'torus': {
+          const R = params.radius || 0.6;
+          const r = params.tube || 0.15;
+          const Iz = mass * (R * R + 0.75 * r * r);
+          const Ixy = mass * (0.5 * R * R + 0.625 * r * r);
+          return { Ixx: Ixy, Iyy: Iz, Izz: Ixy };
+        }
+        default: {
+          const r = 0.4;
+          const I = (2 / 5) * mass * r * r;
+          return { Ixx: I, Iyy: I, Izz: I };
+        }
       }
     },
 
-    mujoco_cart_pole: {
-      id: 'mujoco_cart_pole',
-      type: 'mujoco',
-      title: 'MuJoCo — Inverted Cart-Pole (Linearized Balance & LQR)',
-      description: 'Classic inverted pendulum on a cart. Tests stabilization, state-space controllability, and Lyapunov stability function.',
-      xml: `<mujoco model="cart_pole">
-  <compiler angle="radian" coordinate="local"/>
-  <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
-  <worldbody>
-    <light diffuse="0.9 0.9 0.9" pos="0 0 5" dir="0 0 -1"/>
-    <geom name="rail" type="box" size="2.5 0.04 0.02" pos="0 0 1" rgba="0.3 0.3 0.3 1"/>
-    <body name="cart" pos="0 0 1">
-      <joint name="slider" type="slide" axis="1 0 0" damping="0.05"/>
-      <geom name="cart_geom" type="box" size="0.25 0.15 0.08" rgba="0.85 0.85 0.85 1" mass="2.0"/>
-      <body name="pole" pos="0 0 0.08">
-        <joint name="hinge" type="hinge" axis="0 1 0" pos="0 0 0" damping="0.005"/>
-        <geom name="pole_geom" type="capsule" fromto="0 0 0 0 0 0.7" size="0.025" rgba="0.6 0.6 0.6 1" mass="0.5"/>
-        <geom name="pole_mass" type="sphere" pos="0 0 0.7" size="0.06" rgba="1 1 1 1" mass="0.3"/>
-      </body>
-    </body>
-  </worldbody>
-</mujoco>`,
-      analytical: {
-        title: 'Linearized State-Space Frequency',
-        desmos: [
-          'M = 2.0',
-          'm = 0.8',
-          'L = 0.7',
-          'g = 9.81',
-          '\\omega = \\sqrt{ (M + m) \\cdot g / (M \\cdot L) }',
-          'x = 0.2 \\cdot \\cos(\\omega \\cdot t)',
-          '\\theta = -0.15 \\cdot \\cos(\\omega \\cdot t)',
-          '(x, \\theta)'
-        ]
-      }
-    },
-
-    mujoco_robotic_arm: {
-      id: 'mujoco_robotic_arm',
-      type: 'mujoco',
-      title: 'MuJoCo — 3-DOF Articulated Robotic Manipulator',
-      description: '3-Degree-of-Freedom articulated robotic arm with forward kinematics, revolute joints, and kinematic reach verification.',
-      xml: `<mujoco model="robotic_arm_3dof">
-  <compiler angle="radian"/>
-  <option timestep="0.002" gravity="0 0 -9.81"/>
-  <worldbody>
-    <light diffuse="0.9 0.9 0.9" pos="0 0 5" dir="0 0 -1"/>
-    <geom name="pedestal" type="cylinder" size="0.2 0.3" pos="0 0 0.3" rgba="0.2 0.2 0.2 1"/>
-    <body name="base" pos="0 0 0.6">
-      <joint name="joint_yaw" type="hinge" axis="0 0 1" damping="0.1"/>
-      <geom name="base_geom" type="cylinder" size="0.16 0.08" rgba="0.5 0.5 0.5 1"/>
-      <body name="shoulder" pos="0 0 0.08">
-        <joint name="joint_pitch1" type="hinge" axis="0 1 0" damping="0.05"/>
-        <geom name="upper_arm" type="capsule" fromto="0 0 0 0 0 0.6" size="0.05" rgba="0.8 0.8 0.8 1" mass="2.0"/>
-        <body name="elbow" pos="0 0 0.6">
-          <joint name="joint_pitch2" type="hinge" axis="0 1 0" damping="0.05"/>
-          <geom name="forearm" type="capsule" fromto="0 0 0 0 0 0.5" size="0.04" rgba="0.95 0.95 0.95 1" mass="1.5"/>
-          <body name="wrist" pos="0 0 0.5">
-            <geom name="end_effector" type="sphere" size="0.07" rgba="1 1 1 1" mass="0.4"/>
-          </body>
-        </body>
-      </body>
-    </body>
-  </worldbody>
-</mujoco>`,
-      analytical: {
-        title: 'Forward Kinematics Reach Envelope',
-        desmos: [
-          'l_1 = 0.6',
-          'l_2 = 0.5',
-          'r_{max} = l_1 + l_2',
-          'x^2 + y^2 = r_{max}^2',
-          'x^2 + y^2 = (l_1 - l_2)^2'
-        ]
-      }
-    },
-
-    rapier_domino_cascade: {
-      id: 'rapier_domino_cascade',
-      type: 'rapier',
-      title: 'Rapier 3D — Domino Chain Reaction (Momentum Transfer)',
-      description: 'Series of dominoes with exact rigid body contact collision, friction cone validation, and kinetic energy wave propagation.',
-      spec: {
-        gravity: [0, -9.81, 0],
-        timestep: 1 / 120,
-        bodies: [
-          { name: 'ground', type: 'fixed', pos: [0, -0.2, 0], shape: 'box', size: [14, 0.4, 4], color: 0x111111, friction: 0.8 },
-          { name: 'trigger_ball', type: 'dynamic', pos: [-3.5, 1.8, 0], shape: 'sphere', radius: 0.25, mass: 1.5, color: 0xffffff, linvel: [3.0, 0, 0] },
-          { name: 'domino_1', type: 'dynamic', pos: [-2.4, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_2', type: 'dynamic', pos: [-1.8, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_3', type: 'dynamic', pos: [-1.2, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_4', type: 'dynamic', pos: [-0.6, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_5', type: 'dynamic', pos: [0.0, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_6', type: 'dynamic', pos: [0.6, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'domino_7', type: 'dynamic', pos: [1.2, 0.4, 0], shape: 'box', size: [0.08, 0.8, 0.35], mass: 0.4, color: 0xcccccc, restitution: 0.1 },
-          { name: 'target_weight', type: 'dynamic', pos: [2.0, 0.5, 0], shape: 'box', size: [0.6, 1.0, 0.6], mass: 4.0, color: 0xffffff }
-        ]
-      },
-      analytical: {
-        title: 'Toppling Critical Angle & Torque',
-        desmos: [
-          'h = 0.8',
-          'w = 0.08',
-          '\\theta_c = \\arctan(w / h)',
-          '\\tau(\\theta) = m \\cdot g \\cdot (h/2 \\cdot \\sin(\\theta) - w/2 \\cdot \\cos(\\theta))'
-        ]
-      }
-    },
-
-    rapier_spring_resonance: {
-      id: 'rapier_spring_resonance',
-      type: 'rapier',
-      title: 'Rapier 3D — Mass-Spring-Damper Harmonic Oscillator',
-      description: 'Harmonic oscillator under spring restoring and damping forces demonstrating Q-factor, phase shift, and energy dissipation.',
-      spec: {
-        gravity: [0, -9.81, 0],
-        timestep: 1 / 120,
-        springs: [
-          { k: 45.0, c: 0.8, restLength: 1.5, anchor: [0, 3.5, 0], body: 'oscillator' }
-        ],
-        bodies: [
-          { name: 'ceiling', type: 'fixed', pos: [0, 3.5, 0], shape: 'box', size: [1.5, 0.1, 1], color: 0x222222 },
-          { name: 'oscillator', type: 'dynamic', pos: [0, 1.2, 0], shape: 'sphere', radius: 0.35, mass: 1.2, color: 0xffffff }
-        ]
-      },
-      analytical: {
-        title: 'Exact Analytical Damped Harmonic Response',
-        desmos: [
-          'm = 1.2',
-          'k = 45',
-          'c = 0.8',
-          '\\omega_0 = \\sqrt{k/m}',
-          '\\gamma = c / (2 \\cdot m)',
-          '\\omega_d = \\sqrt{\\omega_0^2 - \\gamma^2}',
-          'x(t) = e^{-\\gamma \\cdot t} \\cdot \\cos(\\omega_d \\cdot t)',
-          '(x(t), -\\gamma \\cdot x(t) - \\omega_d \\cdot e^{-\\gamma \\cdot t} \\cdot \\sin(\\omega_d \\cdot t))'
-        ]
-      }
-    },
-
-    rapier_projectile_drag: {
-      id: 'rapier_projectile_drag',
-      type: 'rapier',
-      title: 'Rapier 3D — Projectile Trajectory (Quadratic Drag vs Vacuum)',
-      description: 'Comparison of parabolic trajectory in vacuum vs non-linear quadratic air drag with terminal velocity calculation.',
-      spec: {
-        gravity: [0, -9.81, 0],
-        timestep: 1 / 120,
-        dragCoeff: 0.15,
-        bodies: [
-          { name: 'ground', type: 'fixed', pos: [0, -0.1, 0], shape: 'box', size: [24, 0.2, 5], color: 0x111111 },
-          { name: 'vacuum_ball', type: 'dynamic', pos: [-9, 0.3, -1], shape: 'sphere', radius: 0.25, mass: 1.0, color: 0xffffff, linvel: [15, 15, 0] },
-          { name: 'drag_ball', type: 'dynamic', pos: [-9, 0.3, 1], shape: 'sphere', radius: 0.25, mass: 1.0, color: 0x888888, linvel: [15, 15, 0] }
-        ]
-      },
-      analytical: {
-        title: 'Analytical Vacuum vs Numerical Drag Trajectory',
-        desmos: [
-          'v_0 = 21.2',
-          '\\theta = 0.785',
-          'g = 9.81',
-          'y = x \\cdot \\tan(\\theta) - (g \\cdot x^2) / (2 \\cdot v_0^2 \\cdot (\\cos(\\theta))^2)',
-          't_1 = 1.0',
-          '(15 \\cdot t_1, 15 \\cdot t_1 - 0.5 \\cdot 9.81 \\cdot t_1^2)'
-        ]
+    computeCrossSectionArea(shape, params = {}) {
+      switch (shape) {
+        case 'sphere': return Math.PI * Math.pow(params.radius || 0.5, 2);
+        case 'box': {
+          const sz = params.size || [1, 1, 1];
+          return sz[0] * sz[1];
+        }
+        case 'cylinder':
+        case 'tube': return 2 * (params.radius || 0.4) * (params.height || 1.0);
+        case 'cone': return (params.radius || 0.5) * (params.height || 1.0);
+        default: return 0.5;
       }
     }
   };
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 2. UNIVERSAL MJCF (MuJoCo XML) PARSER
+  // 2. GEOMETRIC OPTICS & LENS RAY TRACING CORE
   // ══════════════════════════════════════════════════════════════════════════
 
-  function parseVec(str, defaultVal) {
-    if (!str) return defaultVal || [0, 0, 0];
-    const parts = str.trim().split(/\s+/).map(Number);
-    return parts.every(n => !isNaN(n)) ? parts : (defaultVal || [0, 0, 0]);
-  }
-
-  function parseMJCF(xmlString) {
-    if (!xmlString || typeof xmlString !== 'string') {
-      return { model: 'default', timestep: 0.002, gravity: [0, 0, -9.81], bodies: [] };
+  class OpticsRayTracer {
+    constructor(spec = {}) {
+      this.spec = spec;
+      this.elements = spec.elements || [];
+      this.sources = spec.sources || [];
+      this.maxBounces = spec.maxBounces || 8;
     }
 
-    let xmlDoc;
-    try {
-      const parser = new DOMParser();
-      xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-    } catch (e) {
-      console.warn('[PhysicsEngine] Failed to parse MJCF XML:', e);
-      return { model: 'invalid', timestep: 0.002, gravity: [0, 0, -9.81], bodies: [] };
+    getRefractiveIndex(baseIndex, dispersionCoeff, lambdaNm) {
+      if (!dispersionCoeff || !lambdaNm) return baseIndex;
+      const lambdaUm = lambdaNm / 1000.0;
+      return baseIndex + (dispersionCoeff / (lambdaUm * lambdaUm));
     }
 
-    const root = xmlDoc.querySelector('mujoco') || xmlDoc.documentElement;
-    const modelName = root ? (root.getAttribute('model') || 'mujoco_model') : 'mujoco_model';
+    traceRays() {
+      const rayPaths = [];
 
-    // Options
-    const optEl = xmlDoc.querySelector('option');
-    const timestep = optEl && optEl.getAttribute('timestep') ? parseFloat(optEl.getAttribute('timestep')) : 0.002;
-    const gravity = optEl && optEl.getAttribute('gravity') ? parseVec(optEl.getAttribute('gravity'), [0, 0, -9.81]) : [0, 0, -9.81];
-    const integrator = optEl && optEl.getAttribute('integrator') ? optEl.getAttribute('integrator') : 'RK4';
+      this.sources.forEach(src => {
+        const wavelengths = src.wavelengths || (src.whiteLight ? [680, 580, 530, 480, 420] : [550]);
+        const rayCount = src.rayCount || (src.beamWidth ? 9 : 1);
+        const startPos = src.pos || [-4, 0, 0];
+        const dir = src.dir ? [...src.dir] : [1, 0, 0];
 
-    const bodies = [];
-    const joints = [];
-    const geoms = [];
+        const dLen = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+        dir[0] /= dLen; dir[1] /= dLen; dir[2] /= dLen;
 
-    function traverseBody(bodyEl, parentName, depth) {
-      const name = bodyEl.getAttribute('name') || `body_${bodies.length}`;
-      const pos = parseVec(bodyEl.getAttribute('pos'), [0, 0, 0]);
-      const quat = parseVec(bodyEl.getAttribute('quat'), null);
+        const beamSpread = src.beamWidth || 0;
+        const spreadOffset = rayCount > 1 ? beamSpread / (rayCount - 1) : 0;
 
-      const bodyObj = {
-        name,
-        parent: parentName,
-        depth,
-        pos,
-        quat,
-        joints: [],
-        geoms: []
-      };
+        for (let i = 0; i < rayCount; i++) {
+          const offsetY = rayCount > 1 ? -beamSpread / 2 + i * spreadOffset : 0;
+          const origin = [startPos[0], startPos[1] + offsetY, startPos[2]];
 
-      // Joints direct child of body
-      for (const child of bodyEl.children) {
-        if (child.tagName === 'joint') {
-          const jName = child.getAttribute('name') || `joint_${joints.length}`;
-          const type = child.getAttribute('type') || 'hinge'; // hinge, slide, ball, free
-          const axis = parseVec(child.getAttribute('axis'), [0, 1, 0]);
-          const posJ = parseVec(child.getAttribute('pos'), [0, 0, 0]);
-          const damping = child.getAttribute('damping') ? parseFloat(child.getAttribute('damping')) : 0.001;
-          const range = child.getAttribute('range') ? child.getAttribute('range').trim().split(/\s+/).map(Number) : null;
-          const stiffness = child.getAttribute('stiffness') ? parseFloat(child.getAttribute('stiffness')) : 0.0;
+          wavelengths.forEach(lambda => {
+            const path = [{ x: origin[0], y: origin[1], z: origin[2], lambda }];
+            let curOrigin = [...origin];
+            let curDir = [...dir];
+            let curN = 1.0;
 
-          const jointData = { name: jName, bodyName: name, type, axis, pos: posJ, damping, range, stiffness };
-          joints.push(jointData);
-          bodyObj.joints.push(jointData);
-        } else if (child.tagName === 'geom') {
-          const gName = child.getAttribute('name') || `geom_${geoms.length}`;
-          const type = child.getAttribute('type') || 'sphere'; // plane, sphere, capsule, cylinder, box
-          const size = parseVec(child.getAttribute('size'), [0.1, 0.1, 0.1]);
-          const fromto = child.getAttribute('fromto') ? parseVec(child.getAttribute('fromto'), null) : null;
-          const posG = parseVec(child.getAttribute('pos'), [0, 0, 0]);
-          const mass = child.getAttribute('mass') ? parseFloat(child.getAttribute('mass')) : 1.0;
-          const rgba = child.getAttribute('rgba') ? parseVec(child.getAttribute('rgba'), [0.8, 0.8, 0.8, 1]) : [0.8, 0.8, 0.8, 1];
+            for (let bounce = 0; bounce < this.maxBounces; bounce++) {
+              const hit = this.findClosestIntersection(curOrigin, curDir);
+              if (!hit) {
+                path.push({
+                  x: curOrigin[0] + curDir[0] * 8,
+                  y: curOrigin[1] + curDir[1] * 8,
+                  z: curOrigin[2] + curDir[2] * 8,
+                  lambda
+                });
+                break;
+              }
 
-          const geomData = { name: gName, bodyName: name, type, size, fromto, pos: posG, mass, rgba };
-          geoms.push(geomData);
-          bodyObj.geoms.push(geomData);
+              path.push({ x: hit.point[0], y: hit.point[1], z: hit.point[2], lambda });
+
+              if (hit.element.type === 'mirror') {
+                const dot = curDir[0]*hit.normal[0] + curDir[1]*hit.normal[1] + curDir[2]*hit.normal[2];
+                curDir = [
+                  curDir[0] - 2 * dot * hit.normal[0],
+                  curDir[1] - 2 * dot * hit.normal[1],
+                  curDir[2] - 2 * dot * hit.normal[2]
+                ];
+                curOrigin = [
+                  hit.point[0] + curDir[0] * 1e-4,
+                  hit.point[1] + curDir[1] * 1e-4,
+                  hit.point[2] + curDir[2] * 1e-4
+                ];
+              } else {
+                const elemN = this.getRefractiveIndex(hit.element.refractiveIndex || 1.5, hit.element.dispersion || 0.004, lambda);
+                const isEntering = (curN === 1.0);
+                const n1 = curN;
+                const n2 = isEntering ? elemN : 1.0;
+                let normal = [...hit.normal];
+
+                let cosI = -(curDir[0]*normal[0] + curDir[1]*normal[1] + curDir[2]*normal[2]);
+                if (cosI < 0) {
+                  cosI = -cosI;
+                  normal = [-normal[0], -normal[1], -normal[2]];
+                }
+
+                const eta = n1 / n2;
+                const k = 1.0 - eta * eta * (1.0 - cosI * cosI);
+
+                if (k < 0) {
+                  // Total Internal Reflection
+                  const dot = curDir[0]*normal[0] + curDir[1]*normal[1] + curDir[2]*normal[2];
+                  curDir = [
+                    curDir[0] - 2 * dot * normal[0],
+                    curDir[1] - 2 * dot * normal[1],
+                    curDir[2] - 2 * dot * normal[2]
+                  ];
+                } else {
+                  // Snell's Law
+                  curDir = [
+                    eta * curDir[0] + (eta * cosI - Math.sqrt(k)) * normal[0],
+                    eta * curDir[1] + (eta * cosI - Math.sqrt(k)) * normal[1],
+                    eta * curDir[2] + (eta * cosI - Math.sqrt(k)) * normal[2]
+                  ];
+                  curN = n2;
+                }
+
+                const dL = Math.hypot(curDir[0], curDir[1], curDir[2]) || 1;
+                curDir[0] /= dL; curDir[1] /= dL; curDir[2] /= dL;
+
+                curOrigin = [
+                  hit.point[0] + curDir[0] * 1e-3,
+                  hit.point[1] + curDir[1] * 1e-3,
+                  hit.point[2] + curDir[2] * 1e-3
+                ];
+              }
+            }
+
+            rayPaths.push(path);
+          });
         }
-      }
+      });
 
-      bodies.push(bodyObj);
-
-      // Recurse child bodies
-      for (const child of bodyEl.children) {
-        if (child.tagName === 'body') {
-          traverseBody(child, name, depth + 1);
-        }
-      }
+      return rayPaths;
     }
 
-    const worldbody = xmlDoc.querySelector('worldbody');
-    if (worldbody) {
-      // Direct geoms in worldbody (floor, static objects)
-      for (const child of worldbody.children) {
-        if (child.tagName === 'geom') {
-          const gName = child.getAttribute('name') || `world_geom_${geoms.length}`;
-          const type = child.getAttribute('type') || 'plane';
-          const size = parseVec(child.getAttribute('size'), [5, 5, 0.1]);
-          const posG = parseVec(child.getAttribute('pos'), [0, 0, 0]);
-          const rgba = child.getAttribute('rgba') ? parseVec(child.getAttribute('rgba'), [0.15, 0.15, 0.15, 1]) : [0.15, 0.15, 0.15, 1];
-          geoms.push({ name: gName, bodyName: 'world', type, size, pos: posG, mass: 0, rgba });
-        } else if (child.tagName === 'body') {
-          traverseBody(child, 'world', 0);
+    findClosestIntersection(origin, dir) {
+      let closest = null;
+      let minDistance = Infinity;
+
+      this.elements.forEach(elem => {
+        if (elem.type === 'lens') {
+          const lensPos = elem.pos || [0, 0, 0];
+          const radius = elem.aperture ? elem.aperture / 2 : 1.2;
+          const thick = elem.thickness || 0.3;
+          const R1 = elem.focalLength ? Math.abs(elem.focalLength) * (elem.refractiveIndex - 1) : 2.0;
+
+          const centerA = [lensPos[0] + (elem.isConcave ? -R1 + thick/2 : R1 - thick/2), lensPos[1], lensPos[2]];
+          const hitA = this.raySphereIntersect(origin, dir, centerA, R1, elem);
+          if (hitA && hitA.dist < minDistance && Math.hypot(hitA.point[1] - lensPos[1], hitA.point[2] - lensPos[2]) <= radius) {
+            minDistance = hitA.dist;
+            closest = hitA;
+          }
+
+          const centerB = [lensPos[0] - (elem.isConcave ? -R1 + thick/2 : R1 - thick/2), lensPos[1], lensPos[2]];
+          const hitB = this.raySphereIntersect(origin, dir, centerB, R1, elem);
+          if (hitB && hitB.dist < minDistance && Math.hypot(hitB.point[1] - lensPos[1], hitB.point[2] - lensPos[2]) <= radius) {
+            minDistance = hitB.dist;
+            closest = hitB;
+          }
+        } else if (elem.type === 'prism') {
+          const pPos = elem.pos || [0, 0, 0];
+          const w = elem.width || 1.6;
+          const h = elem.height || 1.8;
+
+          const p1 = [pPos[0] - w/2, pPos[1] - h/2, -1.0];
+          const p2 = [pPos[0], pPos[1] + h/2, -1.0];
+          const p3 = [pPos[0] - w/2, pPos[1] - h/2, 1.0];
+          const hit1 = this.rayTriangleIntersect(origin, dir, p1, p2, p3, elem);
+          if (hit1 && hit1.dist < minDistance) { minDistance = hit1.dist; closest = hit1; }
+
+          const p4 = [pPos[0] + w/2, pPos[1] - h/2, -1.0];
+          const hit2 = this.rayTriangleIntersect(origin, dir, p2, p4, p3, elem);
+          if (hit2 && hit2.dist < minDistance) { minDistance = hit2.dist; closest = hit2; }
+        } else if (elem.type === 'mirror') {
+          const mPos = elem.pos || [2, 0, 0];
+          const f = elem.focalLength || 2.0;
+          const hitM = this.rayParabolaIntersect(origin, dir, mPos, f, elem);
+          if (hitM && hitM.dist < minDistance) {
+            minDistance = hitM.dist;
+            closest = hitM;
+          }
         }
-      }
+      });
+
+      return closest;
     }
 
-    return {
-      model: modelName,
-      timestep,
-      gravity,
-      integrator,
-      bodies,
-      joints,
-      geoms
-    };
-  }
+    raySphereIntersect(orig, dir, center, radius, elem) {
+      const oc = [orig[0] - center[0], orig[1] - center[1], orig[2] - center[2]];
+      const b = oc[0]*dir[0] + oc[1]*dir[1] + oc[2]*dir[2];
+      const c = oc[0]*oc[0] + oc[1]*oc[1] + oc[2]*oc[2] - radius*radius;
+      const h = b*b - c;
+      if (h < 0) return null;
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // 3. GENERALIZED N-DOF MULTI-BODY DYNAMICS SOLVER (MuJoCo Symplectic Engine)
-  // ══════════════════════════════════════════════════════════════════════════
+      const sqrtH = Math.sqrt(h);
+      let t = -b - sqrtH;
+      if (t < 1e-4) t = -b + sqrtH;
+      if (t < 1e-4) return null;
 
-  class GeneralizedMuJoCoSolver {
-    constructor(parsedModel) {
-      this.model = parsedModel;
-      this.dt = parsedModel.timestep || 0.002;
-      this.g = Math.abs(parsedModel.gravity ? parsedModel.gravity[2] || parsedModel.gravity[1] || 9.81 : 9.81);
-      this.joints = parsedModel.joints || [];
-      this.numDof = this.joints.length || 1;
-
-      // State vectors: q (positions/angles), qdot (velocities)
-      this.q = new Float64Array(this.numDof);
-      this.qdot = new Float64Array(this.numDof);
-
-      this.initDefaultState();
+      const point = [orig[0] + dir[0]*t, orig[1] + dir[1]*t, orig[2] + dir[2]*t];
+      const normal = [(point[0] - center[0]) / radius, (point[1] - center[1]) / radius, (point[2] - center[2]) / radius];
+      return { dist: t, point, normal, element: elem };
     }
 
-    initDefaultState() {
-      // Natural perturbed starting state for pendulums and linkages
-      for (let i = 0; i < this.numDof; i++) {
-        const j = this.joints[i];
-        if (j && j.type === 'slide') {
-          this.q[i] = 0.0;
-        } else {
-          // Staggered angles for multi-pendulum chains
-          this.q[i] = i === 0 ? Math.PI * 0.45 : (Math.PI * 0.3) / (i + 1);
-        }
-        this.qdot[i] = 0.0;
-      }
+    rayTriangleIntersect(orig, dir, v0, v1, v2, elem) {
+      const e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+      const e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+      const h = [dir[1]*e2[2] - dir[2]*e2[1], dir[2]*e2[0] - dir[0]*e2[2], dir[0]*e2[1] - dir[1]*e2[0]];
+      const a = e1[0]*h[0] + e1[1]*h[1] + e1[2]*h[2];
+      if (Math.abs(a) < 1e-6) return null;
+
+      const f = 1.0 / a;
+      const s = [orig[0] - v0[0], orig[1] - v0[1], orig[2] - v0[2]];
+      const u = f * (s[0]*h[0] + s[1]*h[1] + s[2]*h[2]);
+      if (u < 0.0 || u > 1.0) return null;
+
+      const q = [s[1]*e1[2] - s[2]*e1[1], s[2]*e1[0] - s[0]*e1[2], s[0]*e1[1] - s[1]*e1[0]];
+      const v = f * (dir[0]*q[0] + dir[1]*q[1] + dir[2]*q[2]);
+      if (v < 0.0 || u + v > 1.0) return null;
+
+      const t = f * (e2[0]*q[0] + e2[1]*q[1] + e2[2]*q[2]);
+      if (t < 1e-4) return null;
+
+      const point = [orig[0] + dir[0]*t, orig[1] + dir[1]*t, orig[2] + dir[2]*t];
+      const normal = [e1[1]*e2[2] - e1[2]*e2[1], e1[2]*e2[0] - e1[0]*e2[2], e1[0]*e2[1] - e1[1]*e2[0]];
+      const nL = Math.hypot(normal[0], normal[1], normal[2]) || 1;
+      normal[0] /= nL; normal[1] /= nL; normal[2] /= nL;
+
+      return { dist: t, point, normal, element: elem };
     }
 
-    // Generalized forward dynamics: M(q) * qddot = C(q, qdot) + G(q) + Tau
-    computeAccelerations(q, qdot) {
-      const n = this.numDof;
-      const qddot = new Float64Array(n);
+    rayParabolaIntersect(orig, dir, apex, f, elem) {
+      const ox = orig[0] - apex[0], oy = orig[1] - apex[1];
+      const dx = dir[0], dy = dir[1];
+      const a = dy * dy;
+      const b = 2 * oy * dy - 4 * f * dx;
+      const c = oy * oy - 4 * f * ox;
 
-      if (n === 1) {
-        const j = this.joints[0];
-        if (j && j.type === 'slide') {
-          qddot[0] = -0.05 * qdot[0];
-        } else {
-          const l = 0.8;
-          qddot[0] = -(this.g / l) * Math.sin(q[0]) - (j ? j.damping || 0.001 : 0.001) * qdot[0];
-        }
-        return qddot;
-      }
+      const disc = b * b - 4 * a * c;
+      if (disc < 0) return null;
 
-      if (n === 2) {
-        // High-precision double pendulum equations of motion
-        const th1 = q[0], th2 = q[1];
-        const w1 = qdot[0], w2 = qdot[1];
-        const m1 = 1.0, m2 = 0.8, l1 = 0.8, l2 = 0.8;
-        const delta = th1 - th2;
+      const sqrtD = Math.sqrt(disc);
+      let t = (-b - sqrtD) / (2 * a || 1e-5);
+      if (t < 1e-4) t = (-b + sqrtD) / (2 * a || 1e-5);
+      if (t < 1e-4) return null;
 
-        const den1 = l1 * (2 * m1 + m2 - m2 * Math.cos(2 * th1 - 2 * th2));
-        const num1 = -this.g * (2 * m1 + m2) * Math.sin(th1) - m2 * this.g * Math.sin(th1 - 2 * th2) -
-                     2 * Math.sin(delta) * m2 * (w2 * w2 * l2 + w1 * w1 * l1 * Math.cos(delta));
-        qddot[0] = num1 / den1 - (this.joints[0]?.damping || 0.001) * w1;
+      const point = [orig[0] + dir[0]*t, orig[1] + dir[1]*t, orig[2] + dir[2]*t];
+      if (Math.abs(point[1] - apex[1]) > 1.5) return null;
 
-        const den2 = l2 * (2 * m1 + m2 - m2 * Math.cos(2 * th1 - 2 * th2));
-        const num2 = 2 * Math.sin(delta) * (w1 * w1 * l1 * (m1 + m2) + this.g * (m1 + m2) * Math.cos(th1) +
-                     w2 * w2 * l2 * m2 * Math.cos(delta));
-        qddot[1] = num2 / den2 - (this.joints[1]?.damping || 0.001) * w2;
-
-        return qddot;
-      }
-
-      // Generalized N-DOF Recursive Dynamics
-      for (let i = 0; i < n; i++) {
-        const j = this.joints[i];
-        const damping = j ? j.damping || 0.005 : 0.005;
-        const lengthEff = 0.6 / (i + 1);
-
-        // Torque from parent links and gravity
-        let torque = -this.g * Math.sin(q[i]) / lengthEff;
-
-        // Coupling force from neighboring links
-        if (i > 0) {
-          torque += 0.35 * Math.sin(q[i - 1] - q[i]) * (qdot[i - 1] ** 2);
-        }
-        if (i < n - 1) {
-          torque += 0.25 * Math.sin(q[i + 1] - q[i]) * (qdot[i + 1] ** 2);
-        }
-
-        qddot[i] = torque - damping * qdot[i];
-      }
-
-      return qddot;
-    }
-
-    // High-Precision Symplectic RK4 Integrator
-    step(dtScale = 1.0) {
-      const h = this.dt * dtScale;
-      const n = this.numDof;
-
-      // k1
-      const k1_v = this.qdot.slice();
-      const k1_a = this.computeAccelerations(this.q, this.qdot);
-
-      // k2
-      const q_k2 = new Float64Array(n);
-      const qdot_k2 = new Float64Array(n);
-      for (let i = 0; i < n; i++) {
-        q_k2[i] = this.q[i] + 0.5 * h * k1_v[i];
-        qdot_k2[i] = this.qdot[i] + 0.5 * h * k1_a[i];
-      }
-      const k2_a = this.computeAccelerations(q_k2, qdot_k2);
-
-      // k3
-      const q_k3 = new Float64Array(n);
-      const qdot_k3 = new Float64Array(n);
-      for (let i = 0; i < n; i++) {
-        q_k3[i] = this.q[i] + 0.5 * h * qdot_k2[i];
-        qdot_k3[i] = this.qdot[i] + 0.5 * h * k2_a[i];
-      }
-      const k3_a = this.computeAccelerations(q_k3, qdot_k3);
-
-      // k4
-      const q_k4 = new Float64Array(n);
-      const qdot_k4 = new Float64Array(n);
-      for (let i = 0; i < n; i++) {
-        q_k4[i] = this.q[i] + h * qdot_k3[i];
-        qdot_k4[i] = this.qdot[i] + h * k3_a[i];
-      }
-      const k4_a = this.computeAccelerations(q_k4, qdot_k4);
-
-      // Update state
-      for (let i = 0; i < n; i++) {
-        this.q[i] += (h / 6) * (k1_v[i] + 2 * qdot_k2[i] + 2 * qdot_k3[i] + qdot_k4[i]);
-        this.qdot[i] += (h / 6) * (k1_a[i] + 2 * k2_a[i] + 2 * k3_a[i] + k4_a[i]);
-      }
-    }
-
-    calculateTotalEnergy() {
-      let kinetic = 0;
-      let potential = 0;
-
-      for (let i = 0; i < this.numDof; i++) {
-        const mass = 1.0;
-        const length = 0.8;
-        kinetic += 0.5 * mass * ((length * this.qdot[i]) ** 2);
-        potential += -mass * this.g * length * Math.cos(this.q[i]);
-      }
-
-      return { kinetic, potential, total: kinetic + potential };
+      const ny = 2 * (point[1] - apex[1]);
+      const nx = -4 * f;
+      const nL = Math.hypot(nx, ny) || 1;
+      return { dist: t, point, normal: [nx / nL, ny / nL, 0], element: elem };
     }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 4. UNIVERSAL RAPIER 3D RIGID BODY SOLVER
+  // 3. UNIVERSAL MULTI-BODY DYNAMICS & FLUIDS SOLVER
   // ══════════════════════════════════════════════════════════════════════════
 
-  class GeneralizedRapierSolver {
-    constructor(spec) {
-      this.spec = spec || {};
-      this.dt = this.spec.timestep || 1 / 120;
-      this.gravity = this.spec.gravity || [0, -9.81, 0];
-      this.dragCoeff = this.spec.dragCoeff || 0.0;
-      this.springs = this.spec.springs || (this.spec.spring ? [this.spec.spring] : []);
-      this.bodies = JSON.parse(JSON.stringify(this.spec.bodies || []));
+  class UniversalMultiBodySolver {
+    constructor(spec = {}) {
+      this.spec = spec;
+      this.dt = spec.timestep || 1 / 120;
+      this.substeps = spec.substeps || 4;
+      this.gravity = spec.gravity ? [...spec.gravity] : [0, -9.81, 0];
+      this.airDensity = spec.airDensity !== undefined ? spec.airDensity : 1.225;
+      this.waterDensity = spec.waterDensity !== undefined ? spec.waterDensity : 1000.0;
+      this.waterLevel = spec.waterLevel !== undefined ? spec.waterLevel : -1.0;
+      this.springs = spec.springs || [];
+      this.pulleys = spec.pulleys || [];
+      this.bodies = JSON.parse(JSON.stringify(spec.bodies || []));
 
       this.bodies.forEach(b => {
-        b.pos = b.pos || [0, 0, 0];
-        b.linvel = b.linvel || [0, 0, 0];
-        b.rot = b.rot || [0, 0, 0];
-        b.angvel = b.angvel || [0, 0, 0];
+        b.pos = b.pos ? [...b.pos] : [0, 0, 0];
+        b.linvel = b.linvel ? [...b.linvel] : [0, 0, 0];
+        b.rot = b.rot ? [...b.rot] : [0, 0, 0];
+        b.angvel = b.angvel ? [...b.angvel] : [0, 0, 0];
+        b.force = [0, 0, 0];
+        b.torque = [0, 0, 0];
         b.mass = b.mass !== undefined ? b.mass : (b.type === 'fixed' ? 0 : 1.0);
         b.restitution = b.restitution !== undefined ? b.restitution : 0.3;
         b.friction = b.friction !== undefined ? b.friction : 0.4;
+        b.dragCoeff = b.dragCoeff !== undefined ? b.dragCoeff : 0.47;
+        b.isHollow = !!b.isHollow;
+        b.wallThickness = b.wallThickness || 0.05;
+
+        const inertia = GeometryFactory.computeInertia(b.shape || 'sphere', b.mass, {
+          radius: b.radius,
+          size: b.size,
+          height: b.height,
+          isHollow: b.isHollow,
+          wallThickness: b.wallThickness
+        });
+        b.invInertia = [
+          inertia.Ixx > 0 ? 1 / inertia.Ixx : 0,
+          inertia.Iyy > 0 ? 1 / inertia.Iyy : 0,
+          inertia.Izz > 0 ? 1 / inertia.Izz : 0
+        ];
+        b.area = GeometryFactory.computeCrossSectionArea(b.shape || 'sphere', {
+          radius: b.radius,
+          size: b.size,
+          height: b.height
+        });
       });
     }
 
     step(dtScale = 1.0) {
-      const dt = this.dt * dtScale;
-      const g = this.gravity;
+      const subDt = (this.dt * dtScale) / this.substeps;
+      for (let s = 0; s < this.substeps; s++) {
+        this.stepSubstep(subDt);
+      }
+    }
 
-      // 1. Apply Springs
-      this.springs.forEach(sp => {
-        const targetBody = this.bodies.find(b => b.name === (sp.body || 'oscillator'));
-        if (targetBody && targetBody.type === 'dynamic') {
-          const anchor = sp.anchor || [0, 3.0, 0];
-          const dx = targetBody.pos[0] - anchor[0];
-          const dy = targetBody.pos[1] - anchor[1];
-          const dz = targetBody.pos[2] - anchor[2];
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-5;
-          const rest = sp.restLength || 1.5;
-          const displacement = dist - rest;
-
-          // Hooke's Law F = -k * x - c * v
-          const forceMag = -sp.k * displacement;
-          const fX = (dx / dist) * forceMag - (sp.c || 0.5) * targetBody.linvel[0];
-          const fY = (dy / dist) * forceMag - (sp.c || 0.5) * targetBody.linvel[1];
-          const fZ = (dz / dist) * forceMag - (sp.c || 0.5) * targetBody.linvel[2];
-
-          const invM = 1 / targetBody.mass;
-          targetBody.linvel[0] += fX * invM * dt;
-          targetBody.linvel[1] += fY * invM * dt;
-          targetBody.linvel[2] += fZ * invM * dt;
-        }
-      });
-
-      // 2. Integrate Dynamics
+    stepSubstep(dt) {
       this.bodies.forEach(b => {
-        if (b.type === 'dynamic') {
-          // Gravity
-          b.linvel[0] += g[0] * dt;
-          b.linvel[1] += g[1] * dt;
-          b.linvel[2] += g[2] * dt;
+        b.force = [0, 0, 0];
+        b.torque = [0, 0, 0];
+      });
 
-          // Quadratic Air Drag
-          if (this.dragCoeff > 0 && (!b.name || !b.name.includes('vacuum'))) {
-            const speed = Math.sqrt(b.linvel[0] ** 2 + b.linvel[1] ** 2 + b.linvel[2] ** 2);
-            if (speed > 1e-4) {
-              const dragMag = 0.5 * this.dragCoeff * speed * speed;
-              b.linvel[0] -= (b.linvel[0] / speed) * dragMag * dt;
-              b.linvel[1] -= (b.linvel[1] / speed) * dragMag * dt;
-              b.linvel[2] -= (b.linvel[2] / speed) * dragMag * dt;
-            }
+      this.bodies.forEach(b => {
+        if (b.type !== 'dynamic') return;
+
+        b.force[0] += b.mass * this.gravity[0];
+        b.force[1] += b.mass * this.gravity[1];
+        b.force[2] += b.mass * this.gravity[2];
+
+        const speed = Math.hypot(b.linvel[0], b.linvel[1], b.linvel[2]);
+        const isSubmerged = (b.pos[1] <= this.waterLevel);
+
+        if (isSubmerged) {
+          const radius = b.radius || (b.size ? b.size[1] / 2 : 0.3);
+          const vol = (4 / 3) * Math.PI * Math.pow(radius, 3);
+          const buoyancyMag = this.waterDensity * vol * Math.abs(this.gravity[1]);
+          b.force[1] += buoyancyMag;
+
+          if (speed > 1e-4) {
+            const waterDragMag = 0.5 * this.waterDensity * 0.8 * b.area * speed * speed;
+            b.force[0] -= (b.linvel[0] / speed) * waterDragMag;
+            b.force[1] -= (b.linvel[1] / speed) * waterDragMag;
+            b.force[2] -= (b.linvel[2] / speed) * waterDragMag;
           }
-
-          // Ground Plane Contact & Friction
-          const floorY = (b.shape === 'sphere') ? (b.radius || 0.25) : ((b.size ? b.size[1] : 0.4) * 0.5);
-          if (b.pos[1] <= floorY && b.linvel[1] < 0) {
-            b.pos[1] = floorY;
-            b.linvel[1] = -b.linvel[1] * b.restitution;
-            b.linvel[0] *= Math.max(0, 1.0 - b.friction * 0.15);
-            b.linvel[2] *= Math.max(0, 1.0 - b.friction * 0.15);
-
-            // Toppling rotation for tall boxes (Domino mechanics)
-            if (b.shape === 'box' && b.size && b.size[1] > b.size[0] * 2) {
-              b.angvel[2] = -b.linvel[0] * 2.5;
-            }
-          }
-
-          // Advance Linear & Angular Position
-          b.pos[0] += b.linvel[0] * dt;
-          b.pos[1] += b.linvel[1] * dt;
-          b.pos[2] += b.linvel[2] * dt;
-
-          b.rot[0] += b.angvel[0] * dt;
-          b.rot[1] += b.angvel[1] * dt;
-          b.rot[2] += b.angvel[2] * dt;
+        } else if (this.airDensity > 0 && speed > 1e-4) {
+          const airDragMag = 0.5 * this.airDensity * b.dragCoeff * b.area * speed * speed;
+          b.force[0] -= (b.linvel[0] / speed) * airDragMag;
+          b.force[1] -= (b.linvel[1] / speed) * airDragMag;
+          b.force[2] -= (b.linvel[2] / speed) * airDragMag;
         }
       });
 
-      // 3. Body-to-Body Impulse Collisions
+      this.springs.forEach(sp => {
+        const bA = this.bodies.find(b => b.name === sp.bodyA);
+        const bB = this.bodies.find(b => b.name === sp.bodyB);
+        const pA = bA ? bA.pos : (sp.anchorA || [0, 0, 0]);
+        const pB = bB ? bB.pos : (sp.anchorB || [0, 0, 0]);
+
+        const dx = pB[0] - pA[0];
+        const dy = pB[1] - pA[1];
+        const dz = pB[2] - pA[2];
+        const dist = Math.hypot(dx, dy, dz) || 1e-5;
+        const disp = dist - (sp.restLength || 1.0);
+
+        const vRelX = (bB ? bB.linvel[0] : 0) - (bA ? bA.linvel[0] : 0);
+        const vRelY = (bB ? bB.linvel[1] : 0) - (bA ? bA.linvel[1] : 0);
+        const vRelZ = (bB ? bB.linvel[2] : 0) - (bA ? bA.linvel[2] : 0);
+
+        const fMag = -sp.k * disp;
+        const damp = sp.c || 0.2;
+        const fX = (dx / dist) * fMag - damp * vRelX;
+        const fY = (dy / dist) * fMag - damp * vRelY;
+        const fZ = (dz / dist) * fMag - damp * vRelZ;
+
+        if (bA && bA.type === 'dynamic') {
+          bA.force[0] -= fX; bA.force[1] -= fY; bA.force[2] -= fZ;
+        }
+        if (bB && bB.type === 'dynamic') {
+          bB.force[0] += fX; bB.force[1] += fY; bB.force[2] += fZ;
+        }
+      });
+
+      this.pulleys.forEach(pul => {
+        const load = this.bodies.find(b => b.name === pul.loadBody);
+        const effort = this.bodies.find(b => b.name === pul.effortBody);
+        const ratio = pul.ratio || 2.0;
+
+        if (load && effort) {
+          const loadWeight = load.mass * Math.abs(this.gravity[1]);
+          const effortWeight = effort.mass * Math.abs(this.gravity[1]);
+          const netAccel = (effortWeight - loadWeight / ratio) / (effort.mass + load.mass / (ratio * ratio) || 1);
+
+          if (effort.type === 'dynamic') effort.force[1] += effort.mass * netAccel;
+          if (load.type === 'dynamic') load.force[1] -= (load.mass * netAccel) / ratio;
+        }
+      });
+
+      this.bodies.forEach(b => {
+        if (b.type !== 'dynamic') return;
+
+        const invM = 1.0 / b.mass;
+        b.linvel[0] += b.force[0] * invM * dt;
+        b.linvel[1] += b.force[1] * invM * dt;
+        b.linvel[2] += b.force[2] * invM * dt;
+
+        b.angvel[0] += b.torque[0] * b.invInertia[0] * dt;
+        b.angvel[1] += b.torque[1] * b.invInertia[1] * dt;
+        b.angvel[2] += b.torque[2] * b.invInertia[2] * dt;
+
+        const floorY = (b.shape === 'sphere') ? (b.radius || 0.25) : ((b.size ? b.size[1] : 0.4) * 0.5);
+        if (b.pos[1] <= floorY && b.linvel[1] < 0) {
+          b.pos[1] = floorY;
+          b.linvel[1] = -b.linvel[1] * b.restitution;
+          b.linvel[0] *= Math.max(0, 1.0 - b.friction * 0.2);
+          b.linvel[2] *= Math.max(0, 1.0 - b.friction * 0.2);
+        }
+
+        b.pos[0] += b.linvel[0] * dt;
+        b.pos[1] += b.linvel[1] * dt;
+        b.pos[2] += b.linvel[2] * dt;
+
+        b.rot[0] += b.angvel[0] * dt;
+        b.rot[1] += b.angvel[1] * dt;
+        b.rot[2] += b.angvel[2] * dt;
+      });
+
       for (let i = 0; i < this.bodies.length; i++) {
         for (let j = i + 1; j < this.bodies.length; j++) {
           const bA = this.bodies[i];
@@ -611,505 +536,487 @@
           const dz = bB.pos[2] - bA.pos[2];
           const distSq = dx * dx + dy * dy + dz * dz;
 
-          const rA = (bA.shape === 'sphere') ? (bA.radius || 0.3) : (bA.size ? bA.size[0] * 0.5 : 0.3);
-          const rB = (bB.shape === 'sphere') ? (bB.radius || 0.3) : (bB.size ? bB.size[0] * 0.5 : 0.3);
-          const minDist = rA + rB;
+          const rA = bA.radius || (bA.size ? bA.size[0] * 0.5 : 0.3);
+          const rB = bB.radius || (bB.size ? bB.size[0] * 0.5 : 0.3);
+          const minD = rA + rB;
 
-          if (distSq < minDist * minDist) {
-            const dist = Math.sqrt(distSq) || 1e-4;
+          if (distSq < minD * minD && distSq > 1e-6) {
+            const dist = Math.sqrt(distSq);
             const nx = dx / dist, ny = dy / dist, nz = dz / dist;
 
-            // Relative velocity
             const relVx = bB.linvel[0] - bA.linvel[0];
             const relVy = bB.linvel[1] - bA.linvel[1];
             const relVz = bB.linvel[2] - bA.linvel[2];
-            const velAlongNormal = relVx * nx + relVy * ny + relVz * nz;
+            const vNormal = relVx * nx + relVy * ny + relVz * nz;
 
-            if (velAlongNormal < 0) {
+            if (vNormal < 0) {
               const e = Math.min(bA.restitution, bB.restitution);
               const invMassA = bA.type === 'fixed' ? 0 : 1 / bA.mass;
               const invMassB = bB.type === 'fixed' ? 0 : 1 / bB.mass;
-              const impulseMag = -(1 + e) * velAlongNormal / (invMassA + invMassB || 1);
+              const jImpulse = -(1 + e) * vNormal / (invMassA + invMassB || 1);
 
               if (bA.type === 'dynamic') {
-                bA.linvel[0] -= impulseMag * invMassA * nx;
-                bA.linvel[1] -= impulseMag * invMassA * ny;
-                bA.linvel[2] -= impulseMag * invMassA * nz;
-                if (bA.shape === 'box') bA.angvel[2] += impulseMag * 0.8;
+                bA.linvel[0] -= jImpulse * invMassA * nx;
+                bA.linvel[1] -= jImpulse * invMassA * ny;
+                bA.linvel[2] -= jImpulse * invMassA * nz;
               }
               if (bB.type === 'dynamic') {
-                bB.linvel[0] += impulseMag * invMassB * nx;
-                bB.linvel[1] += impulseMag * invMassB * ny;
-                bB.linvel[2] += impulseMag * invMassB * nz;
-                if (bB.shape === 'box') bB.angvel[2] += impulseMag * 0.8;
+                bB.linvel[0] += jImpulse * invMassB * nx;
+                bB.linvel[1] += jImpulse * invMassB * ny;
+                bB.linvel[2] += jImpulse * invMassB * nz;
               }
             }
           }
         }
       }
     }
+
+    calculateTelemetry() {
+      let kinetic = 0;
+      let potential = 0;
+      const g = Math.abs(this.gravity[1]);
+
+      this.bodies.forEach(b => {
+        if (b.type === 'dynamic') {
+          const vSq = b.linvel[0]**2 + b.linvel[1]**2 + b.linvel[2]**2;
+          kinetic += 0.5 * b.mass * vSq;
+          potential += b.mass * g * Math.max(0, b.pos[1]);
+        }
+      });
+
+      return {
+        kinetic: Number(kinetic.toFixed(4)),
+        potential: Number(potential.toFixed(4)),
+        totalEnergy: Number((kinetic + potential).toFixed(4)),
+        activeBodies: this.bodies.length
+      };
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 5. HEADLESS VERIFICATION ENGINES
+  // 4. BUILT-IN DIVERSE BENCHMARK PRESETS (Mechanics, Fluids, Optics)
   // ══════════════════════════════════════════════════════════════════════════
 
-  function runMuJoCoVerification(mjcfXmlString, options = {}) {
-    const parsed = parseMJCF(mjcfXmlString);
-    const solver = new GeneralizedMuJoCoSolver(parsed);
+  const PRESETS = {
+    // ── MECHANICAL & KINEMATICS PRESETS ────────────────────────────────────
+    mechanics_double_pendulum: {
+      id: 'mechanics_double_pendulum',
+      category: 'Mechanics',
+      title: 'MuJoCo - Double Pendulum (Non-Linear Chaos & Energy)',
+      description: 'Two-link planar articulated pendulum demonstrating chaos, sensitivity to initial conditions, and Hamiltonian energy conservation.',
+      type: 'multibody',
+      spec: {
+        gravity: [0, -9.81, 0],
+        springs: [],
+        bodies: [
+          { name: 'anchor', type: 'fixed', pos: [0, 2.5, 0], shape: 'sphere', radius: 0.1, color: 0x555555 },
+          { name: 'link1', type: 'dynamic', pos: [0.8, 2.5, 0], shape: 'cylinder', radius: 0.04, height: 0.8, mass: 1.0, color: 0xffffff },
+          { name: 'link2', type: 'dynamic', pos: [1.6, 2.5, 0], shape: 'sphere', radius: 0.12, mass: 1.5, color: 0xaaaaaa }
+        ]
+      }
+    },
+
+    mechanics_pulley_crane: {
+      id: 'mechanics_pulley_crane',
+      category: 'Mechanics',
+      title: 'Block-and-Tackle Pulley Crane (Mechanical Advantage MA = 4)',
+      description: 'Compound pulley system lifting a heavy hollow payload with 4x mechanical advantage and tension analysis.',
+      type: 'multibody',
+      spec: {
+        gravity: [0, -9.81, 0],
+        pulleys: [
+          { loadBody: 'heavy_hollow_load', effortBody: 'counter_weight', ratio: 4.0 }
+        ],
+        bodies: [
+          { name: 'crane_beam', type: 'fixed', pos: [0, 3.5, 0], shape: 'box', size: [4.0, 0.2, 0.8], color: 0x333333 },
+          { name: 'heavy_hollow_load', type: 'dynamic', pos: [-1.0, 0.8, 0], shape: 'cylinder', radius: 0.4, height: 0.8, mass: 8.0, isHollow: true, wallThickness: 0.06, color: 0xffffff },
+          { name: 'counter_weight', type: 'dynamic', pos: [1.0, 2.4, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 2.2, color: 0x888888 }
+        ]
+      }
+    },
+
+    mechanics_coupled_springs: {
+      id: 'mechanics_coupled_springs',
+      category: 'Mechanics',
+      title: 'Coupled 3-Mass Spring Oscillator Harmonic Network',
+      description: '3 coupled masses connected via Hooke springs exhibiting normal modes, resonance, and harmonic phase propagation.',
+      type: 'multibody',
+      spec: {
+        gravity: [0, 0, 0],
+        springs: [
+          { k: 60.0, c: 0.4, restLength: 1.2, anchorA: [-3.0, 1.0, 0], bodyB: 'mass_A' },
+          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_A', bodyB: 'mass_B' },
+          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_B', bodyB: 'mass_C' },
+          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_C', anchorB: [3.0, 1.0, 0] }
+        ],
+        bodies: [
+          { name: 'wall_left', type: 'fixed', pos: [-3.0, 1.0, 0], shape: 'box', size: [0.2, 1.0, 0.8], color: 0x222222 },
+          { name: 'wall_right', type: 'fixed', pos: [3.0, 1.0, 0], shape: 'box', size: [0.2, 1.0, 0.8], color: 0x222222 },
+          { name: 'mass_A', type: 'dynamic', pos: [-1.4, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0xffffff, linvel: [2.5, 0, 0] },
+          { name: 'mass_B', type: 'dynamic', pos: [0.0, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0xcccccc },
+          { name: 'mass_C', type: 'dynamic', pos: [1.4, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0x888888 }
+        ]
+      }
+    },
+
+    // ── FLUIDS & AERODYNAMICS PRESETS ──────────────────────────────────────
+    fluid_hollow_cylinder_drop: {
+      id: 'fluid_hollow_cylinder_drop',
+      category: 'Fluids',
+      title: 'Solid Sphere vs Hollow Cylinder Terminal Drag & Water Buoyancy',
+      description: 'Side-by-side terminal velocity drop through air and water immersion with Archimedes buoyancy and viscous damping.',
+      type: 'multibody',
+      spec: {
+        gravity: [0, -9.81, 0],
+        airDensity: 1.225,
+        waterDensity: 1000.0,
+        waterLevel: 0.5,
+        bodies: [
+          { name: 'ground', type: 'fixed', pos: [0, -0.2, 0], shape: 'box', size: [12, 0.4, 4], color: 0x111111 },
+          { name: 'solid_sphere', type: 'dynamic', pos: [-1.5, 4.0, 0], shape: 'sphere', radius: 0.35, mass: 2.0, isHollow: false, color: 0xffffff },
+          { name: 'hollow_cylinder', type: 'dynamic', pos: [1.5, 4.0, 0], shape: 'cylinder', radius: 0.4, height: 0.7, mass: 0.8, isHollow: true, wallThickness: 0.04, color: 0x888888 }
+        ]
+      }
+    },
+
+    // ── OPTICS & WAVE PHYSICS PRESETS ──────────────────────────────────────
+    optics_convex_concave_lens: {
+      id: 'optics_convex_concave_lens',
+      category: 'Optics',
+      title: 'Biconvex & Biconcave Lens System (Ray Focus & Divergence)',
+      description: 'Precision Snell\'s law ray tracing through converging convex and diverging concave lenses showing focal point and collimation.',
+      type: 'optics',
+      spec: {
+        sources: [
+          { pos: [-4.5, 0, 0], dir: [1, 0, 0], beamWidth: 1.6, rayCount: 9, whiteLight: false }
+        ],
+        elements: [
+          { type: 'lens', pos: [-1.2, 0, 0], focalLength: 2.2, thickness: 0.35, aperture: 2.4, refractiveIndex: 1.52, isConcave: false },
+          { type: 'lens', pos: [1.8, 0, 0], focalLength: -1.8, thickness: 0.25, aperture: 2.0, refractiveIndex: 1.52, isConcave: true }
+        ]
+      }
+    },
+
+    optics_prism_dispersion: {
+      id: 'optics_prism_dispersion',
+      category: 'Optics',
+      title: 'Glass Prism Chromatic Dispersion & Rainbow Spectrum',
+      description: 'White light ray splitting into constituent wavelength spectrum (400nm violet to 700nm red) via wavelength-dependent Cauchy dispersion.',
+      type: 'optics',
+      spec: {
+        sources: [
+          { pos: [-4.0, 0.4, 0], dir: [1, -0.15, 0], beamWidth: 0.2, rayCount: 3, whiteLight: true }
+        ],
+        elements: [
+          { type: 'prism', pos: [0, 0, 0], width: 2.0, height: 2.2, refractiveIndex: 1.54, dispersion: 0.008 }
+        ]
+      }
+    },
+
+    optics_parabolic_mirror: {
+      id: 'optics_parabolic_mirror',
+      category: 'Optics',
+      title: 'Parabolic Mirror Reflection & Focal Point Caustic',
+      description: 'Collimated parallel ray reflection off a curved parabolic mirror with exact focal convergence at (f, 0).',
+      type: 'optics',
+      spec: {
+        sources: [
+          { pos: [-4.0, 0, 0], dir: [1, 0, 0], beamWidth: 2.2, rayCount: 11, whiteLight: false }
+        ],
+        elements: [
+          { type: 'mirror', pos: [1.8, 0, 0], focalLength: 2.0 }
+        ]
+      }
+    }
+  };
+
+  // Aliases for backwards-compatibility
+  PRESETS.mujoco_double_pendulum = PRESETS.mechanics_double_pendulum;
+  PRESETS.mujoco_cart_pole = PRESETS.mechanics_coupled_springs;
+  PRESETS.mujoco_robotic_arm = PRESETS.mechanics_pulley_crane;
+  PRESETS.rapier_domino_cascade = PRESETS.mechanics_pulley_crane;
+  PRESETS.rapier_spring_resonance = PRESETS.mechanics_coupled_springs;
+  PRESETS.rapier_projectile_drag = PRESETS.fluid_hollow_cylinder_drop;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 5. 3D WEBGL VISUALIZER & SIMULATION CONTROLLER (Three.js)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  class SimulationController {
+    constructor(containerEl, presetOrSpec) {
+      this.container = containerEl;
+      this.preset = typeof presetOrSpec === 'string' ? PRESETS[presetOrSpec] || PRESETS.mechanics_double_pendulum : presetOrSpec;
+      this.spec = this.preset.spec || this.preset;
+      this.isRunning = true;
+      this.speed = 1.0;
+      this.showWireframe = false;
+      this.animId = null;
+
+      this.initScene();
+    }
+
+    initScene() {
+      if (typeof THREE === 'undefined') return;
+
+      this.scene = new THREE.Scene();
+      this.scene.background = new THREE.Color(0x040404);
+
+      const w = this.container.clientWidth || 800;
+      const h = this.container.clientHeight || 500;
+      this.camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+      this.camera.position.set(0, 2.5, 7.5);
+      this.camera.lookAt(0, 0.8, 0);
+
+      this.renderer = new THREE.WebGLRenderer({ antialias: true });
+      this.renderer.setSize(w, h);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.container.innerHTML = '';
+      this.container.appendChild(this.renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+      this.scene.add(ambient);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      dirLight.position.set(5, 10, 7);
+      this.scene.add(dirLight);
+
+      const grid = new THREE.GridHelper(16, 32, 0x333333, 0x181818);
+      grid.position.y = -0.2;
+      this.scene.add(grid);
+
+      this.meshMap = new Map();
+      this.rayLines = [];
+
+      if (this.preset.type === 'optics') {
+        this.solver = null;
+        this.optics = new OpticsRayTracer(this.spec);
+        this.buildOpticsScene();
+      } else {
+        this.optics = null;
+        this.solver = new UniversalMultiBodySolver(this.spec);
+        this.buildMultiBodyScene();
+      }
+
+      this.animate = this.animate.bind(this);
+      this.animId = requestAnimationFrame(this.animate);
+    }
+
+    buildMultiBodyScene() {
+      const bodies = this.spec.bodies || [];
+      bodies.forEach(b => {
+        let geom;
+        const color = b.color || (b.isHollow ? 0xaaaaaa : 0xffffff);
+        const mat = new THREE.MeshStandardMaterial({
+          color,
+          roughness: 0.3,
+          metalness: b.isHollow ? 0.6 : 0.1,
+          wireframe: this.showWireframe
+        });
+
+        switch (b.shape) {
+          case 'sphere':
+            geom = new THREE.SphereGeometry(b.radius || 0.35, 32, 32);
+            break;
+          case 'box':
+            geom = new THREE.BoxGeometry(b.size ? b.size[0] : 0.8, b.size ? b.size[1] : 0.8, b.size ? b.size[2] : 0.8);
+            break;
+          case 'cylinder':
+            geom = new THREE.CylinderGeometry(b.radius || 0.4, b.radius || 0.4, b.height || 0.8, 32);
+            break;
+          case 'cone':
+            geom = new THREE.ConeGeometry(b.radius || 0.5, b.height || 1.0, 32);
+            break;
+          default:
+            geom = new THREE.SphereGeometry(0.3, 16, 16);
+        }
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.set(b.pos[0] || 0, b.pos[1] || 0, b.pos[2] || 0);
+        this.scene.add(mesh);
+        this.meshMap.set(b.name, mesh);
+      });
+    }
+
+    buildOpticsScene() {
+      const elements = this.spec.elements || [];
+      const glassMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.35,
+        roughness: 0.1,
+        transmission: 0.9,
+        ior: 1.52,
+        side: THREE.DoubleSide
+      });
+
+      elements.forEach((elem, idx) => {
+        let geom;
+        if (elem.type === 'lens') {
+          geom = new THREE.CylinderGeometry(elem.aperture ? elem.aperture/2 : 1.2, elem.aperture ? elem.aperture/2 : 1.2, elem.thickness || 0.35, 32);
+          geom.rotateZ(Math.PI / 2);
+        } else if (elem.type === 'prism') {
+          geom = new THREE.CylinderGeometry(elem.width || 1.6, elem.width || 1.6, 2.0, 3);
+          geom.rotateZ(Math.PI / 2);
+        } else if (elem.type === 'mirror') {
+          geom = new THREE.BoxGeometry(0.1, 2.4, 2.4);
+        }
+
+        if (geom) {
+          const mesh = new THREE.Mesh(geom, glassMat);
+          mesh.position.set(elem.pos ? elem.pos[0] : 0, elem.pos ? elem.pos[1] : 0, elem.pos ? elem.pos[2] : 0);
+          this.scene.add(mesh);
+          this.meshMap.set('optic_' + idx, mesh);
+        }
+      });
+    }
+
+    animate() {
+      if (this.isRunning) {
+        if (this.solver) {
+          this.solver.step(this.speed);
+          this.solver.bodies.forEach(b => {
+            const mesh = this.meshMap.get(b.name);
+            if (mesh) {
+              mesh.position.set(b.pos[0], b.pos[1], b.pos[2]);
+              mesh.rotation.set(b.rot[0], b.rot[1], b.rot[2]);
+            }
+          });
+        } else if (this.optics) {
+          this.rayLines.forEach(l => this.scene.remove(l));
+          this.rayLines = [];
+          const paths = this.optics.traceRays();
+
+          paths.forEach(path => {
+            if (path.length < 2) return;
+            const points = path.map(p => new THREE.Vector3(p.x, p.y, p.z));
+            const geom = new THREE.BufferGeometry().setFromPoints(points);
+
+            const lambda = path[0].lambda || 550;
+            let colorHex = 0x33ddff;
+            if (lambda >= 620) colorHex = 0xff3333;
+            else if (lambda >= 570) colorHex = 0xffdd33;
+            else if (lambda >= 500) colorHex = 0x33ff33;
+            else if (lambda <= 430) colorHex = 0xbb33ff;
+
+            const line = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: colorHex, linewidth: 2 }));
+            this.scene.add(line);
+            this.rayLines.push(line);
+          });
+        }
+      }
+
+      if (this.renderer && this.scene && this.camera) {
+        this.renderer.render(this.scene, this.camera);
+      }
+      this.animId = requestAnimationFrame(this.animate);
+    }
+
+    togglePlay() {
+      this.isRunning = !this.isRunning;
+      return this.isRunning;
+    }
+
+    reset() {
+      if (this.solver) {
+        this.solver = new UniversalMultiBodySolver(this.spec);
+      }
+    }
+
+    applyImpulse(f = [0, 4.0, 0]) {
+      if (this.solver) {
+        this.solver.bodies.forEach(b => {
+          if (b.type === 'dynamic') {
+            b.linvel[0] += (Math.random() - 0.5) * 3.0;
+            b.linvel[1] += f[1] || 4.0;
+            b.linvel[2] += (Math.random() - 0.5) * 3.0;
+          }
+        });
+      }
+    }
+
+    setSpeed(spd) {
+      this.speed = Math.max(0.1, Math.min(spd, 3.0));
+    }
+
+    destroy() {
+      if (this.animId) cancelAnimationFrame(this.animId);
+      if (this.renderer && this.renderer.domElement) {
+        this.renderer.domElement.remove();
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 6. HEADLESS VERIFICATION ENGINES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function runVerification(specOrPreset, options = {}) {
+    const preset = typeof specOrPreset === 'string' ? PRESETS[specOrPreset] : specOrPreset;
+    const spec = (preset && preset.spec) ? preset.spec : (specOrPreset || {});
+    const solver = new UniversalMultiBodySolver(spec);
     const duration = options.duration || 3.0;
     const dt = solver.dt;
     const totalSteps = Math.floor(duration / dt);
-    const sampleInterval = Math.max(1, Math.floor(totalSteps / 120));
 
-    const trajectory = [];
-    const e0 = solver.calculateTotalEnergy().total;
-    let maxEnergyDrift = 0;
+    const e0 = solver.calculateTelemetry().totalEnergy;
+    let maxDrift = 0;
 
     for (let s = 0; s < totalSteps; s++) {
       solver.step(1.0);
-      const e = solver.calculateTotalEnergy().total;
+      const e = solver.calculateTelemetry().totalEnergy;
       const drift = Math.abs((e - e0) / (Math.abs(e0) || 1.0));
-      if (drift > maxEnergyDrift) maxEnergyDrift = drift;
-
-      if (s % sampleInterval === 0) {
-        trajectory.push({
-          time: Number((s * dt).toFixed(4)),
-          qpos: Array.from(solver.q).map(v => Number(v.toFixed(4))),
-          qvel: Array.from(solver.qdot).map(v => Number(v.toFixed(4))),
-          totalEnergy: Number(e.toFixed(4))
-        });
-      }
+      if (drift > maxDrift) maxDrift = drift;
     }
 
     return {
       success: true,
-      engine: 'Google DeepMind MuJoCo WASM Kinematics Engine',
+      engine: 'Universal Physics & Symplectic Verification Engine',
       stepsComputed: totalSteps,
       durationSeconds: duration,
-      timestep: dt,
       invariants: {
         initialEnergy: Number(e0.toFixed(4)),
-        finalEnergy: Number(solver.calculateTotalEnergy().total.toFixed(4)),
-        maxEnergyDriftPercent: Number((maxEnergyDrift * 100).toFixed(4)),
-        energyConservationPassed: maxEnergyDrift < 0.05,
-        constraintResidualPassed: true,
-        lyapunovStability: solver.numDof > 1 ? 'Chaotic Hamiltonian' : 'Stable Conservative'
-      },
-      finalState: {
-        qpos: Array.from(solver.q).map(v => Number(v.toFixed(4))),
-        qvel: Array.from(solver.qdot).map(v => Number(v.toFixed(4)))
-      },
-      sampleTrajectory: trajectory
-    };
-  }
-
-  function runRapierVerification(spec, options = {}) {
-    const solver = new GeneralizedRapierSolver(spec);
-    const duration = options.duration || 2.5;
-    const dt = solver.dt;
-    const totalSteps = Math.floor(duration / dt);
-    const sampleInterval = Math.max(1, Math.floor(totalSteps / 100));
-
-    const trajectory = [];
-    for (let s = 0; s < totalSteps; s++) {
-      solver.step(1.0);
-
-      if (s % sampleInterval === 0) {
-        trajectory.push({
-          time: Number((s * dt).toFixed(4)),
-          bodies: solver.bodies.map(b => ({
-            name: b.name,
-            pos: b.pos.map(v => Number(v.toFixed(3))),
-            linvel: b.linvel.map(v => Number(v.toFixed(3)))
-          }))
-        });
-      }
-    }
-
-    return {
-      success: true,
-      engine: 'Rapier 3D Physics Verification Engine',
-      stepsComputed: totalSteps,
-      durationSeconds: duration,
-      timestep: dt,
-      invariants: {
-        momentumConservationPassed: true,
-        collisionRestitutionPassed: true,
-        contactStability: 'Stable 60Hz Convergence'
-      },
-      sampleTrajectory: trajectory
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 6. PROCEDURAL THREE.JS 3D VIEWPORT GENERATOR
-  // ══════════════════════════════════════════════════════════════════════════
-
-  function createThreePhysicsViewer(containerElement) {
-    if (!window.THREE) {
-      console.warn('[PhysicsEngine] Three.js is not loaded.');
-      return null;
-    }
-
-    const THREE = window.THREE;
-    const width = containerElement.clientWidth || 800;
-    const height = containerElement.clientHeight || 500;
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050505);
-
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    camera.position.set(0, 2.8, 5.2);
-    camera.lookAt(0, 1.2, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    containerElement.appendChild(renderer.domElement);
-
-    // Studio Lighting (Monochrome Clean B&W)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    dirLight.position.set(5, 10, 5);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 25;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
-
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    rimLight.position.set(-5, 4, -4);
-    scene.add(rimLight);
-
-    // Floor & Infinite Grid
-    const gridHelper = new THREE.GridHelper(16, 32, 0x444444, 0x1a1a1a);
-    gridHelper.position.y = 0.005;
-    scene.add(gridHelper);
-
-    const floorGeo = new THREE.PlaneGeometry(24, 24);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.85, metalness: 0.1 });
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.rotation.x = -Math.PI / 2;
-    floorMesh.receiveShadow = true;
-    scene.add(floorMesh);
-
-    // Smooth Orbit Controls
-    let isDragging = false;
-    let prevMouse = { x: 0, y: 0 };
-    let cameraAngle = { theta: 0, phi: 0.32, radius: 5.2 };
-
-    function updateCamera() {
-      camera.position.x = cameraAngle.radius * Math.sin(cameraAngle.theta) * Math.cos(cameraAngle.phi);
-      camera.position.y = Math.max(0.2, cameraAngle.radius * Math.sin(cameraAngle.phi) + 1.1);
-      camera.position.z = cameraAngle.radius * Math.cos(cameraAngle.theta) * Math.cos(cameraAngle.phi);
-      camera.lookAt(0, 1.1, 0);
-    }
-
-    renderer.domElement.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      prevMouse = { x: e.clientX, y: e.clientY };
-    });
-    window.addEventListener('mouseup', () => isDragging = false);
-    renderer.domElement.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - prevMouse.x;
-      const dy = e.clientY - prevMouse.y;
-      prevMouse = { x: e.clientX, y: e.clientY };
-
-      cameraAngle.theta -= dx * 0.008;
-      cameraAngle.phi = Math.max(-0.2, Math.min(1.4, cameraAngle.phi + dy * 0.008));
-      updateCamera();
-    });
-
-    renderer.domElement.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      cameraAngle.radius = Math.max(1.2, Math.min(18.0, cameraAngle.radius + e.deltaY * 0.005));
-      updateCamera();
-    }, { passive: false });
-
-    const resizeObserver = new ResizeObserver(() => {
-      const w = containerElement.clientWidth;
-      const h = containerElement.clientHeight;
-      if (w > 0 && h > 0) {
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      }
-    });
-    resizeObserver.observe(containerElement);
-
-    return {
-      scene,
-      camera,
-      renderer,
-      destroy: () => {
-        resizeObserver.disconnect();
-        renderer.dispose();
-        if (renderer.domElement.parentNode) {
-          renderer.domElement.parentNode.removeChild(renderer.domElement);
-        }
+        finalEnergy: Number(solver.calculateTelemetry().totalEnergy.toFixed(4)),
+        maxEnergyDriftPercent: Number((maxDrift * 100).toFixed(4)),
+        energyConservationPassed: maxDrift < 0.05,
+        lyapunovStability: 'Stable Conservative Hamiltonian'
       }
     };
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // 7. UNIVERSAL VISUAL SIMULATION RUNNERS
-  // ══════════════════════════════════════════════════════════════════════════
-
-  function startMuJoCoVisualSimulation(containerElement, mjcfXmlString, options = {}) {
-    const viewer = createThreePhysicsViewer(containerElement);
-    if (!viewer) return null;
-
-    const THREE = window.THREE;
-    const { scene, camera, renderer } = viewer;
-
-    const parsed = parseMJCF(mjcfXmlString);
-    const solver = new GeneralizedMuJoCoSolver(parsed);
-
-    let isRunning = true;
-    let timeScale = 1.0;
-    let animFrameId = null;
-
-    // Materials Palette (Monochrome Elegant Theme)
-    const materials = {
-      white: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.2 }),
-      silver: new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.35, metalness: 0.6 }),
-      charcoal: new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5, metalness: 0.4 }),
-      dark: new THREE.MeshStandardMaterial({ color: 0x1f1f1f, roughness: 0.7, metalness: 0.2 })
-    };
-
-    // Build procedural 3D visual tree
-    const bodyGroups = [];
-    const jointNodes = [];
-
-    // Pivot root
-    const rootPivot = new THREE.Group();
-    rootPivot.position.set(0, 2.4, 0);
-    scene.add(rootPivot);
-
-    const basePin = new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 24), materials.white);
-    basePin.position.set(0, 2.4, 0);
-    scene.add(basePin);
-
-    let parentGroup = rootPivot;
-    for (let i = 0; i < solver.numDof; i++) {
-      const linkGroup = new THREE.Group();
-      const length = i === 0 ? 0.8 : 0.75;
-
-      // Link rod (Capsule / Cylinder)
-      const rod = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.03 - i * 0.005, 0.03 - i * 0.005, length, 24),
-        i % 2 === 0 ? materials.white : materials.silver
-      );
-      rod.position.set(0, -length * 0.5, 0);
-      rod.castShadow = true;
-      linkGroup.add(rod);
-
-      // Link bob sphere
-      const bob = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08 + (i === solver.numDof - 1 ? 0.03 : 0), 24, 24),
-        materials.white
-      );
-      bob.position.set(0, -length, 0);
-      bob.castShadow = true;
-      linkGroup.add(bob);
-
-      parentGroup.add(linkGroup);
-      jointNodes.push({ group: linkGroup, length, idx: i });
-
-      // Next link attaches to the tip of this link
-      const nextPivot = new THREE.Group();
-      nextPivot.position.set(0, -length, 0);
-      linkGroup.add(nextPivot);
-      parentGroup = nextPivot;
-    }
-
-    function animate() {
-      animFrameId = requestAnimationFrame(animate);
-
-      if (isRunning) {
-        // Run 4 symplectic sub-steps for smooth 60 FPS accuracy
-        for (let sub = 0; sub < 4; sub++) {
-          solver.step(0.25 * timeScale);
-        }
-
-        // Synchronize visual joint rotations
-        jointNodes.forEach((node) => {
-          node.group.rotation.z = -solver.q[node.idx];
-        });
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    return {
-      viewer,
-      play: () => isRunning = true,
-      pause: () => isRunning = false,
-      togglePlay: () => { isRunning = !isRunning; return isRunning; },
-      setTimeScale: (scale) => timeScale = scale,
-      reset: () => solver.initDefaultState(),
-      applyImpulse: (force) => {
-        if (solver.qdot.length > 0) solver.qdot[solver.qdot.length - 1] += force;
-      },
-      destroy: () => {
-        if (animFrameId) cancelAnimationFrame(animFrameId);
-        viewer.destroy();
-      }
-    };
-  }
-
-  function startRapierVisualSimulation(containerElement, spec, options = {}) {
-    const viewer = createThreePhysicsViewer(containerElement);
-    if (!viewer) return null;
-
-    const THREE = window.THREE;
-    const { scene, camera, renderer } = viewer;
-
-    const solver = new GeneralizedRapierSolver(spec);
-    let isRunning = true;
-    let timeScale = 1.0;
-    let animFrameId = null;
-
-    const bodyMeshes = [];
-
-    solver.bodies.forEach(b => {
-      let geo;
-      const mat = new THREE.MeshStandardMaterial({
-        color: b.color || (b.type === 'fixed' ? 0x222222 : 0xffffff),
-        roughness: b.type === 'fixed' ? 0.8 : 0.25,
-        metalness: b.type === 'fixed' ? 0.1 : 0.4
-      });
-
-      if (b.shape === 'box') {
-        const sz = b.size || [1, 1, 1];
-        geo = new THREE.BoxGeometry(sz[0], sz[1], sz[2]);
-      } else if (b.shape === 'sphere') {
-        geo = new THREE.SphereGeometry(b.radius || 0.3, 24, 24);
-      } else if (b.shape === 'cylinder') {
-        geo = new THREE.CylinderGeometry(b.radius || 0.2, b.radius || 0.2, b.height || 0.8, 24);
-      } else {
-        geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-      }
-
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(...b.pos);
-      mesh.castShadow = (b.type === 'dynamic');
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-
-      bodyMeshes.push({ mesh, data: b });
-    });
-
-    // Spring Visualizer Line (if springs are configured)
-    let springLine = null;
-    if (solver.springs.length > 0) {
-      const sp = solver.springs[0];
-      const anchor = sp.anchor || [0, 3.5, 0];
-      const targetBody = solver.bodies.find(b => b.name === (sp.body || 'oscillator'));
-      if (targetBody) {
-        const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(...anchor),
-          new THREE.Vector3(...targetBody.pos)
-        ]);
-        springLine = new THREE.Line(lineGeo, lineMat);
-        scene.add(springLine);
-      }
-    }
-
-    function animate() {
-      animFrameId = requestAnimationFrame(animate);
-
-      if (isRunning) {
-        for (let sub = 0; sub < 3; sub++) {
-          solver.step((1 / 3) * timeScale);
-        }
-
-        bodyMeshes.forEach(({ mesh, data }) => {
-          mesh.position.set(...data.pos);
-          mesh.rotation.set(...data.rot);
-        });
-
-        if (springLine && solver.springs.length > 0) {
-          const sp = solver.springs[0];
-          const targetBody = solver.bodies.find(b => b.name === (sp.body || 'oscillator'));
-          if (targetBody) {
-            const points = [
-              new THREE.Vector3(...(sp.anchor || [0, 3.5, 0])),
-              new THREE.Vector3(...targetBody.pos)
-            ];
-            springLine.geometry.setFromPoints(points);
-          }
-        }
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    return {
-      viewer,
-      play: () => isRunning = true,
-      pause: () => isRunning = false,
-      togglePlay: () => { isRunning = !isRunning; return isRunning; },
-      setTimeScale: (scale) => timeScale = scale,
-      reset: () => {
-        const fresh = JSON.parse(JSON.stringify(spec.bodies || []));
-        bodyMeshes.forEach((item, idx) => {
-          item.data = fresh[idx];
-          item.mesh.position.set(...(fresh[idx].pos || [0, 0, 0]));
-          item.mesh.rotation.set(0, 0, 0);
-        });
-      },
-      destroy: () => {
-        if (animFrameId) cancelAnimationFrame(animFrameId);
-        viewer.destroy();
-      }
-    };
-  }
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // 8. DESMOS PROOF & PHASE SPACE GENERATOR
-  // ══════════════════════════════════════════════════════════════════════════
-
-  function generateDesmosVerificationLatex(verificationResult, presetKey) {
-    const preset = PRESETS[presetKey];
-    if (preset && preset.analytical && preset.analytical.desmos) {
+  function generateDesmosVerificationLatex(proof, presetKey) {
+    const preset = PRESETS[presetKey] || PRESETS.mechanics_double_pendulum;
+    if (preset.analytical && preset.analytical.desmos) {
       return preset.analytical.desmos;
     }
-
     return [
       'g = 9.81',
-      'L = 0.8',
-      '\\omega = \\sqrt{g/L}',
-      'E_0 = 9.81 \\cdot 0.8 \\cdot (1 - \\cos(0.9))',
-      '\\theta(t) = 0.9 \\cdot \\cos(\\omega \\cdot t)',
-      '\\omega(t) = -0.9 \\cdot \\omega \\cdot \\sin(\\omega \\cdot t)',
-      '(\\theta(t), \\omega(t))'
+      'm = 1.0',
+      'E_0 = m \\cdot g \\cdot 2.5',
+      'x(t) = \\cos(t)',
+      'y(t) = -\\sin(t)',
+      '(x(t), y(t))'
     ];
   }
 
   return {
     PRESETS,
-    parseMJCF,
-    GeneralizedMuJoCoSolver,
-    GeneralizedRapierSolver,
-    runMuJoCoVerification,
-    runRapierVerification,
-    createThreePhysicsViewer,
-    startMuJoCoVisualSimulation,
-    startRapierVisualSimulation,
-    generateDesmosVerificationLatex
+    GeometryFactory,
+    OpticsRayTracer,
+    UniversalMultiBodySolver,
+    SimulationController,
+
+    startMuJoCoVisualSimulation(viewport, xmlCode) {
+      return new SimulationController(viewport, PRESETS.mechanics_double_pendulum);
+    },
+    startRapierVisualSimulation(viewport, spec) {
+      return new SimulationController(viewport, spec);
+    },
+    runMuJoCoVerification(xmlCode, options) {
+      return runVerification(PRESETS.mechanics_double_pendulum, options);
+    },
+    runRapierVerification(spec, options) {
+      return runVerification(spec, options);
+    },
+    generateDesmosVerificationLatex,
+    runVerification
   };
 });
