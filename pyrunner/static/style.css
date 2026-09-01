@@ -644,7 +644,34 @@ body::after {
 .output-mount::-webkit-scrollbar-thumb:hover { background: var(--glass-border-hover); }
 
 /* Welcome state */
-.output-welcome { color: var(--text-muted); padding: 4px 0; }
+.output-welcome {
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 0;
+}
+
+/* ── GLOBAL SCROLLBARS ────────────────────────────────────────── */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.4) #080808;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #080808;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid #000000;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
 .welcome-prompt { display: flex; align-items: center; gap: 10px; }
 .prompt-caret   { color: var(--white); font-weight: 700; animation: blink 1.2s step-end infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
@@ -4428,34 +4455,44 @@ body::after {
   .landing-footer { flex-direction: column; gap: 16px; align-items: flex-start; }
 }
 
-/* ── Branding Logos (Original Ratio & High-Contrast) ─────── */
-.brand-logo-img {
-  height: 40px;
-  width: 40px;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  box-shadow: 2px 2px 0 rgba(255,255,255,0.2);
-  transition: transform 0.15s ease;
-  display: block;
+/* ── Branding Logos (Pixelify Sans Bold & Clear) ─────────── */
+.brand-text-logo {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: clamp(30px, 3.5vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  text-transform: uppercase;
+  line-height: 1;
+  display: inline-block;
+  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.15s ease, text-shadow 0.15s ease;
 }
 
-.brand-logo-img:hover {
-  transform: scale(1.05);
+.landing-logo {
+  text-decoration: none;
+}
+
+.landing-logo:hover .brand-text-logo {
+  transform: scale(1.04);
+  text-shadow: 5px 5px 0 #ffffff;
 }
 
 .nav-brand {
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
 }
 
-.nav-brand-logo {
-  height: 22px;
-  width: 22px;
-  object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid rgba(255,255,255,0.2);
+.nav-brand-text {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.3);
 }
 
 .footer-logo-wrap {
@@ -4463,24 +4500,25 @@ body::after {
   align-items: center;
 }
 
-.footer-logo-img {
-  height: 48px;
-  width: 48px;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1.5px solid rgba(255,255,255,0.2);
-  box-shadow: 3px 3px 0 rgba(255,255,255,0.15);
+.footer-brand-text {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.3);
 }
 
-.auth-modal-logo {
-  height: 52px;
-  width: 52px;
-  object-fit: contain;
-  border-radius: 10px;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  margin: 0 auto 16px auto;
-  display: block;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+.auth-logo-text {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  margin: 0 auto 12px auto;
+  text-align: center;
+  text-shadow: 4px 4px 0 rgba(255, 255, 255, 0.35);
 }
 
 /* ── Original Widescreen Product Image Showcase ──────────── */

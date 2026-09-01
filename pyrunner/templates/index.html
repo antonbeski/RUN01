@@ -53,7 +53,7 @@
     <!-- SITE HEADER -->
     <header class="site-header" role="banner">
       <a href="#top" class="landing-logo" aria-label="RUN01 home">
-        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01 Logo" class="brand-logo-img" />
+        <span class="brand-text-logo">RUN01</span>
       </a>
       <nav aria-label="Primary navigation" class="landing-nav hidden-mobile">
         <a href="#landingEngine">ENGINE</a>
@@ -323,7 +323,7 @@
     <!-- FOOTER -->
     <footer class="landing-footer">
       <div class="footer-logo-wrap">
-        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="footer-logo-img" />
+        <span class="footer-brand-text">RUN01</span>
       </div>
       <p>PYTHON &times; WASM &times; YOUR BROWSER</p>
       <p>&copy; 2026 RUN01</p>
@@ -343,8 +343,7 @@
     </button>
 
     <div class="nav-brand" id="navBrand" role="button" title="RUN01" aria-label="Run01">
-      <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="nav-brand-logo" />
-      <span>RUN01</span>
+      <span class="nav-brand-text">RUN01</span>
     </div>
 
     <div class="nav-status" id="navStatus" role="status" aria-live="polite">
@@ -735,7 +734,7 @@
       <button class="auth-modal-close" id="btnCloseAuthModal" aria-label="Close modal">&times;</button>
       
       <div class="auth-modal-header">
-        <img src="{{ url_for('static', filename='run01-logo.jpg') }}" alt="RUN01" class="auth-modal-logo" />
+        <div class="auth-logo-text">RUN01</div>
         <h2 class="auth-modal-title" id="authModalTitle">Welcome to RUN01</h2>
         <p class="auth-modal-subtitle">Sign in to save your workspace & manage your account.</p>
       </div>
