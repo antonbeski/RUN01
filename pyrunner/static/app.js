@@ -868,7 +868,7 @@ function startPyodideInit() {
   pyodideInitPromise = initPyodide().catch((err) => {
     console.error('Pyodide init failed:', err);
     setStatus('error', 'Python init failed — check console');
-    appendToOutput(`⚠ Failed to initialise Python:\n${err.message ?? err}`, 'err');
+    appendToOutput(` Failed to initialise Python:\n${err.message ?? err}`, 'err');
   });
 
   Promise.all([monacoReady, pyodideInitPromise]).then(() => {
@@ -1129,7 +1129,7 @@ async function renderPlotly(encoded, block) {
     wrap.innerHTML = '';
     const msg = document.createElement('span');
     msg.className   = 'out-line err';
-    msg.textContent = '⚠ Chart render failed: ' + (err.message ?? String(err));
+    msg.textContent = ' Chart render failed: ' + (err.message ?? String(err));
     wrap.appendChild(msg);
   }
 
@@ -2130,7 +2130,7 @@ async function downloadStaticDataset(staticInfo, node) {
     localStorage.setItem(`run01-dl-${staticInfo.key}`, new Date().toISOString());
     renderStaticDownloadStatus(staticInfo);
   } catch (err) {
-    statusEl.textContent = `⚠ Download failed: ${err.message ?? err}`;
+    statusEl.textContent = ` Download failed: ${err.message ?? err}`;
   } finally {
     btn.disabled = false;
     btn.textContent = originalLabel;
@@ -3081,7 +3081,7 @@ document.addEventListener('keydown', (e) => {
         openStudioBtn.className = 'ai-code-btn';
         openStudioBtn.style.color = '#34d399';
         openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = '⚡ Open in Physics Studio';
+        openStudioBtn.textContent = ' Open in Physics Studio';
         openStudioBtn.addEventListener('click', () => {
           if (window.openPhysicsStudioWithSpec) {
             window.openPhysicsStudioWithSpec('mujoco', xmlCode, 'AI MuJoCo Simulation');
@@ -3159,7 +3159,7 @@ document.addEventListener('keydown', (e) => {
         openStudioBtn.className = 'ai-code-btn';
         openStudioBtn.style.color = '#34d399';
         openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = '⚡ Open in Physics Studio';
+        openStudioBtn.textContent = ' Open in Physics Studio';
         openStudioBtn.addEventListener('click', () => {
           if (window.openPhysicsStudioWithSpec) {
             window.openPhysicsStudioWithSpec('rapier', JSON.stringify(specObj, null, 2), 'Rapier 3D Simulation');
@@ -3283,7 +3283,7 @@ document.addEventListener('keydown', (e) => {
         if (isPython) {
           const runBtn = document.createElement('button');
           runBtn.className = 'ai-code-btn';
-          runBtn.textContent = '⚡ Run';
+          runBtn.textContent = ' Run';
           runBtn.style.color = '#4ade80';
           runBtn.style.fontWeight = 'bold';
           runBtn.addEventListener('click', () => {
@@ -3291,7 +3291,7 @@ document.addEventListener('keydown', (e) => {
               monacoEditor.setValue(codeLines);
               runBtn.textContent = 'Running...';
               triggerRun();
-              setTimeout(() => runBtn.textContent = '⚡ Run', 2000);
+              setTimeout(() => runBtn.textContent = ' Run', 2000);
             }
           });
           actions.appendChild(runBtn);
@@ -3642,7 +3642,7 @@ document.addEventListener('keydown', (e) => {
     return null;
   }
 
-  // ⚡ Run (inside input area, shown after code generated)
+  //  Run (inside input area, shown after code generated)
   const aiActionRunBar = document.getElementById('aiActionRunBar');
   if (aiActionRunBar) {
     aiActionRunBar.addEventListener('click', () => {
@@ -3653,7 +3653,7 @@ document.addEventListener('keydown', (e) => {
         triggerRun();
         const bar = document.getElementById('aiCodeActionBar');
         setTimeout(() => {
-          aiActionRunBar.textContent = '⚡ Run';
+          aiActionRunBar.textContent = ' Run';
           if (bar) bar.classList.remove('visible');
         }, 2200);
       } else {
@@ -4588,7 +4588,7 @@ window.ViewManager = (function() {
     openStudioBtn.className = 'ai-code-btn';
     openStudioBtn.style.color = '#34d399';
     openStudioBtn.style.fontWeight = 'bold';
-    openStudioBtn.textContent = '⚡ Open in Physics Studio';
+    openStudioBtn.textContent = ' Open in Physics Studio';
     openStudioBtn.addEventListener('click', () => {
       window.openPhysicsStudioWithSpec(type, specOrXml, title);
     });

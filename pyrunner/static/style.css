@@ -1,5 +1,5 @@
 /* ============================================================
-   Run01 â€” Premium Monochrome Glassmorphic Theme  (v2)
+   Run01  -  Premium Monochrome Glassmorphic Theme  (v2)
    Full design system: Black / White / Gray palette.
    New in v2: language tabs, init overlay, plot/chart output.
    ============================================================ */
@@ -11,7 +11,7 @@
 }
 
 :root {
-  /* â”€â”€ Palette â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* -- Palette ----------------------- */
   --bg:                  #050505;
   --glass-bg:            rgba(255,255,255,0.02);
   --glass-bg-hover:      rgba(255,255,255,0.05);
@@ -27,18 +27,18 @@
   --white:               #FFFFFF;
   --black:               #000000;
 
-  /* â”€â”€ Typography â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* -- Typography ------------------- */
   --font-ui:   'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-logo: 'Pixelify Sans', sans-serif;
 
-  /* â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* -- Layout ----------------------- */
   --nav-h:    56px;
   --radius:   12px;
   --radius-sm: 6px;
 }
 
-/* â”€â”€ LIGHT THEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- LIGHT THEME ------------------------------------------ */
 [data-theme="light"] {
   --bg:                  #F2F2F7;
   --glass-bg:            rgba(255,255,255,0.75);
@@ -126,7 +126,7 @@
   border: 1px solid rgba(0,0,0,0.15);
 }
 
-/* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- BASE ------------------------------------------------- */
 html, body {
   min-height: 100%;
   background: #000000;
@@ -145,7 +145,7 @@ body.in-ide {
   overflow: hidden;
 }
 
-/* Ambient glow â€” top-left */
+/* Ambient glow  -  top-left */
 body::before {
   content: '';
   position: fixed;
@@ -155,7 +155,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
 }
-/* Ambient glow â€” bottom-right */
+/* Ambient glow  -  bottom-right */
 body::after {
   content: '';
   position: fixed;
@@ -166,7 +166,7 @@ body::after {
   z-index: 0;
 }
 
-/* â”€â”€ NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- NAV -------------------------------------------------- */
 .nav {
   height: var(--nav-h);
   margin: 14px 14px 7px;
@@ -185,7 +185,7 @@ body::after {
   transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
-/* â”€â”€ LOGO â€” Pixelify Sans only, always â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- LOGO  -  Pixelify Sans only, always -------------------- */
 .nav-brand {
   display: flex;
   align-items: center;
@@ -198,7 +198,7 @@ body::after {
   color: var(--white);
 }
 
-/* â”€â”€ NAV STATUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- NAV STATUS ------------------------------------------- */
 .nav-status {
   display: flex;
   align-items: center;
@@ -260,7 +260,7 @@ body::after {
   text-overflow: ellipsis;
 }
 
-/* â”€â”€ NAV ACTIONS / BUTTONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- NAV ACTIONS / BUTTONS --------------------------------- */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -323,7 +323,7 @@ body::after {
   margin-left: 2px;
 }
 
-/* â”€â”€ DATA DROPDOWN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- DATA DROPDOWN ----------------------------------------- */
 .data-dropdown-wrap {
   position: relative;
 }
@@ -447,7 +447,7 @@ body::after {
 [data-theme="light"] .ds-name { color: #1D1D1F; }
 [data-theme="light"] .ds-desc { color: #8E8E93; }
 
-/* â”€â”€ WORKSPACE OUTER (column: editor row on top, dex panel below) â”€ */
+/* -- WORKSPACE OUTER (column: editor row on top, dex panel below) - */
 .workspace-outer {
   display: flex;
   flex-direction: column;
@@ -457,7 +457,7 @@ body::after {
   z-index: 10;
 }
 
-/* â”€â”€ WORKSPACE (horizontal editor | output row) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- WORKSPACE (horizontal editor | output row) --------------- */
 .workspace {
   display: flex;
   flex: 1 1 auto;
@@ -473,7 +473,7 @@ body::after {
   z-index: 10;
 }
 
-/* â”€â”€ PANES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- PANES ------------------------------------------------- */
 .pane {
   display: flex;
   flex-direction: column;
@@ -508,7 +508,7 @@ body::after {
   padding: 0 16px;
 }
 
-/* â”€â”€ LANGUAGE TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- LANGUAGE TABS ----------------------------------------- */
 .lang-tabs {
   display: flex;
   align-items: stretch;
@@ -576,7 +576,7 @@ body::after {
   color: var(--text-muted);
 }
 
-/* â”€â”€ PILLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- PILLS ------------------------------------------------- */
 .pill {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -598,7 +598,7 @@ body::after {
   opacity: 0.65;
 }
 
-/* â”€â”€ EDITOR MOUNT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- EDITOR MOUNT ------------------------------------------ */
 .editor-mount {
   flex: 1;
   overflow: hidden;
@@ -610,7 +610,7 @@ body::after {
   background: #ffffff;
 }
 
-/* â”€â”€ RESIZE HANDLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- RESIZE HANDLE ----------------------------------------- */
 .resize-handle {
   width: 1px;
   background: var(--glass-border);
@@ -627,7 +627,7 @@ body::after {
   width: 3px;
 }
 
-/* â”€â”€ OUTPUT MOUNT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- OUTPUT MOUNT ------------------------------------------ */
 .output-mount {
   flex: 1;
   overflow-y: auto;
@@ -691,7 +691,7 @@ body::after {
   color: var(--text);
 }
 
-/* â”€â”€ OUTPUT LINES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- OUTPUT LINES ------------------------------------------ */
 .out-line {
   white-space: pre-wrap;
   word-break: break-word;
@@ -744,7 +744,7 @@ body::after {
   font-family: var(--font-mono);
 }
 
-/* â”€â”€ INLINE PLOT OUTPUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- INLINE PLOT OUTPUT ------------------------------------ */
 .out-plot-wrap {
   margin: 12px 0;
   border-radius: 10px;
@@ -763,7 +763,7 @@ body::after {
   border-radius: 10px;
 }
 
-/* â”€â”€ INLINE PLOTLY OUTPUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- INLINE PLOTLY OUTPUT ---------------------------------- */
 .out-plotly-wrap {
   margin: 12px 0;
   border-radius: 10px;
@@ -775,7 +775,7 @@ body::after {
   background: #0a0a0a;
 }
 
-/* â”€â”€ GLOBAL SCROLLBARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- GLOBAL SCROLLBARS ------------------------------------- */
 * { scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent; }
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -783,7 +783,7 @@ body::after {
 ::-webkit-scrollbar-thumb:hover { background: var(--glass-border-hover); }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   INIT OVERLAY â€” full-screen loading splash
+   INIT OVERLAY  -  full-screen loading splash
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .init-overlay {
   position: fixed;
@@ -815,7 +815,7 @@ body::after {
   box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.4);
 }
 
-/* â”€â”€ INIT LOGO â€” Pixelify Sans only, always â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- INIT LOGO  -  Pixelify Sans only, always --------------- */
 .init-logo {
   display: flex;
   align-items: center;
@@ -936,7 +936,7 @@ body::after {
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   DATA EXPLORER â€” BOTTOM PANEL
+   DATA EXPLORER  -  BOTTOM PANEL
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Horizontal drag handle (sits between workspace and dex-panel) */
@@ -957,7 +957,7 @@ body::after {
   background: rgba(99,102,241,0.35);
 }
 
-/* Bottom panel â€” inline inside workspace-outer */
+/* Bottom panel  -  inline inside workspace-outer */
 .dex-panel {
   flex-shrink: 0;
   display: flex;
@@ -972,7 +972,7 @@ body::after {
   min-height: 0;
 }
 
-/* Fullscreen bottom panel â€” expand to cover the entire workspace-outer */
+/* Fullscreen bottom panel  -  expand to cover the entire workspace-outer */
 .workspace-outer.bottom-fullscreen .workspace {
   display: none;
 }
@@ -1120,7 +1120,7 @@ body::after {
   color: #7aa4ff;
 }
 
-/* Body â€” split into tree + preview */
+/* Body  -  split into tree + preview */
 .dex-body {
   flex: 1;
   display: flex;
@@ -1299,7 +1299,7 @@ body::after {
   border-color: rgba(0,0,0,0.08);
 }
 
-/* â”€â”€ TREE NODES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- TREE NODES -------------------------------------------- */
 .dex-node {
   user-select: none;
 }
@@ -1458,7 +1458,7 @@ body::after {
   flex-shrink: 0;
 }
 
-/* â”€â”€ LIGHT MODE overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- LIGHT MODE overrides ----------------------------------- */
 [data-theme="light"] .dex-panel {
   background: rgba(248,248,252,0.99);
   border-color: rgba(0,0,0,0.10);
@@ -1481,7 +1481,7 @@ body::after {
 [data-theme="light"] .dex-backdrop { background: rgba(0,0,0,0.35); }
 [data-theme="light"] .dex-stats { border-top-color: rgba(0,0,0,0.07); }
 
-/* â”€â”€ AI Assistant styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- AI Assistant styling ----------------------------------- */
 .pane-ai {
   flex: 1 1 350px;
   max-width: 500px;
@@ -1508,7 +1508,7 @@ body::after {
   background: rgba(0, 0, 0, 0.05) !important;
 }
 
-/* â”€â”€ Model Select (dark mode fix) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Model Select (dark mode fix) ---------------------------- */
 .ai-model-select {
   background: #1a1a1a;
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1548,10 +1548,10 @@ body::after {
   color: #1d1d1f;
 }
 
-/* â”€â”€ Quick Actions Toolbar â”€ REMOVED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Quick Actions Toolbar - REMOVED ---------------------------- */
 /* .ai-quick-actions and .btn-ai-action styles retained for reference only     */
 
-/* â”€â”€ AI Input Wrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- AI Input Wrap ------------------------------------------- */
 .ai-input-wrap {
   padding: 10px 12px 12px;
   background: rgba(0, 0, 0, 0.18);
@@ -1563,7 +1563,7 @@ body::after {
   background: rgba(0, 0, 0, 0.03);
 }
 
-/* â”€â”€ Code Action Bar (shows inside input area after code generated) â”€â”€ */
+/* -- Code Action Bar (shows inside input area after code generated) -- */
 .ai-code-action-bar {
   display: none;
   align-items: center;
@@ -1603,7 +1603,7 @@ body::after {
 }
 .ai-code-action-dismiss:hover { opacity: 1; }
 
-/* â”€â”€ Textarea Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Textarea Row -------------------------------------------- */
 .ai-textarea-row {
   display: flex;
   gap: 8px;
@@ -1872,7 +1872,7 @@ body::after {
   color: #ef5350;
 }
 
-/* â”€â”€ Liquid Metal Shimmer & Ripple Click Effects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Liquid Metal Shimmer & Ripple Click Effects ------------------ */
 @keyframes liquid-metal-shimmer {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -1898,7 +1898,7 @@ body::after {
   transform: scale(0.96) translateY(1px) !important;
 }
 
-/* âš¡ Agree & Run */
+/*  Agree & Run */
 .btn-ai-run-primary {
   background: linear-gradient(135deg, rgba(34,197,94,0.28), rgba(16,185,129,0.18), rgba(5,150,105,0.28));
   background-size: 200% 200%;
@@ -1929,7 +1929,7 @@ body::after {
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
 }
 
-/* â–¶ Apply Code */
+/*  Apply Code */
 .btn-ai-apply-primary {
   background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05), rgba(255,255,255,0.15));
   background-size: 200% 200%;
@@ -1970,7 +1970,7 @@ body::after {
   transform: translate(-50%, -50%) scale(0);
 }
 
-/* â”€â”€ Surgical Diff Edit Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Surgical Diff Edit Card ---------------------------------------- */
 .ai-diff-card {
   margin: 8px 0;
   border-radius: 8px;
@@ -2125,8 +2125,8 @@ body::after {
   background: rgba(0, 0, 0, 0.25);
 }
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   AI CHAT â€” RICH MARKDOWN BODY  (.ai-md-body)
-   Renders marked.js output like ChatGPT / Claude â€” clean & structured
+   AI CHAT  -  RICH MARKDOWN BODY  (.ai-md-body)
+   Renders marked.js output like ChatGPT / Claude  -  clean & structured
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .ai-md-body {
@@ -2220,7 +2220,7 @@ body::after {
   color: #555;
 }
 
-/* â”€â”€ Tables â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Tables ------------------------------------------------------ */
 .ai-md-body table {
   width: 100%;
   border-collapse: collapse;
@@ -2690,7 +2690,7 @@ body::after {
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   DESMOS GRAPHING CALCULATOR â€” FULL-SCREEN MODAL
+   DESMOS GRAPHING CALCULATOR  -  FULL-SCREEN MODAL
    Black & White monochrome theme, covers entire viewport
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -2836,12 +2836,12 @@ body::after {
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   PHYSICS SIMULATION STUDIO â€” FULL-SCREEN MODAL
+   PHYSICS SIMULATION STUDIO  -  FULL-SCREEN MODAL
    Strict Black & White monochrome theme.
    No colour accents. Covers entire viewport. Nothing overflows.
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* Nav button â€” monochrome */
+/* Nav button  -  monochrome */
 .btn-physics {
   color: var(--text);
   font-weight: 600;
@@ -2872,7 +2872,7 @@ body::after {
   color: #ffffff;
 }
 
-/* â”€â”€ Full-screen overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Full-screen overlay ----------------------------------------- */
 .physics-modal-overlay {
   position: fixed;
   inset: 0;
@@ -2886,7 +2886,7 @@ body::after {
   display: none;
 }
 
-/* â”€â”€ Modal card fills the entire screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Modal card fills the entire screen --------------------------- */
 .physics-modal-card {
   width: 100%;
   height: 100%;
@@ -2905,7 +2905,7 @@ body::after {
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* â”€â”€ Header bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Header bar --------------------------------------------------- */
 .physics-modal-header {
   display: flex;
   align-items: center;
@@ -2998,7 +2998,7 @@ body::after {
   color: #000;
 }
 
-/* â”€â”€ Body: 3D canvas left + details right â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Body: 3D canvas left + details right ----------------------- */
 .physics-modal-body {
   display: grid;
   grid-template-columns: 1.55fr 1fr;
@@ -3014,7 +3014,7 @@ body::after {
   }
 }
 
-/* â”€â”€ Left: 3D Viewport â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Left: 3D Viewport -------------------------------------------- */
 .physics-viewport-wrap {
   position: relative;
   display: flex;
@@ -3046,7 +3046,7 @@ body::after {
   cursor: grabbing;
 }
 
-/* â”€â”€ Floating Telemetry HUD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Floating Telemetry HUD --------------------------------------- */
 .physics-telemetry-hud {
   position: absolute;
   top: 12px;
@@ -3083,7 +3083,7 @@ body::after {
 [data-theme="light"] .hud-value,
 [data-theme="light"] .hud-pass  { color: #000000 !important; }
 
-/* â”€â”€ Transport Controls Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Transport Controls Bar --------------------------------------- */
 .physics-transport-bar {
   display: flex;
   align-items: center;
@@ -3128,7 +3128,7 @@ body::after {
   border-color: rgba(0,0,0,0.35);
 }
 
-/* Verify / Desmos action buttons â€” white filled */
+/* Verify / Desmos action buttons  -  white filled */
 .btn-physics-action {
   background: #ffffff;
   border: 1px solid #ffffff;
@@ -3180,7 +3180,7 @@ body::after {
 }
 [data-theme="light"] #physicsSpeedLabel { color: #000000; }
 
-/* â”€â”€ Right: Details Pane â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Right: Details Pane ------------------------------------------ */
 .physics-details-pane {
   display: flex;
   flex-direction: column;
@@ -3245,7 +3245,7 @@ body::after {
   gap: 12px;
 }
 
-/* â”€â”€ Proof Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Proof Card --------------------------------------------------- */
 .proof-card {
   background: #111111;
   border: 1px solid rgba(255,255,255,0.12);
@@ -3351,7 +3351,7 @@ body::after {
   border-color: rgba(0,0,0,0.06);
 }
 
-/* â”€â”€ Model Spec Editor tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Model Spec Editor tab --------------------------------------- */
 .physics-spec-editor {
   width: 100%;
   flex: 1;
@@ -3402,7 +3402,7 @@ body::after {
   background: #222222;
 }
 
-/* â”€â”€ Physics chat cards (AI messages) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* -- Physics chat cards (AI messages) --------------------------- */
 .physics-chat-card {
   margin: 10px 0;
   border-radius: 10px;
@@ -3612,39 +3612,60 @@ body::after {
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 
-/* ── Hero Grid ──────────────────────────────────────────── */
-.hero-grid {
-  min-height: calc(100vh - 110px);
-  display: grid;
-  grid-template-columns: 48% 52%;
-  border-bottom: 2px solid rgba(255,255,255,0.18);
-  background: #000000;
-}
-
-.hero-copy {
-  position: relative;
-  isolation: isolate;
-  padding: clamp(60px, 8vw, 120px) clamp(24px, 5vw, 84px);
+/* ── Hero Section (Full-Width Clean Horizontal Flow) ─────── */
+.hero-section {
+  width: 100%;
+  padding: clamp(60px, 7vw, 100px) clamp(20px, 5vw, 60px) clamp(60px, 8vw, 110px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border-right: 2px solid rgba(255,255,255,0.18);
+  align-items: center;
+  text-align: center;
   background: #000000;
-  overflow: hidden;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
-.hero-copy::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  width: 50%;
-  aspect-ratio: 1;
-  left: -15%;
-  top: 10%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  filter: blur(60px);
-  animation: glow-drift 8s ease-in-out infinite alternate;
+.hero-content {
+  max-width: 880px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 52px;
+}
+
+.hero-content .eyebrow {
+  margin-bottom: 20px;
+}
+
+.hero-content h1 {
+  margin: 0;
+  font-family: 'Pixelify Sans', monospace;
+  font-weight: 800;
+  font-size: clamp(48px, 6.5vw, 92px);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.hero-content h1 span {
+  color: #ffffff;
+}
+
+.hero-content .hero-lede {
+  max-width: 640px;
+  margin: 24px auto 32px;
+  font-size: clamp(15px, 1.2vw, 18px);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: 'DM Mono', monospace;
+}
+
+.hero-content .flex-actions {
+  justify-content: center;
+}
+
+.hero-content .boot-line {
+  margin-top: 32px;
+  justify-content: center;
 }
 
 .eyebrow {
@@ -3666,31 +3687,6 @@ body::after {
   border: 1px solid #000000;
   box-shadow: 2px 2px 0 rgba(255,255,255,0.8);
   animation: pixel-blink 1.4s steps(2) infinite;
-}
-
-.hero-copy h1 {
-  margin: 0;
-  font-family: 'Pixelify Sans', monospace;
-  font-weight: 800;
-  font-size: clamp(48px, 6.5vw, 100px);
-  line-height: 0.92;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-}
-
-.hero-copy h1 span {
-  color: #000000;
-  -webkit-text-stroke: 2px #ffffff;
-  text-shadow: 4px 4px 0 #ffffff;
-}
-
-.hero-lede {
-  max-width: 500px;
-  margin: 32px 0;
-  font-size: clamp(15px, 1.15vw, 18px);
-  line-height: 1.65;
-  color: rgba(255,255,255,0.78);
-  font-family: 'DM Mono', monospace;
 }
 
 .flex-actions {
@@ -3727,6 +3723,11 @@ body::after {
   color: rgba(255,255,255,0.45);
   font-size: 9.5px;
   font-family: 'DM Mono', monospace;
+}
+
+.boot-line span::before {
+  content: "■ ";
+  color: #ffffff;
 }
 
 .boot-line span::before {
@@ -4157,18 +4158,18 @@ body::after {
   .landing-footer { flex-direction: column; gap: 16px; align-items: flex-start; }
 }
 
-/* ── Branding Logos (Pixelify Sans Bold & Clear) ─────────── */
+/* ── Branding Logos (Clean, Normal, Crisp Solid White) ── */
 .brand-text-logo {
   font-family: 'Pixelify Sans', monospace;
-  font-size: clamp(30px, 3.5vw, 42px);
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: clamp(28px, 3.2vw, 38px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: #ffffff;
   text-transform: uppercase;
   line-height: 1;
   display: inline-block;
-  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.35);
-  transition: transform 0.15s ease, text-shadow 0.15s ease;
+  text-shadow: none !important;
+  transition: opacity 0.15s ease;
 }
 
 .landing-logo {
@@ -4176,8 +4177,8 @@ body::after {
 }
 
 .landing-logo:hover .brand-text-logo {
-  transform: scale(1.04);
-  text-shadow: 5px 5px 0 #ffffff;
+  opacity: 0.85;
+  text-shadow: none !important;
 }
 
 .nav-brand {
@@ -4189,12 +4190,12 @@ body::after {
 
 .nav-brand-text {
   font-family: 'Pixelify Sans', monospace;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: #ffffff;
   line-height: 1;
-  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: none !important;
 }
 
 .footer-logo-wrap {
@@ -4204,43 +4205,42 @@ body::after {
 
 .footer-brand-text {
   font-family: 'Pixelify Sans', monospace;
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: #ffffff;
   line-height: 1;
-  text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.3);
+  text-shadow: none !important;
 }
 
 .auth-logo-text {
   font-family: 'Pixelify Sans', monospace;
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: #ffffff;
   margin: 0 auto 12px auto;
   text-align: center;
-  text-shadow: 4px 4px 0 rgba(255, 255, 255, 0.35);
+  text-shadow: none !important;
 }
 
-/* ── Original Widescreen Product Image Showcase ──────────── */
-.hero-product-container {
+/* ── Full-Width Large Product Image Showcase ────────────── */
+.hero-product-showcase {
   width: 100%;
-  max-width: 880px;
-  position: relative;
-  border-radius: 10px;
-  border: 2px solid rgba(255,255,255,0.28);
-  background: #050505;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.85), 8px 8px 0 rgba(255,255,255,0.15);
-  overflow: hidden;
-  z-index: 2;
-  transform: translate3d(0, 0, 0);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
-.hero-product-container:hover {
-  transform: translate3d(0, -6px, 0);
-  box-shadow: 0 32px 75px rgba(0,0,0,0.95), 12px 12px 0 rgba(255,255,255,0.22);
+.hero-product-frame {
+  width: 100%;
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #050505;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.95), 0 0 1px rgba(255, 255, 255, 0.25);
+  overflow: hidden;
 }
 
 .hero-product-img {
@@ -4249,12 +4249,6 @@ body::after {
   display: block;
   object-fit: contain;
   aspect-ratio: 1024 / 472;
-}
-
-.glass-stat-c {
-  left: 35%;
-  bottom: 6%;
-  animation: glass-float 5s 2.4s ease-in-out infinite;
 }
 
 /* ── Detailed App Specs Grid ─────────────────────────────── */
