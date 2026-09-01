@@ -3461,6 +3461,10 @@ body::after {
   transition: opacity 0.25s ease;
 }
 
+.hidden {
+  display: none !important;
+}
+
 #landingView.hidden,
 #ideView.hidden {
   display: none !important;
