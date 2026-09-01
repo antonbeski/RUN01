@@ -20,183 +20,8 @@ const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
 
 // ── Per-language starter code ──────────────────────────────
 const STARTER_CODES = {
-
-  python: `\
-# ╔═══════════════════════════════════════════════════════════╗
-# ║         Run01 — Full Data Science Demo               ║
-# ║  NumPy · Pandas · SciPy · Sklearn · Statsmodels      ║
-# ║  Matplotlib · Seaborn · Plotly · Yahoo Finance       ║
-# ╚═══════════════════════════════════════════════════════════╝
-import sys, time, warnings
-warnings.filterwarnings('ignore')
-
-import numpy as np
-import pandas as pd
-import scipy
-import scipy.stats as stats
-import sklearn
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-import statsmodels
-import statsmodels.api as sm
-import matplotlib
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-t0 = time.time()
-
-# ── 1. Environment ─────────────────────────────────────────
-print("┌─ Run01 Environment ──────────────────────────────────")
-print(f"│  Python       {sys.version.split()[0]}")
-print(f"│  NumPy        {np.__version__}")
-print(f"│  Pandas       {pd.__version__}")
-print(f"│  SciPy        {scipy.__version__}")
-print(f"│  Scikit-Learn {sklearn.__version__}")
-print(f"│  Statsmodels  {statsmodels.__version__}")
-print(f"│  Matplotlib   {matplotlib.__version__}")
-print(f"│  Seaborn      {sns.__version__}")
-print(f"│  Plotly       {plotly.__version__}")
-print("└──────────────────────────────────────────────────────")
-print()
-
-# ── 2. Live Stock Data (via Run01 proxy — bypasses CORS) ───
-print("▶  Fetching AAPL — 3 months of data…")
-df = await yf_download("AAPL", period="3mo")
-print(f"   {len(df)} trading sessions  •  columns: {list(df.columns)}")
-print(df.tail(3).to_string())
-print()
-
-# ── 3. NumPy + SciPy Statistics ───────────────────────────
-print("▶  Statistical Analysis (NumPy + SciPy)…")
-returns = df['Close'].pct_change().dropna().values
-mu, sigma = returns.mean(), returns.std()
-sharpe = (mu / sigma) * np.sqrt(252)
-t_stat, p_val = stats.ttest_1samp(returns, 0)
-skewness = float(stats.skew(returns))
-excess_kurt = float(stats.kurtosis(returns))
-print(f"   μ={mu*100:+.4f}%  σ={sigma*100:.4f}%  Sharpe(ann)={sharpe:.3f}")
-print(f"   t-test (H₀: μ=0): t={t_stat:.3f}  p={p_val:.4f}  {'✓ reject H₀' if p_val < 0.05 else '○ fail to reject H₀'}")
-print(f"   Skewness={skewness:.4f}  Excess Kurtosis={excess_kurt:.4f}")
-print()
-
-# ── 4. Scikit-Learn Linear Regression ─────────────────────
-print("▶  Trend Regression (Scikit-Learn)…")
-X = np.arange(len(df)).reshape(-1, 1)
-y = df['Close'].values
-scaler = StandardScaler()
-Xs = scaler.fit_transform(X)
-model = LinearRegression().fit(Xs, y)
-r2 = model.score(Xs, y)
-pred_y = model.predict(Xs)
-trend_dir = "↑ uptrend" if model.coef_[0] > 0 else "↓ downtrend"
-print(f"   R²={r2:.4f}  coef={model.coef_[0]:+.4f} (scaled)  {trend_dir}")
-print()
-
-# ── 5. Statsmodels OLS ────────────────────────────────────
-print("▶  OLS Regression Summary (Statsmodels)…")
-X_sm = sm.add_constant(np.arange(len(df), dtype=float))
-ols  = sm.OLS(df['Close'].values, X_sm).fit()
-print(ols.summary().tables[1].as_text())
-print()
-
-# ── 6. Matplotlib 4-panel chart ───────────────────────────
-print("▶  Rendering 4-panel chart (Matplotlib + Seaborn)…")
-sns.set_theme(style='dark', palette='muted')
-
-fig, axes = plt.subplots(2, 2, figsize=(11, 7), facecolor='#0a0a0a')
-fig.suptitle('AAPL — 3-Month Analysis', color='#e5e5e5',
-             fontsize=14, fontweight='bold', y=0.99)
-
-# Panel 1 — Price + trend
-ax = axes[0, 0]
-ax.set_facecolor('#111')
-ax.plot(df['Close'].values, color='#1f77b4', lw=1.5, label='Close')
-ax.plot(pred_y, '--', color='#ff7f0e', lw=1.5, label='Trend')
-ax.set_title('Price + Linear Trend', color='#aaa', fontsize=10)
-ax.tick_params(colors='#555')
-ax.legend(fontsize=8, facecolor='#111', labelcolor='white')
-[s.set_color('#1e1e1e') for s in ax.spines.values()]
-
-# Panel 2 — Returns distribution
-ax2 = axes[0, 1]
-ax2.set_facecolor('#111')
-sns.histplot(returns * 100, bins=22, ax=ax2, color='#17becf', edgecolor='#1e1e1e')
-ax2.axvline(x=0, color='#d62728', lw=1, linestyle='--', alpha=0.9)
-ax2.set_title('Daily Returns Distribution (%)', color='#aaa', fontsize=10)
-ax2.tick_params(colors='#555')
-[s.set_color('#1e1e1e') for s in ax2.spines.values()]
-
-# Panel 3 — Rolling volatility
-ax3 = axes[1, 0]
-ax3.set_facecolor('#111')
-vol = pd.Series(returns).rolling(10).std() * np.sqrt(252) * 100
-ax3.fill_between(range(len(vol)), vol, alpha=0.25, color='#9467bd')
-ax3.plot(vol.values, color='#9467bd', lw=1.2)
-ax3.set_title('Rolling 10-Day Annualised Vol (%)', color='#aaa', fontsize=10)
-ax3.tick_params(colors='#555')
-[s.set_color('#1e1e1e') for s in ax3.spines.values()]
-
-# Panel 4 — Volume
-ax4 = axes[1, 1]
-ax4.set_facecolor('#111')
-bar_colors = ['#2ca02c' if c >= o else '#d62728'
-              for c, o in zip(df['Close'], df['Open'])]
-ax4.bar(range(len(df)), df['Volume'] / 1e6, color=bar_colors, width=0.85)
-ax4.set_title('Volume (M shares)', color='#aaa', fontsize=10)
-ax4.tick_params(colors='#555')
-[s.set_color('#1e1e1e') for s in ax4.spines.values()]
-
-plt.tight_layout(pad=1.5)
-plt.show()
-print()
-
-# ── 7. Plotly Interactive Candlestick + Volume ────────────
-print("▶  Rendering interactive candlestick chart (Plotly)…")
-fig2 = make_subplots(
-    rows=2, cols=1, shared_xaxes=True,
-    row_heights=[0.72, 0.28], vertical_spacing=0.03,
-)
-dates = df.index.astype(str).tolist()
-
-fig2.add_trace(go.Candlestick(
-    x=dates,
-    open=df['Open'], high=df['High'],
-    low=df['Low'],   close=df['Close'],
-    name='AAPL',
-    increasing=dict(line=dict(color='#2ca02c', width=1.5), fillcolor='#2ca02c'),
-    decreasing=dict(line=dict(color='#d62728', width=1.5), fillcolor='#d62728'),
-), row=1, col=1)
-
-fig2.add_trace(go.Bar(
-    x=dates,
-    y=df['Volume'] / 1e6,
-    name='Vol (M)',
-    marker_color=['#2ca02c' if c >= o else '#d62728'
-                  for c, o in zip(df['Close'], df['Open'])],
-), row=2, col=1)
-
-fig2.update_layout(
-    title=dict(text='AAPL — Interactive Candlestick', font=dict(size=13, color='#aaa')),
-    paper_bgcolor='#0a0a0a',
-    plot_bgcolor='#111111',
-    font=dict(color='#777', size=11, family='JetBrains Mono, monospace'),
-    xaxis=dict(gridcolor='#1a1a1a', rangeslider=dict(visible=False), showgrid=True),
-    xaxis2=dict(gridcolor='#1a1a1a', showgrid=True),
-    yaxis=dict(gridcolor='#1a1a1a', showgrid=True),
-    yaxis2=dict(gridcolor='#1a1a1a', showgrid=True, title='Vol (M)'),
-    legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#777')),
-    margin=dict(l=4, r=4, t=36, b=4),
-    height=440,
-)
-fig2.show()
-print()
-
-elapsed = time.time() - t0
-print(f"✓ Completed in {elapsed:.2f}s")
-`,
+  python: '',
+  desmos: ''
 };
 
 // ── Language metadata ──────────────────────────────────────
@@ -4367,11 +4192,20 @@ window.ViewManager = (function() {
   function openPhysicsModal() {
     if (!physicsModalOverlay) return;
     physicsModalOverlay.classList.remove('hidden');
+    physicsModalOverlay.style.display = 'flex';
+    if (physicsPresetSelect && physicsPresetSelect.value) {
+      currentPresetKey = physicsPresetSelect.value;
+    } else {
+      currentPresetKey = 'mechanics_double_pendulum';
+    }
     loadPreset(currentPresetKey);
   }
 
   function closePhysicsModal() {
-    if (physicsModalOverlay) physicsModalOverlay.classList.add('hidden');
+    if (physicsModalOverlay) {
+      physicsModalOverlay.classList.add('hidden');
+      physicsModalOverlay.style.display = 'none';
+    }
     if (currentSimulation) {
       currentSimulation.destroy();
       currentSimulation = null;
