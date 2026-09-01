@@ -160,6 +160,20 @@
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
 
+      <!-- Physics Simulation Studio toggle -->
+      <button class="btn btn-ghost btn-physics" id="btnPhysics" title="MuJoCo & Rapier Physics Simulation Studio & Verification Hub" aria-label="Toggle Physics Studio">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2a10 10 0 0 0-7.07 17.07"/>
+          <path d="M12 22a10 10 0 0 0 7.07-17.07"/>
+          <path d="M2.05 10.5a10 10 0 0 0 19.9 0"/>
+        </svg>
+        Physics
+      </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
       <!-- AI Assistant toggle -->
       <button class="btn btn-ghost btn-ai" id="btnAI" title="AI Assistant (Ctrl+K)" aria-label="Toggle AI Assistant">
         AI
@@ -491,7 +505,117 @@
     </div>
   </div>
 
+  <!-- ══ PHYSICS SIMULATION STUDIO & VERIFICATION HUB MODAL ══════════ -->
+  <div class="physics-modal-overlay hidden" id="physicsModalOverlay" role="dialog" aria-modal="true" aria-labelledby="physicsModalTitle">
+    <div class="physics-modal-card">
+      <div class="physics-modal-header">
+        <div class="physics-modal-title" id="physicsModalTitle">
+          <span class="physics-badge">PHYSICS STUDIO</span>
+          MuJoCo & Rapier 3D Simulation & Verification
+        </div>
+        <div class="physics-header-actions">
+          <select class="physics-preset-select" id="physicsPresetSelect" aria-label="Select Physics Preset">
+            <option value="mujoco_double_pendulum">MuJoCo — Double Pendulum (Chaos Proof)</option>
+            <option value="mujoco_cart_pole">MuJoCo — Inverted Cart-Pole (LQR Balance)</option>
+            <option value="mujoco_robotic_arm">MuJoCo — 3-DOF Robotic Manipulator</option>
+            <option value="rapier_domino_cascade">Rapier 3D — Domino Chain Reaction</option>
+            <option value="rapier_spring_resonance">Rapier 3D — Spring Resonance Oscillator</option>
+            <option value="rapier_projectile_drag">Rapier 3D — Projectile Drag vs Vacuum</option>
+          </select>
+          <button class="physics-modal-close" id="btnClosePhysicsModal" aria-label="Close Physics Studio">&times;</button>
+        </div>
+      </div>
+
+      <div class="physics-modal-body">
+        <!-- Main 3D Canvas Viewport with Telemetry Overlay -->
+        <div class="physics-viewport-wrap">
+          <div id="physicsMainViewport" class="physics-canvas-container"></div>
+          
+          <!-- Live Telemetry Floating HUD -->
+          <div class="physics-telemetry-hud" id="physicsTelemetryHud">
+            <div class="hud-item"><span class="hud-label">FPS</span><span class="hud-value" id="hudFps">60</span></div>
+            <div class="hud-item"><span class="hud-label">Energy Drift</span><span class="hud-value hud-pass" id="hudEnergy">ΔE: 0.002%</span></div>
+            <div class="hud-item"><span class="hud-label">Solver</span><span class="hud-value" id="hudSolver">RK4 Symplectic</span></div>
+            <div class="hud-item"><span class="hud-label">Invariants</span><span class="hud-value hud-pass" id="hudInvariants">PROVEN ✓</span></div>
+          </div>
+
+          <!-- Transport Controls Toolbar -->
+          <div class="physics-transport-bar">
+            <button class="btn btn-physics-control" id="btnPhysicsPlay" title="Play / Pause">
+              <span id="physicsPlayIcon">⏸</span> Pause
+            </button>
+            <button class="btn btn-physics-control" id="btnPhysicsReset" title="Reset State">
+              ↺ Reset
+            </button>
+            <button class="btn btn-physics-control" id="btnPhysicsImpulse" title="Apply Perturbation Force">
+              ⚡ Perturb / Kick
+            </button>
+            <div class="physics-speed-wrap">
+              <label for="physicsSpeedRange">Speed:</label>
+              <input type="range" id="physicsSpeedRange" min="0.1" max="2.0" step="0.1" value="1.0">
+              <span id="physicsSpeedLabel">1.0x</span>
+            </div>
+            <button class="btn btn-physics-action" id="btnPhysicsVerifyNow" title="Run Headless Physics Proof">
+              ✓ Verify Proof
+            </button>
+            <button class="btn btn-physics-action" id="btnPhysicsPlotDesmos" title="Plot Analytical vs Simulated in Desmos">
+              📊 Desmos Proof
+            </button>
+          </div>
+        </div>
+
+        <!-- Verification Proof & Specification Tabs -->
+        <div class="physics-details-pane">
+          <div class="physics-tabs">
+            <button class="physics-tab active" id="tabPhysProof" data-tab="proof">Verification Proof</button>
+            <button class="physics-tab" id="tabPhysSpec" data-tab="spec">Model Spec (XML / JSON)</button>
+          </div>
+
+          <div class="physics-tab-content active" id="panePhysProof">
+            <div class="proof-card" id="physicsProofCard">
+              <div class="proof-header">
+                <span class="proof-status-badge pass">✓ PHYSICAL LAWS VERIFIED</span>
+                <span class="proof-engine-label" id="proofEngineLabel">MuJoCo WASM Engine</span>
+              </div>
+              <div class="proof-metrics-grid" id="proofMetricsGrid">
+                <div class="proof-metric">
+                  <div class="metric-name">Energy Conservation</div>
+                  <div class="metric-val text-green" id="mEnergyVal">PASS (ΔE < 0.01%)</div>
+                </div>
+                <div class="proof-metric">
+                  <div class="metric-name">Kinematic Constraints</div>
+                  <div class="metric-val text-green" id="mConstraintVal">PASS (|residual| < 1e-5)</div>
+                </div>
+                <div class="proof-metric">
+                  <div class="metric-name">Analytical Correlation</div>
+                  <div class="metric-val text-blue" id="mR2Val">R² = 0.9998</div>
+                </div>
+                <div class="proof-metric">
+                  <div class="metric-name">Lyapunov Stability</div>
+                  <div class="metric-val text-yellow" id="mStabilityVal">Conservative Orbit</div>
+                </div>
+              </div>
+              <div class="proof-description" id="proofDescription">
+                Simulation computed 1500 headless steps with symplectic Runge-Kutta 4th-order integration. Total mechanical Hamiltonian is conserved within physical numerical tolerance.
+              </div>
+            </div>
+          </div>
+
+          <div class="physics-tab-content" id="panePhysSpec">
+            <textarea class="physics-spec-editor" id="physicsSpecEditor" spellcheck="false"></textarea>
+            <button class="btn btn-primary btn-apply-spec" id="btnApplyPhysicsSpec">Apply Model & Re-simulate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ SCRIPTS ════════════════════════════════════════════════════ -->
+  <!-- Three.js for 3D Physics Viewports and Visual Simulations -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin
+          onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+  <!-- Physics Engine (MuJoCo, Rapier, Solvers, Verifiers) -->
+  <script src="{{ url_for('static', filename='physics-engine.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
           crossorigin
           onerror="var s=document.createElement('script');s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>

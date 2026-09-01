@@ -846,6 +846,8 @@ def run_code():
 MODEL_CATALOG = [
     # ── NVIDIA NIM — token-efficient + high quality ──────────────────────
     {"id": "deepseek-ai/deepseek-v4-flash-0731",     "name": "DeepSeek V4 Flash ", "provider": "NVIDIA NIM"},
+    {"id": "deepseek-ai/deepseek-r1",                "name": "DeepSeek R1 ",       "provider": "NVIDIA NIM"},
+    {"id": "deepseek-ai/deepseek-v3",                "name": "DeepSeek V3 ",       "provider": "NVIDIA NIM"},
     {"id": "nvidia/llama-3.1-nemotron-70b-instruct", "name": "Nemotron 70B ",                             "provider": "NVIDIA NIM"},
     {"id": "qwen/qwen2.5-coder-32b-instruct",        "name": "Qwen 2.5 Coder 32B ",                    "provider": "NVIDIA NIM"},
     {"id": "meta/llama-3.3-70b-instruct",            "name": "Llama 3.3 70B",                                          "provider": "NVIDIA NIM"},
@@ -865,6 +867,8 @@ PROVIDER_CONFIG = {
         "key_env":  ["NVIDIA_API_KEY", "NVIDIA_API_KEY_2"],
         "fallback_chain": [
             "deepseek-ai/deepseek-v4-flash-0731",
+            "deepseek-ai/deepseek-r1",
+            "deepseek-ai/deepseek-v3",
             "nvidia/llama-3.1-nemotron-70b-instruct",
             "qwen/qwen2.5-coder-32b-instruct",
             "meta/llama-3.3-70b-instruct",
@@ -950,39 +954,64 @@ def ai_chat():
         messages = body.get("messages", [])
         model    = body.get("model", "deepseek-ai/deepseek-v4-flash-0731")
 
-        # ── Inject Desmos Math Graph & Simulation Instructions ────────────
-        desmos_sys_prompt = (
-            "You are an expert AI assistant with built-in interactive Desmos Graphing Calculator support.\n"
-            "Whenever the user asks to plot a graph, function, math equation, or physics simulation:\n"
-            "Output a ```desmos code block containing equations formatted strictly according to Desmos LaTeX rules:\n\n"
-            "CRITICAL DESMOS SYNTAX RULES:\n"
-            "1. NO COMMENTS: Strictly NO '#' or '//' comments inside ```desmos blocks.\n"
-            "2. NO ASTERISKS: Do NOT use '*' for multiplication. Write '\\cdot' or write variables directly (e.g., 'y = a \\cdot \\sin(b \\cdot x)', 'a = 2', 'b = 1').\n"
-            "3. NO FUNCTION PARAMETER NOTATION: Do NOT write 'x(t) =' or 'y(t) ='. To plot a parametric curve, directly write the point coordinate tuple '(x_expression, y_expression)', e.g. '(t, \\sin(t))' or '(v_0 \\cdot t \\cdot \\cos(a), v_0 \\cdot t \\cdot \\sin(a) - 0.5 \\cdot g \\cdot t^2)'.\n"
-            "4. SIMPLE VARIABLE SLIDERS: Define sliders using simple single-letter variables like 'a = 2', 'b = 1', 'f = 1', 't = 0'.\n"
-            "5. GREEK LETTERS: Use standard LaTeX '\\theta', '\\pi', '\\alpha', '\\beta', or plain letters 'a', 'b', 'c', 'k'.\n\n"
-            "EXEMPLAR DESMOS SIMULATION CODE BLOCKS:\n\n"
-            "Example 1 — Sinusoidal Wave with Sliders:\n"
-            "```desmos\n"
-            "a = 2\n"
-            "f = 1\n"
-            "p = 0\n"
-            "y = a \\cdot \\sin(2 \\cdot \\pi \\cdot f \\cdot x + p)\n"
+        # ── Inject Desmos Math Graph & Physics Verification Instructions ────────────
+        physics_sys_prompt = (
+            "You are an expert AI assistant with built-in MuJoCo WASM & Rapier 3D Physics Simulation engines and interactive Desmos Graphing Calculator verification.\n"
+            "When answering questions related to physics, dynamics, kinematics, calculus, differential equations, or mechanism design:\n"
+            "DO NOT just provide text explanations — always provide mathematical derivations AND verifiable simulations so the app can automatically prove and simulate the answer.\n\n"
+            "SIMULATION & VERIFICATION BLOCKS YOU CAN GENERATE:\n\n"
+            "1. MuJoCo MJCF Simulation (Multi-body dynamics, robotics, pendulums, cart-pole, joints):\n"
+            "Output a ```mujoco block containing valid MJCF XML with <mujoco>, <worldbody>, <body>, <joint>, <geom>, and <option> tags.\n"
+            "Example:\n"
+            "```mujoco\n"
+            "<mujoco model=\"pendulum\">\n"
+            "  <option timestep=\"0.002\" gravity=\"0 0 -9.81\"/>\n"
+            "  <worldbody>\n"
+            "    <light diffuse=\"0.8 0.8 0.8\" pos=\"0 0 3\" dir=\"0 0 -1\"/>\n"
+            "    <geom type=\"plane\" size=\"4 4 0.1\" rgba=\"0.2 0.2 0.25 1\"/>\n"
+            "    <body pos=\"0 0 2\">\n"
+            "      <joint type=\"hinge\" axis=\"0 1 0\" damping=\"0.001\"/>\n"
+            "      <geom type=\"capsule\" fromto=\"0 0 0 0 0 -0.8\" size=\"0.04\" rgba=\"0.2 0.7 0.95 1\" mass=\"1.0\"/>\n"
+            "      <geom type=\"sphere\" pos=\"0 0 -0.8\" size=\"0.09\" rgba=\"0.95 0.8 0.2 1\" mass=\"1.2\"/>\n"
+            "    </body>\n"
+            "  </worldbody>\n"
+            "</mujoco>\n"
             "```\n\n"
-            "Example 2 — Projectile Motion Trajectory & Moving Point:\n"
+            "2. Rapier 3D Physics Simulation (Rigid bodies, colliders, contact forces, restitution, projectile drag, springs):\n"
+            "Output a ```rapier block containing a JSON physics specification with gravity, timestep, and bodies array.\n"
+            "Example:\n"
+            "```rapier\n"
+            "{\n"
+            "  \"gravity\": [0, -9.81, 0],\n"
+            "  \"timestep\": 0.00833,\n"
+            "  \"bodies\": [\n"
+            "    { \"name\": \"floor\", \"type\": \"fixed\", \"pos\": [0, -0.2, 0], \"shape\": \"box\", \"size\": [10, 0.4, 4], \"color\": 1976891 },\n"
+            "    { \"name\": \"ball\", \"type\": \"dynamic\", \"pos\": [-2, 2.5, 0], \"shape\": \"sphere\", \"radius\": 0.3, \"mass\": 1.0, \"color\": 3718648, \"linvel\": [3, 2, 0], \"restitution\": 0.7 }\n"
+            "  ]\n"
+            "}\n"
+            "```\n\n"
+            "3. Desmos Mathematical Proof & Phase-Space Graph:\n"
+            "Output a ```desmos block containing equations formatted strictly according to Desmos LaTeX rules:\n"
+            "CRITICAL DESMOS SYNTAX RULES:\n"
+            "• NO COMMENTS: Strictly NO '#' or '//' comments inside ```desmos blocks.\n"
+            "• NO ASTERISKS: Do NOT use '*' for multiplication. Write '\\cdot' or write variables directly (e.g., 'y = a \\cdot \\sin(b \\cdot x)').\n"
+            "• NO FUNCTION PARAMETER NOTATION: Do NOT write 'x(t) =' or 'y(t) ='. To plot parametric motion or phase space, directly write coordinate point tuples '(x(t), y(t))' or '(\\theta, \\omega)'.\n"
+            "• SIMPLE SLIDERS: Define sliders using simple single-letter variables like 'v = 20', 'g = 9.81', 't = 0'.\n"
+            "• STANDARD LATEX: Use '\\theta', '\\pi', '\\alpha', '\\omega', '\\sqrt{...}'.\n"
+            "Example:\n"
             "```desmos\n"
             "v = 20\n"
             "a = 0.785\n"
-            "g = 9.8\n"
+            "g = 9.81\n"
             "t = 1\n"
             "y = x \\cdot \\tan(a) - (g \\cdot x^2) / (2 \\cdot v^2 \\cdot (\\cos(a))^2)\n"
             "(v \\cdot t \\cdot \\cos(a), v \\cdot t \\cdot \\sin(a) - 0.5 \\cdot g \\cdot t^2)\n"
             "```"
         )
         if not messages or messages[0].get("role") != "system":
-            messages.insert(0, {"role": "system", "content": desmos_sys_prompt})
+            messages.insert(0, {"role": "system", "content": physics_sys_prompt})
         else:
-            messages[0]["content"] = desmos_sys_prompt + "\n\n" + messages[0]["content"]
+            messages[0]["content"] = physics_sys_prompt + "\n\n" + messages[0]["content"]
 
         # ── Resolve which provider each candidate model belongs to ────────
         requested_provider = _model_provider(model)
