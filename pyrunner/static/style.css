@@ -4186,16 +4186,25 @@ body::after {
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+  text-decoration: none;
+  padding-right: 4px;
 }
 
 .nav-brand-text {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 22px;
+  font-family: 'Pixelify Sans', monospace !important;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: #ffffff;
   line-height: 1;
   text-shadow: none !important;
+  transition: opacity 0.15s ease;
+}
+
+.nav-brand:hover .nav-brand-text {
+  opacity: 0.85;
 }
 
 .footer-logo-wrap {
