@@ -593,150 +593,17 @@
     }
   }
 
+
   // ══════════════════════════════════════════════════════════════════════════
-  // 4. BUILT-IN DIVERSE BENCHMARK PRESETS (Mechanics, Fluids, Optics)
+  // 4. PRESET REGISTRY — intentionally empty.
+  //    The AI writes a complete JSON spec and passes it to SimulationController
+  //    directly via window.openPhysicsStudioWithSpec() or the spec editor.
+  //    No hardcoded simulations live here.
   // ══════════════════════════════════════════════════════════════════════════
 
-  const PRESETS = {
-    // ── MECHANICAL & KINEMATICS PRESETS ────────────────────────────────────
-    mechanics_double_pendulum: {
-      id: 'mechanics_double_pendulum',
-      category: 'Mechanics',
-      title: 'MuJoCo - Double Pendulum (Non-Linear Chaos & Energy)',
-      description: 'Two-link planar articulated pendulum demonstrating chaos, sensitivity to initial conditions, and Hamiltonian energy conservation.',
-      type: 'multibody',
-      spec: {
-        gravity: [0, -9.81, 0],
-        springs: [],
-        bodies: [
-          { name: 'anchor', type: 'fixed', pos: [0, 2.5, 0], shape: 'sphere', radius: 0.1, color: 0x555555 },
-          { name: 'link1', type: 'dynamic', pos: [0.8, 2.5, 0], shape: 'cylinder', radius: 0.04, height: 0.8, mass: 1.0, color: 0xffffff },
-          { name: 'link2', type: 'dynamic', pos: [1.6, 2.5, 0], shape: 'sphere', radius: 0.12, mass: 1.5, color: 0xaaaaaa }
-        ]
-      }
-    },
+  const PRESETS = {};
 
-    mechanics_pulley_crane: {
-      id: 'mechanics_pulley_crane',
-      category: 'Mechanics',
-      title: 'Block-and-Tackle Pulley Crane (Mechanical Advantage MA = 4)',
-      description: 'Compound pulley system lifting a heavy hollow payload with 4x mechanical advantage and tension analysis.',
-      type: 'multibody',
-      spec: {
-        gravity: [0, -9.81, 0],
-        pulleys: [
-          { loadBody: 'heavy_hollow_load', effortBody: 'counter_weight', ratio: 4.0 }
-        ],
-        bodies: [
-          { name: 'crane_beam', type: 'fixed', pos: [0, 3.5, 0], shape: 'box', size: [4.0, 0.2, 0.8], color: 0x333333 },
-          { name: 'heavy_hollow_load', type: 'dynamic', pos: [-1.0, 0.8, 0], shape: 'cylinder', radius: 0.4, height: 0.8, mass: 8.0, isHollow: true, wallThickness: 0.06, color: 0xffffff },
-          { name: 'counter_weight', type: 'dynamic', pos: [1.0, 2.4, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 2.2, color: 0x888888 }
-        ]
-      }
-    },
 
-    mechanics_coupled_springs: {
-      id: 'mechanics_coupled_springs',
-      category: 'Mechanics',
-      title: 'Coupled 3-Mass Spring Oscillator Harmonic Network',
-      description: '3 coupled masses connected via Hooke springs exhibiting normal modes, resonance, and harmonic phase propagation.',
-      type: 'multibody',
-      spec: {
-        gravity: [0, 0, 0],
-        springs: [
-          { k: 60.0, c: 0.4, restLength: 1.2, anchorA: [-3.0, 1.0, 0], bodyB: 'mass_A' },
-          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_A', bodyB: 'mass_B' },
-          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_B', bodyB: 'mass_C' },
-          { k: 60.0, c: 0.4, restLength: 1.2, bodyA: 'mass_C', anchorB: [3.0, 1.0, 0] }
-        ],
-        bodies: [
-          { name: 'wall_left', type: 'fixed', pos: [-3.0, 1.0, 0], shape: 'box', size: [0.2, 1.0, 0.8], color: 0x222222 },
-          { name: 'wall_right', type: 'fixed', pos: [3.0, 1.0, 0], shape: 'box', size: [0.2, 1.0, 0.8], color: 0x222222 },
-          { name: 'mass_A', type: 'dynamic', pos: [-1.4, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0xffffff, linvel: [2.5, 0, 0] },
-          { name: 'mass_B', type: 'dynamic', pos: [0.0, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0xcccccc },
-          { name: 'mass_C', type: 'dynamic', pos: [1.4, 1.0, 0], shape: 'box', size: [0.4, 0.4, 0.4], mass: 1.0, color: 0x888888 }
-        ]
-      }
-    },
-
-    // ── FLUIDS & AERODYNAMICS PRESETS ──────────────────────────────────────
-    fluid_hollow_cylinder_drop: {
-      id: 'fluid_hollow_cylinder_drop',
-      category: 'Fluids',
-      title: 'Solid Sphere vs Hollow Cylinder Terminal Drag & Water Buoyancy',
-      description: 'Side-by-side terminal velocity drop through air and water immersion with Archimedes buoyancy and viscous damping.',
-      type: 'multibody',
-      spec: {
-        gravity: [0, -9.81, 0],
-        airDensity: 1.225,
-        waterDensity: 1000.0,
-        waterLevel: 0.5,
-        bodies: [
-          { name: 'ground', type: 'fixed', pos: [0, -0.2, 0], shape: 'box', size: [12, 0.4, 4], color: 0x111111 },
-          { name: 'solid_sphere', type: 'dynamic', pos: [-1.5, 4.0, 0], shape: 'sphere', radius: 0.35, mass: 2.0, isHollow: false, color: 0xffffff },
-          { name: 'hollow_cylinder', type: 'dynamic', pos: [1.5, 4.0, 0], shape: 'cylinder', radius: 0.4, height: 0.7, mass: 0.8, isHollow: true, wallThickness: 0.04, color: 0x888888 }
-        ]
-      }
-    },
-
-    // ── OPTICS & WAVE PHYSICS PRESETS ──────────────────────────────────────
-    optics_convex_concave_lens: {
-      id: 'optics_convex_concave_lens',
-      category: 'Optics',
-      title: 'Biconvex & Biconcave Lens System (Ray Focus & Divergence)',
-      description: 'Precision Snell\'s law ray tracing through converging convex and diverging concave lenses showing focal point and collimation.',
-      type: 'optics',
-      spec: {
-        sources: [
-          { pos: [-4.5, 0, 0], dir: [1, 0, 0], beamWidth: 1.6, rayCount: 9, whiteLight: false }
-        ],
-        elements: [
-          { type: 'lens', pos: [-1.2, 0, 0], focalLength: 2.2, thickness: 0.35, aperture: 2.4, refractiveIndex: 1.52, isConcave: false },
-          { type: 'lens', pos: [1.8, 0, 0], focalLength: -1.8, thickness: 0.25, aperture: 2.0, refractiveIndex: 1.52, isConcave: true }
-        ]
-      }
-    },
-
-    optics_prism_dispersion: {
-      id: 'optics_prism_dispersion',
-      category: 'Optics',
-      title: 'Glass Prism Chromatic Dispersion & Rainbow Spectrum',
-      description: 'White light ray splitting into constituent wavelength spectrum (400nm violet to 700nm red) via wavelength-dependent Cauchy dispersion.',
-      type: 'optics',
-      spec: {
-        sources: [
-          { pos: [-4.0, 0.4, 0], dir: [1, -0.15, 0], beamWidth: 0.2, rayCount: 3, whiteLight: true }
-        ],
-        elements: [
-          { type: 'prism', pos: [0, 0, 0], width: 2.0, height: 2.2, refractiveIndex: 1.54, dispersion: 0.008 }
-        ]
-      }
-    },
-
-    optics_parabolic_mirror: {
-      id: 'optics_parabolic_mirror',
-      category: 'Optics',
-      title: 'Parabolic Mirror Reflection & Focal Point Caustic',
-      description: 'Collimated parallel ray reflection off a curved parabolic mirror with exact focal convergence at (f, 0).',
-      type: 'optics',
-      spec: {
-        sources: [
-          { pos: [-4.0, 0, 0], dir: [1, 0, 0], beamWidth: 2.2, rayCount: 11, whiteLight: false }
-        ],
-        elements: [
-          { type: 'mirror', pos: [1.8, 0, 0], focalLength: 2.0 }
-        ]
-      }
-    }
-  };
-
-  // Aliases for backwards-compatibility
-  PRESETS.mujoco_double_pendulum = PRESETS.mechanics_double_pendulum;
-  PRESETS.mujoco_cart_pole = PRESETS.mechanics_coupled_springs;
-  PRESETS.mujoco_robotic_arm = PRESETS.mechanics_pulley_crane;
-  PRESETS.rapier_domino_cascade = PRESETS.mechanics_pulley_crane;
-  PRESETS.rapier_spring_resonance = PRESETS.mechanics_coupled_springs;
-  PRESETS.rapier_projectile_drag = PRESETS.fluid_hollow_cylinder_drop;
 
   // ══════════════════════════════════════════════════════════════════════════
   // 5. 3D WEBGL VISUALIZER & SIMULATION CONTROLLER (Three.js)
@@ -745,8 +612,18 @@
   class SimulationController {
     constructor(containerEl, presetOrSpec) {
       this.container = containerEl;
-      this.preset = typeof presetOrSpec === 'string' ? PRESETS[presetOrSpec] || PRESETS.mechanics_double_pendulum : presetOrSpec;
-      this.spec = this.preset.spec || this.preset;
+      // Accept either a preset object (with .spec) or a raw spec object directly
+      if (typeof presetOrSpec === 'string') {
+        // Legacy string key — no longer supported; log a warning
+        console.warn('[PhysicsEngine] String preset keys are no longer supported. Pass a spec object directly.');
+        this.preset = { type: 'multibody', spec: {} };
+      } else if (presetOrSpec && presetOrSpec.spec) {
+        this.preset = presetOrSpec;
+      } else {
+        // Raw spec passed directly
+        this.preset = { type: presetOrSpec && presetOrSpec.elements ? 'optics' : 'multibody', spec: presetOrSpec || {} };
+      }
+      this.spec = this.preset.spec || {};
       this.isRunning = true;
       this.speed = 1.0;
       this.showWireframe = false;
@@ -983,14 +860,10 @@
   }
 
   function generateDesmosVerificationLatex(proof, presetKey) {
-    const preset = PRESETS[presetKey] || PRESETS.mechanics_double_pendulum;
-    if (preset.analytical && preset.analytical.desmos) {
-      return preset.analytical.desmos;
-    }
+    // Returns a blank template for AI to populate via show_desmos() in Python
     return [
       'g = 9.81',
-      'm = 1.0',
-      'E_0 = m \\cdot g \\cdot 2.5',
+      't = 0',
       'x(t) = \\cos(t)',
       'y(t) = -\\sin(t)',
       '(x(t), y(t))'
@@ -1004,14 +877,27 @@
     UniversalMultiBodySolver,
     SimulationController,
 
-    startMuJoCoVisualSimulation(viewport, xmlCode) {
-      return new SimulationController(viewport, PRESETS.mechanics_double_pendulum);
+    startMuJoCoVisualSimulation(viewport, specOrXml) {
+      // Accepts a raw spec object or JSON string; XML strings are passed as multibody spec placeholder
+      let spec = {};
+      if (typeof specOrXml === 'object' && specOrXml !== null) {
+        spec = specOrXml;
+      } else if (typeof specOrXml === 'string' && !specOrXml.trim().startsWith('<')) {
+        try { spec = JSON.parse(specOrXml); } catch(e) { spec = {}; }
+      }
+      return new SimulationController(viewport, spec);
     },
     startRapierVisualSimulation(viewport, spec) {
       return new SimulationController(viewport, spec);
     },
-    runMuJoCoVerification(xmlCode, options) {
-      return runVerification(PRESETS.mechanics_double_pendulum, options);
+    runMuJoCoVerification(specOrXml, options) {
+      let spec = {};
+      if (typeof specOrXml === 'object' && specOrXml !== null) {
+        spec = specOrXml;
+      } else if (typeof specOrXml === 'string' && !specOrXml.trim().startsWith('<')) {
+        try { spec = JSON.parse(specOrXml); } catch(e) { spec = {}; }
+      }
+      return runVerification({ spec }, options);
     },
     runRapierVerification(spec, options) {
       return runVerification(spec, options);
@@ -1020,3 +906,4 @@
     runVerification
   };
 });
+

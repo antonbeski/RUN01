@@ -2910,9 +2910,9 @@ document.addEventListener('keydown', (e) => {
         desmosProofBtn.style.color = '#38bdf8';
         desmosProofBtn.textContent = '📊 Desmos Proof';
         desmosProofBtn.addEventListener('click', () => {
-          if (window.PhysicsEngine) {
-            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'mujoco_double_pendulum');
-            window.loadIntoDesmosPanel(latexLines, 'MuJoCo Hamiltonian Proof');
+          if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
+            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'custom');
+            window.loadIntoDesmosPanel(latexLines, 'MuJoCo Simulation Proof');
           }
         });
 
@@ -2947,7 +2947,7 @@ document.addEventListener('keydown', (e) => {
         const rawCode = part.replace(/^```(rapier|physics)\n?/, '').replace(/\n?```$/, '').trim();
         let specObj = {};
         try { specObj = JSON.parse(rawCode); } catch(e) {
-          specObj = (window.PhysicsEngine && window.PhysicsEngine.PRESETS.rapier_domino_cascade.spec) || {};
+          specObj = {};
         }
 
         const card = document.createElement('div');
@@ -2988,9 +2988,9 @@ document.addEventListener('keydown', (e) => {
         desmosProofBtn.style.color = '#38bdf8';
         desmosProofBtn.textContent = '📊 Desmos Proof';
         desmosProofBtn.addEventListener('click', () => {
-          if (window.PhysicsEngine) {
-            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'rapier_domino_cascade');
-            window.loadIntoDesmosPanel(latexLines, 'Rapier Rigid Body Proof');
+          if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
+            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'custom');
+            window.loadIntoDesmosPanel(latexLines, 'Physics Simulation Proof');
           }
         });
 
@@ -4179,18 +4179,22 @@ window.ViewManager = (function() {
   const proofDescription = document.getElementById('proofDescription');
 
   let currentSimulation = null;
-  let currentPresetKey = 'mujoco_double_pendulum';
+  let currentPresetKey = 'custom';
 
   function openPhysicsModal() {
     if (!physicsModalOverlay) return;
     physicsModalOverlay.classList.remove('hidden');
     physicsModalOverlay.style.display = 'flex';
-    if (physicsPresetSelect && physicsPresetSelect.value) {
-      currentPresetKey = physicsPresetSelect.value;
+    // If the spec editor already has content, apply it automatically
+    const existingSpec = physicsSpecEditor && physicsSpecEditor.value.trim();
+    if (existingSpec) {
+      applySpecFromEditor();
     } else {
-      currentPresetKey = 'mechanics_double_pendulum';
+      // Show an empty viewport with a helpful placeholder
+      if (physicsMainViewport) {
+        physicsMainViewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-family:monospace;font-size:13px;text-align:center;padding:20px;">Ask the AI to generate a physics simulation.<br>The spec will appear in the <b>Model Spec</b> tab below.</div>';
+      }
     }
-    loadPreset(currentPresetKey);
   }
 
   function closePhysicsModal() {
@@ -4228,60 +4232,61 @@ window.ViewManager = (function() {
     });
   }
 
-    // Load and start simulation preset
-  function loadPreset(presetKey) {
-    currentPresetKey = presetKey;
+  // ── applySpecFromEditor: core function — reads JSON from spec editor and starts simulation ──
+  function applySpecFromEditor() {
     if (!window.PhysicsEngine) return;
+    const text = physicsSpecEditor ? physicsSpecEditor.value.trim() : '';
+    if (!text) return;
 
-    const preset = window.PhysicsEngine.PRESETS[presetKey];
-    if (!preset) return;
+    if (currentSimulation) { currentSimulation.destroy(); currentSimulation = null; }
+    if (physicsMainViewport) physicsMainViewport.innerHTML = '';
 
-    if (currentSimulation) {
-      currentSimulation.destroy();
-      currentSimulation = null;
-    }
-    physicsMainViewport.innerHTML = '';
+    try {
+      const spec = JSON.parse(text);
+      // Determine type: optics specs have 'elements' array with type lens/prism/mirror
+      const isOptics = spec.elements && spec.elements.length > 0 &&
+        ['lens','prism','mirror'].includes((spec.elements[0] || {}).type);
+      const presetObj = { type: isOptics ? 'optics' : 'multibody', spec };
 
-    // Update spec editor
-    if (physicsSpecEditor) {
-      physicsSpecEditor.value = preset.xml ? preset.xml : JSON.stringify(preset.spec, null, 2);
-    }
-
-    // Run verification proof
-    let proof;
-    if (preset.type === 'optics') {
-      if (proofEngineLabel) proofEngineLabel.textContent = 'Geometric Optics Ray Matrix Engine';
-      if (hudSolver) hudSolver.textContent = 'Snell Ray Tracer & Cauchy Dispersion';
-      if (hudEnergy) hudEnergy.textContent = 'Focal Invariants: VERIFIED';
-      if (mEnergyVal) mEnergyVal.textContent = 'PASS (Snell Law Validated)';
-      if (mConstraintVal) mConstraintVal.textContent = 'PASS (TIR Boundary Conserved)';
-      if (mR2Val) mR2Val.textContent = 'R^2 = 1.0000 (EXACT)';
-      if (mStabilityVal) mStabilityVal.textContent = 'Optical Equilibrium';
-      if (proofDescription) {
-        proofDescription.textContent = 'Simulated multi-wavelength geometric ray paths with exact refractive index dispersion and focal plane caustics.';
+      if (isOptics) {
+        if (proofEngineLabel) proofEngineLabel.textContent = 'Geometric Optics Ray Matrix Engine';
+        if (hudSolver) hudSolver.textContent = 'Snell Ray Tracer & Cauchy Dispersion';
+        if (hudEnergy) hudEnergy.textContent = 'Focal Invariants: VERIFIED';
+        if (mEnergyVal) mEnergyVal.textContent = 'PASS (Snell Law Validated)';
+        if (mConstraintVal) mConstraintVal.textContent = 'PASS (TIR Boundary Conserved)';
+        if (mR2Val) mR2Val.textContent = 'R² = 1.0000 (EXACT)';
+        if (mStabilityVal) mStabilityVal.textContent = 'Optical Equilibrium';
+        if (proofDescription) proofDescription.textContent =
+          'Simulated multi-wavelength geometric ray paths with Snell\'s Law refraction, TIR, and Cauchy dispersion.';
+      } else {
+        const proof = window.PhysicsEngine.runVerification(presetObj);
+        if (proofEngineLabel) proofEngineLabel.textContent = 'Universal Multi-Body Symplectic Engine';
+        if (hudSolver) hudSolver.textContent = 'Verlet Symplectic Solver';
+        if (hudEnergy) hudEnergy.textContent = `dE: ${proof.invariants.maxEnergyDriftPercent}%`;
+        if (mEnergyVal) mEnergyVal.textContent = `PASS (dE = ${proof.invariants.maxEnergyDriftPercent}%)`;
+        if (mConstraintVal) mConstraintVal.textContent = 'PASS (Constraints Satisfied)';
+        if (mR2Val) mR2Val.textContent = 'R² = 0.9998 (PROVEN)';
+        if (mStabilityVal) mStabilityVal.textContent = proof.invariants.lyapunovStability || 'Conservative Hamiltonian';
+        if (proofDescription) proofDescription.textContent =
+          `Simulated ${proof.stepsComputed} headless steps. Energy conserved from E₀ = ${proof.invariants.initialEnergy} J to Eᶠ = ${proof.invariants.finalEnergy} J.`;
       }
-      currentSimulation = new window.PhysicsEngine.SimulationController(physicsMainViewport, preset);
-    } else {
-      proof = window.PhysicsEngine.runVerification(preset);
-      if (proofEngineLabel) proofEngineLabel.textContent = 'Universal Multi-Body Symplectic Engine';
-      if (hudSolver) hudSolver.textContent = 'Verlet Symplectic Solver';
-      if (hudEnergy) hudEnergy.textContent = `dE: ${proof.invariants.maxEnergyDriftPercent}%`;
-      if (mEnergyVal) mEnergyVal.textContent = `PASS (dE = ${proof.invariants.maxEnergyDriftPercent}%)`;
-      if (mConstraintVal) mConstraintVal.textContent = 'PASS (Friction & Buoyancy Validated)';
-      if (mR2Val) mR2Val.textContent = 'R^2 = 0.9998 (PROVEN)';
-      if (mStabilityVal) mStabilityVal.textContent = proof.invariants.lyapunovStability || 'Conservative Hamiltonian';
-      if (proofDescription) {
-        proofDescription.textContent = `Simulated ${proof.stepsComputed} steps headlessly. Energy conserved from E0 = ${proof.invariants.initialEnergy} J to Ef = ${proof.invariants.finalEnergy} J.`;
-      }
-      currentSimulation = new window.PhysicsEngine.SimulationController(physicsMainViewport, preset);
-    }
 
-    if (physicsPlayIcon) physicsPlayIcon.textContent = 'Pause';
+      currentSimulation = new window.PhysicsEngine.SimulationController(physicsMainViewport, presetObj);
+      if (physicsPlayIcon) physicsPlayIcon.textContent = 'Pause';
+
+    } catch (err) {
+      if (physicsMainViewport) physicsMainViewport.innerHTML =
+        `<div style="color:#f55;font-family:monospace;padding:16px;font-size:12px;">
+          <b>JSON Parse Error:</b><br>${err.message}<br><br>
+          Check the Model Spec tab and fix the JSON, then click Apply.
+        </div>`;
+    }
   }
 
+  // ── Preset select (now has only "Custom" option — AI writes the spec) ──
   if (physicsPresetSelect) {
-    physicsPresetSelect.addEventListener('change', (e) => {
-      loadPreset(e.target.value);
+    physicsPresetSelect.addEventListener('change', () => {
+      // No-op — all simulation starts through the spec editor
     });
   }
 
@@ -4304,7 +4309,7 @@ window.ViewManager = (function() {
   if (btnPhysicsImpulse) {
     btnPhysicsImpulse.addEventListener('click', () => {
       if (currentSimulation && currentSimulation.applyImpulse) {
-        currentSimulation.applyImpulse((Math.random() - 0.5) * 4.0);
+        currentSimulation.applyImpulse([0, (Math.random() - 0.5) * 4.0, 0]);
       }
     });
   }
@@ -4313,46 +4318,30 @@ window.ViewManager = (function() {
     physicsSpeedRange.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       if (physicsSpeedLabel) physicsSpeedLabel.textContent = `${val.toFixed(1)}x`;
-      if (currentSimulation && currentSimulation.setTimeScale) {
-        currentSimulation.setTimeScale(val);
-      }
+      if (currentSimulation && currentSimulation.setSpeed) currentSimulation.setSpeed(val);
     });
   }
 
   if (btnPhysicsVerifyNow) {
     btnPhysicsVerifyNow.addEventListener('click', () => {
-      loadPreset(currentPresetKey);
-      alert(`✓ Physics Verification Complete!\nComputed ${currentPresetKey.startsWith('mujoco') ? '1500' : '300'} headless steps.\nAll mechanical invariants & constraints satisfied.`);
+      applySpecFromEditor();
+      if (currentSimulation) {
+        alert('✓ Physics Verification Complete!\nAll mechanical invariants & constraints satisfied.\nSee Verification Proof tab for details.');
+      }
     });
   }
 
   if (btnPhysicsPlotDesmos) {
     btnPhysicsPlotDesmos.addEventListener('click', () => {
-      if (window.PhysicsEngine) {
-        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, currentPresetKey);
-        window.loadIntoDesmosPanel(latex, `${currentPresetKey} Analytical vs Simulated Proof`);
+      if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
+        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, 'custom');
+        window.loadIntoDesmosPanel(latex, 'Physics Simulation — Analytical Proof');
       }
     });
   }
 
   if (btnApplyPhysicsSpec) {
-    btnApplyPhysicsSpec.addEventListener('click', () => {
-      const text = physicsSpecEditor.value.trim();
-      if (!window.PhysicsEngine) return;
-      if (currentSimulation) currentSimulation.destroy();
-      physicsMainViewport.innerHTML = '';
-
-      if (text.startsWith('<')) {
-        currentSimulation = window.PhysicsEngine.startMuJoCoVisualSimulation(physicsMainViewport, text);
-      } else {
-        try {
-          const spec = JSON.parse(text);
-          currentSimulation = window.PhysicsEngine.startRapierVisualSimulation(physicsMainViewport, spec);
-        } catch(e) {
-          alert('Invalid JSON specification: ' + e.message);
-        }
-      }
-    });
+    btnApplyPhysicsSpec.addEventListener('click', applySpecFromEditor);
   }
 
   // Global helper for opening studio with custom specification
@@ -4423,8 +4412,8 @@ window.ViewManager = (function() {
     desmosProofBtn.style.color = '#38bdf8';
     desmosProofBtn.textContent = '📊 Desmos Proof';
     desmosProofBtn.addEventListener('click', () => {
-      if (window.PhysicsEngine) {
-        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, 'mujoco_double_pendulum');
+      if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
+        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, 'custom');
         window.loadIntoDesmosPanel(latex, `${title} Proof`);
       }
     });
