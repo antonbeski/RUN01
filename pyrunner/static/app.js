@@ -3056,7 +3056,7 @@ document.addEventListener('keydown', (e) => {
         container.className = 'desmos-chat-card';
 
         const lines = desmosCode.split('\n')
-          .map(l => l.replace(/(#|\/\/).*$/, '').trim())
+          .map(l => cleanDesmosLatex(l))
           .filter(Boolean);
 
         const header = document.createElement('div');
@@ -3372,6 +3372,20 @@ document.addEventListener('keydown', (e) => {
 - Matplotlib/Seaborn: Call plt.show() at the end. The IDE automatically intercepts and renders it as an inline PNG.
 - Plotly: Call fig.show() at the end. The IDE automatically intercepts and renders it as an interactive plot.
 
+[PHYSICS SIMULATION & DESMOS GRAPHING INSTRUCTIONS]
+1. Real 3D Physics Simulations:
+   - To simulate 3D rigid bodies, kinematics, pendulums, robotics, collisions:
+     * In Python: Call \`physics.show_mujoco(xml_str, title="...")\` or \`physics.show_rapier(spec_dict, title="...")\`.
+     * In Chat: Output a fenced block \`\`\`mujoco [valid MJCF xml] \`\`\` or \`\`\`physics [JSON spec] \`\`\`.
+   - Always include a floor/ground geom (<geom type="plane" size="2 2 0.1"/> or type="fixed" box) and dynamic bodies with positive mass.
+2. Desmos Mathematical Graphing:
+   - ONLY produce Desmos graphs if explicitly requested by the user, or if plotting an analytical mathematical curve/function (e.g. projectile path, phase portrait). DO NOT produce unnecessary Desmos graphs for every question.
+   - For Desmos equations:
+     * Use single-letter variables or subscripts (e.g., m = 1, v_{1x} = 1.4, never multi-character names without subscripts like v1x).
+     * Output a fenced block \`\`\`desmos [equations] \`\`\` or in Python call \`show_desmos("y = x^2", title="...")\`.
+3. Verification Proofs:
+   - In RUN01, the actual running simulation and mathematical trajectory IS the proof. Do not write arbitrary hardcoded proof text.
+
 [STRICT OUTPUT FORMATTING RULES]
 1. For surgical modification of existing code in the editor:
    - Output one or more surgical edits using the exact formatting below (do NOT wrap the edit blocks in markdown fences):
@@ -3631,12 +3645,24 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     line = line.replace(/π/g, '\\pi');
     line = line.replace(/α/g, '\\alpha');
     line = line.replace(/β/g, '\\beta');
+    line = line.replace(/γ/g, '\\gamma');
+    line = line.replace(/ω/g, '\\omega');
+    line = line.replace(/λ/g, '\\lambda');
+
+    // Replace Python power ** with LaTeX ^
+    line = line.replace(/\*\*/g, '^');
 
     // Replace raw asterisks * with LaTeX \cdot
     line = line.replace(/\*/g, ' \\cdot ');
 
-    // Replace function parameter definitions like x(t) = ... or y(t) = ...
-    line = line.replace(/^[a-zA-Z]\([a-zA-Z]\)\s*=\s*/, '');
+    // Convert multi-character variable names with numbers like v1x, v1y, v2x to subscript format v_{1x}, v_{1y}, v_{2x}
+    // Desmos only allows single-letter variables or subscripted variables like v_{1} or a_{x}
+    line = line.replace(/\b([a-zA-Z])([0-9]+[a-zA-Z]*|[a-zA-Z]+[0-9]+)\b/g, (match, p1, p2) => {
+      // Don't modify standard math functions like sin, cos, tan, log, exp, sqrt, arcsin, etc.
+      const mathFuncs = ['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'sqrt', 'cdot', 'frac', 'theta', 'alpha', 'beta', 'gamma', 'omega', 'pi', 'lambda'];
+      if (mathFuncs.includes(match.toLowerCase())) return match;
+      return `${p1}_{${p2}}`;
+    });
 
     // Normalize whitespace
     line = line.replace(/\s+/g, ' ').trim();
@@ -4219,10 +4245,25 @@ window.ViewManager = (function() {
     if (existingSpec) {
       applySpecFromEditor();
     } else {
-      // Show an empty viewport with a helpful placeholder
-      if (physicsMainViewport) {
-        physicsMainViewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-family:monospace;font-size:13px;text-align:center;padding:20px;">Ask the AI to generate a physics simulation.<br>The spec will appear in the <b>Model Spec</b> tab below.</div>';
-      }
+      // Provide a clean starter XML template ready to run
+      const defaultStarter = `<mujoco model="double_pendulum">
+  <option gravity="0 0 -9.81" timestep="0.002"/>
+  <worldbody>
+    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
+    <geom type="plane" size="2 2 0.1" rgba=".9 .9 .9 1"/>
+    <geom type="sphere" size="0.05" pos="0 0 1.5" rgba="0.5 0.5 0.5 1"/>
+    <body pos="0 0 1.5">
+      <joint name="pin1" type="hinge" axis="0 1 0"/>
+      <geom name="link1" type="capsule" size="0.03 0.3" pos="0 0 -0.3" rgba="0.2 0.8 0.4 1" mass="1"/>
+      <body pos="0 0 -0.6">
+        <joint name="pin2" type="hinge" axis="0 1 0"/>
+        <geom name="link2" type="sphere" size="0.08" pos="0 0 0" rgba="0.9 0.3 0.3 1" mass="1.5"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>`;
+      if (physicsSpecEditor) physicsSpecEditor.value = defaultStarter;
+      applySpecFromEditor();
     }
   }
 

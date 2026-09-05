@@ -781,30 +781,29 @@
           <div class="physics-tab-content active" id="panePhysProof">
             <div class="proof-card" id="physicsProofCard">
               <div class="proof-header">
-                <span class="proof-status-badge pass">PHYSICAL LAWS VERIFIED</span>
-                <span class="proof-engine-label" id="proofEngineLabel">MuJoCo WASM Engine</span>
+                <span class="proof-status-badge pass" id="proofStatusBadge">REAL-TIME SIMULATION</span>
+                <span class="proof-engine-label" id="proofEngineLabel">MuJoCo 3.x WASM Engine</span>
               </div>
               <div class="proof-metrics-grid" id="proofMetricsGrid">
                 <div class="proof-metric">
                   <div class="metric-name">Energy Conservation</div>
-                  <div class="metric-val text-green" id="mEnergyVal">PASS (dE &lt; 0.01%)</div>
+                  <div class="metric-val text-green" id="mEnergyVal">--</div>
                 </div>
                 <div class="proof-metric">
                   <div class="metric-name">Kinematic Constraints</div>
-                  <div class="metric-val text-green" id="mConstraintVal">PASS (|residual| &lt; 1e-5)</div>
+                  <div class="metric-val text-green" id="mConstraintVal">--</div>
                 </div>
                 <div class="proof-metric">
                   <div class="metric-name">Analytical Correlation</div>
-                  <div class="metric-val text-blue" id="mR2Val">R^2 = 0.9998</div>
+                  <div class="metric-val text-blue" id="mR2Val">--</div>
                 </div>
                 <div class="proof-metric">
                   <div class="metric-name">Lyapunov Stability</div>
-                  <div class="metric-val text-yellow" id="mStabilityVal">Conservative Orbit</div>
+                  <div class="metric-val text-yellow" id="mStabilityVal">--</div>
                 </div>
               </div>
               <div class="proof-description" id="proofDescription">
-                Simulation computed 1500 headless steps with symplectic Runge-Kutta 4th-order integration.
-                Total mechanical Hamiltonian is conserved within physical numerical tolerance.
+                Live simulation telemetry will be computed dynamically from the active physics model.
               </div>
             </div>
           </div>

@@ -756,6 +756,21 @@
       this.container.innerHTML = '';
       this.container.appendChild(this.renderer.domElement);
 
+      // Handle container resizing automatically
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => {
+          if (!this.container || !this.renderer || !this.camera) return;
+          const newW = this.container.clientWidth;
+          const newH = this.container.clientHeight;
+          if (newW > 0 && newH > 0) {
+            this.camera.aspect = newW / newH;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(newW, newH);
+          }
+        });
+        this.resizeObserver.observe(this.container);
+      }
+
       const ambient = new THREE.AmbientLight(0xffffff, 0.7);
       this.scene.add(ambient);
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -1043,6 +1058,10 @@
 
     destroy() {
       if (this.animId) cancelAnimationFrame(this.animId);
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+      }
       if (this.mujocoSim) {
         this.mujocoSim.destroy();
         this.mujocoSim = null;
