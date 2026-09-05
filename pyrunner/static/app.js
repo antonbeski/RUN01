@@ -4204,7 +4204,6 @@ window.ViewManager = (function() {
   const btnPhysics = document.getElementById('btnPhysics');
   const physicsModalOverlay = document.getElementById('physicsModalOverlay');
   const btnClosePhysicsModal = document.getElementById('btnClosePhysicsModal');
-  const physicsPresetSelect = document.getElementById('physicsPresetSelect');
   const physicsMainViewport = document.getElementById('physicsMainViewport');
 
   const btnPhysicsPlay = document.getElementById('btnPhysicsPlay');
@@ -4370,13 +4369,6 @@ window.ViewManager = (function() {
           Check the Model Spec tab and ensure valid JSON or MuJoCo XML, then click Apply.
         </div>`;
     }
-  }
-
-  // ── Preset select (now has only "Custom" option — AI writes the spec) ──
-  if (physicsPresetSelect) {
-    physicsPresetSelect.addEventListener('change', () => {
-      // No-op — all simulation starts through the spec editor
-    });
   }
 
   if (btnPhysicsPlay) {
