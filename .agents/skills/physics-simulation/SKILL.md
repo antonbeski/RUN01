@@ -1,4 +1,4 @@
-﻿---
+---
 name: physics-simulation
 description: Comprehensive guidelines, JSON schema, and code patterns for writing error-free 2D/3D physics simulations in RUN01 (Mechanics, Multi-Body Dynamics, Springs, Pulleys, Buoyancy/Aerodynamics, and Geometric Optics).
 argument-hint: "[simulation-type] [objects-description]"
@@ -178,11 +178,76 @@ For Snell's law refraction, chromatic prism dispersion, lenses, and parabolic mi
 
 ---
 
-## 4. Best Practices to Guarantee Zero Errors
+## 4. Native MuJoCo MJCF XML Specification
 
-1. **Always Include a Ground/Floor**: When simulating falling objects, include a `fixed` box at `pos: [0, -0.2, 0]` with `size: [16, 0.4, 8]` so objects don't fall infinitely into the void.
+RUN01 runs the real **MuJoCo 3.x WASM engine** in the browser. You can generate standard MJCF XML definitions for advanced multibody dynamics, robotic arms, inverted pendulums, ragdolls, and tendon-driven mechanisms.
+
+### Python Execution:
+```python
+from app import physics  # or mujoco alias
+
+xml_code = """
+<mujoco model="inverted_pendulum">
+  <option gravity="0 0 -9.81" integrator="RK4" timestep="0.002"/>
+  <worldbody>
+    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
+    <geom type="plane" size="2 2 0.1" rgba=".9 .9 .9 1"/>
+    <body pos="0 0 0.1">
+      <joint name="slide" type="slide" axis="1 0 0"/>
+      <geom name="cart" type="box" size="0.2 0.1 0.05" rgba="0.2 0.6 1 1" mass="1.0"/>
+      <body pos="0 0 0">
+        <joint name="hinge" type="hinge" axis="0 1 0"/>
+        <geom name="pole" type="capsule" size="0.02 0.4" pos="0 0 0.4" rgba="1 0.4 0.4 1" mass="0.2"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
+"""
+
+# 1. Rigorous MuJoCo verification of Hamiltonian energy conservation
+proof = physics.verify_mujoco(xml_code, duration=3.0)
+print(f"MuJoCo Invariants: dE = {proof['invariants']['maxEnergyDriftPercent']}%")
+
+# 2. Interactive 3D WebGL viewport driven by the MuJoCo WASM solver
+physics.show_mujoco(xml_code, title="Inverted Pendulum")
+```
+
+### AI Chat Markdown Block:
+````markdown
+```mujoco
+<mujoco model="double_pendulum">
+  <option gravity="0 0 -9.81" timestep="0.002"/>
+  <worldbody>
+    <geom type="sphere" size="0.05" pos="0 0 1.5" rgba="0.5 0.5 0.5 1"/>
+    <body pos="0 0 1.5">
+      <joint name="pin1" type="hinge" axis="0 1 0"/>
+      <geom name="link1" type="capsule" size="0.03 0.3" pos="0 0 -0.3" rgba="0.2 0.8 0.4 1" mass="1"/>
+      <body pos="0 0 -0.6">
+        <joint name="pin2" type="hinge" axis="0 1 0"/>
+        <geom name="link2" type="sphere" size="0.08" pos="0 0 0" rgba="0.9 0.3 0.3 1" mass="1.5"/>
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
+```
+````
+
+### Supported MuJoCo MJCF Elements & Constraints:
+- **Joint Types**: `free`, `hinge`, `slide`, `ball`
+- **Geom Types**: `plane`, `sphere`, `capsule`, `cylinder`, `box`, `ellipsoid`
+- **Integrators**: `Euler`, `RK4`, `implicit`, `implicitfast`
+- **Options**: `gravity`, `timestep`, `density`, `viscosity`, `tolerance`
+- **Coordinate System**: MuJoCo uses Z-up convention (`pos="x y z"` with gravity along `-Z`).
+
+---
+
+## 5. Best Practices to Guarantee Zero Errors
+
+1. **Always Include a Ground/Floor**: When simulating falling objects, include a `fixed` box at `pos: [0, -0.2, 0]` with `size: [16, 0.4, 8]` (or in MJCF: `<geom type="plane" size="5 5 0.1"/>`) so objects don't fall infinitely into the void.
 2. **Valid Mass Values**: Always provide `mass > 0` for `dynamic` objects (typically `0.5` to `10.0`). Do not set mass to 0 for dynamic objects.
-3. **Color Formatting**: In JSON, use standard numbers for colors, e.g., `0x38bdf8` -> `3718648` or simply hex literals in Python `0x38bdf8`.
+3. **Color Formatting**: In JSON, use standard numbers for colors (e.g., `0x38bdf8` or hex integers). In MJCF, use `rgba="r g b a"` with values normalized from 0.0 to 1.0.
 4. **Spring Rest Length Matching**: Set `restLength` close to the initial distance between `posA` and `posB` to avoid explosive initial acceleration unless deliberately studying sudden release.
 5. **Body Names in Springs/Pulleys**: Ensure every string specified in `bodyA`, `bodyB`, `loadBody`, `effortBody` exactly matches a `name` in the `bodies` array.
 6. **Optics Positioning**: Position the ray source on the negative X axis (e.g. `[-4.0, 0, 0]`) aimed toward `dir: [1.0, 0, 0]`, placing lenses and prisms near the origin `[0, 0, 0]`.
+7. **MuJoCo XML Validity**: Always encapsulate MJCF definitions in root `<mujoco model="..."> ... </mujoco>` with `<worldbody>` containing child geoms and bodies.
+

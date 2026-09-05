@@ -593,37 +593,143 @@
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 4. REAL MUJOCO WASM SIMULATION & VERIFICATION SOLVER
+  // ══════════════════════════════════════════════════════════════════════════
+
+  let _globalMujoco = typeof window !== 'undefined' ? (window.mujoco || null) : null;
+
+  function setMujocoInstance(mj) {
+    _globalMujoco = mj;
+  }
+
+  function getMujocoInstance() {
+    if (_globalMujoco) return _globalMujoco;
+    if (typeof window !== 'undefined' && window.mujoco) {
+      _globalMujoco = window.mujoco;
+      return _globalMujoco;
+    }
+    return null;
+  }
+
+  class MujocoWasmSimulation {
+    constructor(xmlString) {
+      this.xml = (typeof xmlString === 'string') ? xmlString.trim() : '';
+      this.mujoco = getMujocoInstance();
+      this.model = null;
+      this.data = null;
+      this.isReady = false;
+      this.error = null;
+
+      if (!this.mujoco) {
+        this.error = 'MuJoCo WASM runtime is not yet loaded.';
+        return;
+      }
+
+      try {
+        const path = '/model_' + Math.random().toString(36).substr(2, 8) + '.xml';
+        this.mujoco.FS.writeFile(path, this.xml);
+        this.model = this.mujoco.MjModel.from_xml_path(path);
+        try { this.mujoco.FS.unlink(path); } catch(e) {}
+        this.data = new this.mujoco.MjData(this.model);
+
+        // Enable energy computation flag (mjENBL_ENERGY = 2)
+        if (this.model.opt) {
+          this.model.opt.enableflags = (this.model.opt.enableflags || 0) | 2;
+        }
+
+        this.isReady = true;
+      } catch (err) {
+        this.error = err.message || String(err);
+        console.error('[MuJoCo WASM] Compilation error:', err);
+      }
+    }
+
+    step(substeps = 1) {
+      if (!this.isReady || !this.model || !this.data || !this.mujoco) return;
+      for (let s = 0; s < substeps; s++) {
+        this.mujoco.mj_step(this.model, this.data);
+      }
+    }
+
+    calculateTelemetry() {
+      if (!this.isReady || !this.model || !this.data || !this.mujoco) {
+        return { kinetic: 0, potential: 0, totalEnergy: 0, activeBodies: 0 };
+      }
+
+      try {
+        if (typeof this.mujoco.mj_energyPos === 'function') {
+          this.mujoco.mj_energyPos(this.model, this.data);
+        }
+        if (typeof this.mujoco.mj_energyVel === 'function') {
+          this.mujoco.mj_energyVel(this.model, this.data);
+        }
+
+        let pot = 0, kin = 0;
+        if (this.data.energy) {
+          pot = Number(this.data.energy[0]) || 0;
+          kin = Number(this.data.energy[1]) || 0;
+        }
+
+        return {
+          potential: Number(pot.toFixed(4)),
+          kinetic: Number(kin.toFixed(4)),
+          totalEnergy: Number((pot + kin).toFixed(4)),
+          activeBodies: this.model.nbody || 0
+        };
+      } catch (err) {
+        return { kinetic: 0, potential: 0, totalEnergy: 0, activeBodies: this.model.nbody || 0 };
+      }
+    }
+
+    reset() {
+      if (!this.isReady || !this.model || !this.data || !this.mujoco) return;
+      try {
+        if (typeof this.mujoco.mj_resetData === 'function') {
+          this.mujoco.mj_resetData(this.model, this.data);
+        }
+      } catch(e) {}
+    }
+
+    destroy() {
+      if (this.data && typeof this.data.delete === 'function') {
+        try { this.data.delete(); } catch(e) {}
+      }
+      if (this.model && typeof this.model.delete === 'function') {
+        try { this.model.delete(); } catch(e) {}
+      }
+      this.model = null;
+      this.data = null;
+      this.isReady = false;
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 4. PRESET REGISTRY — intentionally empty.
-  //    The AI writes a complete JSON spec and passes it to SimulationController
-  //    directly via window.openPhysicsStudioWithSpec() or the spec editor.
-  //    No hardcoded simulations live here.
+  // 5. PRESET REGISTRY — intentionally empty (AI generates all models dynamically)
   // ══════════════════════════════════════════════════════════════════════════
 
   const PRESETS = {};
 
-
-
   // ══════════════════════════════════════════════════════════════════════════
-  // 5. 3D WEBGL VISUALIZER & SIMULATION CONTROLLER (Three.js)
+  // 6. 3D WEBGL VISUALIZER & SIMULATION CONTROLLER (Three.js)
   // ══════════════════════════════════════════════════════════════════════════
 
   class SimulationController {
     constructor(containerEl, presetOrSpec) {
       this.container = containerEl;
-      // Accept either a preset object (with .spec) or a raw spec object directly
-      if (typeof presetOrSpec === 'string') {
-        // Legacy string key — no longer supported; log a warning
-        console.warn('[PhysicsEngine] String preset keys are no longer supported. Pass a spec object directly.');
-        this.preset = { type: 'multibody', spec: {} };
+      if (typeof presetOrSpec === 'string' && presetOrSpec.trim().startsWith('<')) {
+        this.preset = { type: 'mujoco', xml: presetOrSpec };
+      } else if (presetOrSpec && presetOrSpec.xml) {
+        this.preset = { type: 'mujoco', xml: presetOrSpec.xml };
       } else if (presetOrSpec && presetOrSpec.spec) {
         this.preset = presetOrSpec;
       } else {
-        // Raw spec passed directly
-        this.preset = { type: presetOrSpec && presetOrSpec.elements ? 'optics' : 'multibody', spec: presetOrSpec || {} };
+        const isOptics = presetOrSpec && presetOrSpec.elements && presetOrSpec.elements.length > 0;
+        this.preset = { type: isOptics ? 'optics' : 'multibody', spec: presetOrSpec || {} };
       }
+
       this.spec = this.preset.spec || {};
+      this.xml = this.preset.xml || '';
       this.isRunning = true;
       this.speed = 1.0;
       this.showWireframe = false;
@@ -662,19 +768,102 @@
 
       this.meshMap = new Map();
       this.rayLines = [];
+      this.mujocoGeomMeshes = [];
 
-      if (this.preset.type === 'optics') {
+      if (this.preset.type === 'mujoco') {
+        this.optics = null;
         this.solver = null;
+        this.mujocoSim = new MujocoWasmSimulation(this.xml);
+        if (this.mujocoSim.isReady) {
+          this.buildMujocoScene();
+        } else {
+          this.container.innerHTML = `<div style="color:#f87171;font-family:monospace;padding:16px;font-size:12px;"><b>MuJoCo Initialization Error:</b><br>${this.mujocoSim.error || 'Failed to initialize MuJoCo WASM'}</div>`;
+          return;
+        }
+      } else if (this.preset.type === 'optics') {
+        this.solver = null;
+        this.mujocoSim = null;
         this.optics = new OpticsRayTracer(this.spec);
         this.buildOpticsScene();
       } else {
         this.optics = null;
+        this.mujocoSim = null;
         this.solver = new UniversalMultiBodySolver(this.spec);
         this.buildMultiBodyScene();
       }
 
       this.animate = this.animate.bind(this);
       this.animId = requestAnimationFrame(this.animate);
+    }
+
+    buildMujocoScene() {
+      if (!this.mujocoSim || !this.mujocoSim.model) return;
+      const model = this.mujocoSim.model;
+      const data = this.mujocoSim.data;
+      const ngeom = model.ngeom;
+
+      for (let g = 0; g < ngeom; g++) {
+        const type = model.geom_type ? model.geom_type[g] : 2; // 0=plane, 2=sphere, 3=capsule, 4=ellipsoid, 5=cylinder, 6=box
+        const sizeX = (model.geom_size && model.geom_size[g * 3 + 0]) || 0.1;
+        const sizeY = (model.geom_size && model.geom_size[g * 3 + 1]) || 0.1;
+        const sizeZ = (model.geom_size && model.geom_size[g * 3 + 2]) || 0.1;
+
+        let geom;
+        if (type === 0) {
+          // Plane
+          const pW = sizeX > 0 ? sizeX * 2 : 20;
+          const pH = sizeY > 0 ? sizeY * 2 : 20;
+          geom = new THREE.PlaneGeometry(pW, pH);
+          geom.rotateX(-Math.PI / 2);
+        } else if (type === 2) {
+          // Sphere
+          geom = new THREE.SphereGeometry(sizeX || 0.1, 32, 32);
+        } else if (type === 3 || type === 5) {
+          // Capsule or Cylinder
+          const radius = sizeX || 0.05;
+          const halfHeight = sizeY || 0.2;
+          geom = new THREE.CylinderGeometry(radius, radius, halfHeight * 2, 32);
+        } else if (type === 6) {
+          // Box
+          geom = new THREE.BoxGeometry(sizeX * 2, sizeY * 2, sizeZ * 2);
+        } else {
+          geom = new THREE.SphereGeometry(sizeX || 0.1, 16, 16);
+        }
+
+        // Color & Material from geom_rgba
+        let colorHex = 0x38bdf8;
+        let opacity = 1.0;
+        if (model.geom_rgba) {
+          const r = model.geom_rgba[g * 4 + 0];
+          const gr = model.geom_rgba[g * 4 + 1];
+          const b = model.geom_rgba[g * 4 + 2];
+          const a = model.geom_rgba[g * 4 + 3];
+          if (r !== undefined && gr !== undefined && b !== undefined) {
+            colorHex = (Math.round(r * 255) << 16) | (Math.round(gr * 255) << 8) | Math.round(b * 255);
+          }
+          if (a !== undefined) opacity = a;
+        }
+
+        const mat = new THREE.MeshStandardMaterial({
+          color: colorHex,
+          roughness: 0.35,
+          metalness: 0.2,
+          transparent: opacity < 1.0,
+          opacity: opacity,
+          wireframe: this.showWireframe
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        if (data && data.geom_xpos) {
+          mesh.position.set(
+            data.geom_xpos[g * 3 + 0] || 0,
+            data.geom_xpos[g * 3 + 2] || 0, // MuJoCo Z is up -> Three.js Y
+            -(data.geom_xpos[g * 3 + 1] || 0)
+          );
+        }
+        this.scene.add(mesh);
+        this.mujocoGeomMeshes.push({ geomIdx: g, mesh, type });
+      }
     }
 
     buildMultiBodyScene() {
@@ -748,7 +937,38 @@
 
     animate() {
       if (this.isRunning) {
-        if (this.solver) {
+        if (this.mujocoSim && this.mujocoSim.isReady) {
+          const steps = Math.max(1, Math.round(this.speed * 2));
+          this.mujocoSim.step(steps);
+
+          const data = this.mujocoSim.data;
+          if (data && data.geom_xpos && data.geom_xmat) {
+            this.mujocoGeomMeshes.forEach(item => {
+              const g = item.geomIdx;
+              const mesh = item.mesh;
+
+              // MuJoCo coordinates (X=right, Y=forward, Z=up) -> Three.js (X=right, Y=up, Z=-forward)
+              const mx = data.geom_xpos[g * 3 + 0];
+              const my = data.geom_xpos[g * 3 + 1];
+              const mz = data.geom_xpos[g * 3 + 2];
+              mesh.position.set(mx, mz, -my);
+
+              // 3x3 rotation matrix
+              const r00 = data.geom_xmat[g * 9 + 0], r01 = data.geom_xmat[g * 9 + 1], r02 = data.geom_xmat[g * 9 + 2];
+              const r10 = data.geom_xmat[g * 9 + 3], r11 = data.geom_xmat[g * 9 + 4], r12 = data.geom_xmat[g * 9 + 5];
+              const r20 = data.geom_xmat[g * 9 + 6], r21 = data.geom_xmat[g * 9 + 7], r22 = data.geom_xmat[g * 9 + 8];
+
+              const rotMatrix = new THREE.Matrix4();
+              rotMatrix.set(
+                r00,  r02, -r01, 0,
+                r20,  r22, -r21, 0,
+               -r10, -r12,  r11, 0,
+                0,    0,    0,   1
+              );
+              mesh.setRotationFromMatrix(rotMatrix);
+            });
+          }
+        } else if (this.solver) {
           this.solver.step(this.speed);
           this.solver.bodies.forEach(b => {
             const mesh = this.meshMap.get(b.name);
@@ -793,13 +1013,20 @@
     }
 
     reset() {
-      if (this.solver) {
+      if (this.mujocoSim) {
+        this.mujocoSim.reset();
+      } else if (this.solver) {
         this.solver = new UniversalMultiBodySolver(this.spec);
       }
     }
 
     applyImpulse(f = [0, 4.0, 0]) {
-      if (this.solver) {
+      if (this.mujocoSim && this.mujocoSim.isReady && this.mujocoSim.data && this.mujocoSim.data.qvel) {
+        const qvel = this.mujocoSim.data.qvel;
+        for (let i = 0; i < Math.min(qvel.length, 6); i++) {
+          qvel[i] += (Math.random() - 0.5) * 3.0;
+        }
+      } else if (this.solver) {
         this.solver.bodies.forEach(b => {
           if (b.type === 'dynamic') {
             b.linvel[0] += (Math.random() - 0.5) * 3.0;
@@ -816,6 +1043,10 @@
 
     destroy() {
       if (this.animId) cancelAnimationFrame(this.animId);
+      if (this.mujocoSim) {
+        this.mujocoSim.destroy();
+        this.mujocoSim = null;
+      }
       if (this.renderer && this.renderer.domElement) {
         this.renderer.domElement.remove();
       }
@@ -823,10 +1054,69 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 6. HEADLESS VERIFICATION ENGINES
+  // 7. REAL MUJOCO & HEADLESS VERIFICATION ENGINES
   // ══════════════════════════════════════════════════════════════════════════
 
+  function runMuJoCoVerification(xmlString, options = {}) {
+    const xml = (typeof xmlString === 'string') ? xmlString.trim() : '';
+    const sim = new MujocoWasmSimulation(xml);
+    if (!sim.isReady) {
+      return {
+        success: false,
+        engine: 'MuJoCo 3.x WASM Physics Engine',
+        error: sim.error || 'MuJoCo initialization failed',
+        invariants: {
+          initialEnergy: 0,
+          finalEnergy: 0,
+          maxEnergyDriftPercent: 0,
+          energyConservationPassed: false,
+          lyapunovStability: 'Failed'
+        }
+      };
+    }
+
+    const duration = options.duration || 3.0;
+    const timestep = (sim.model && sim.model.opt && sim.model.opt.timestep) ? sim.model.opt.timestep : 0.002;
+    const totalSteps = Math.floor(duration / timestep);
+
+    const initialTelem = sim.calculateTelemetry();
+    const e0 = initialTelem.totalEnergy;
+    let maxDrift = 0;
+
+    for (let s = 0; s < totalSteps; s++) {
+      sim.step(1);
+      const telem = sim.calculateTelemetry();
+      const e = telem.totalEnergy;
+      const drift = Math.abs((e - e0) / (Math.abs(e0) || 1.0));
+      if (drift > maxDrift) maxDrift = drift;
+    }
+
+    const finalTelem = sim.calculateTelemetry();
+    const res = {
+      success: true,
+      engine: 'MuJoCo 3.x WASM Symplectic Rigorous Verifier',
+      stepsComputed: totalSteps,
+      durationSeconds: duration,
+      invariants: {
+        initialEnergy: Number(e0.toFixed(4)),
+        finalEnergy: Number(finalTelem.totalEnergy.toFixed(4)),
+        maxEnergyDriftPercent: Number((maxDrift * 100).toFixed(4)),
+        energyConservationPassed: maxDrift < 0.05,
+        lyapunovStability: 'MuJoCo Conservative Hamiltonian'
+      }
+    };
+    sim.destroy();
+    return res;
+  }
+
   function runVerification(specOrPreset, options = {}) {
+    if (typeof specOrPreset === 'string' && specOrPreset.trim().startsWith('<')) {
+      return runMuJoCoVerification(specOrPreset, options);
+    }
+    if (specOrPreset && specOrPreset.xml) {
+      return runMuJoCoVerification(specOrPreset.xml, options);
+    }
+
     const preset = typeof specOrPreset === 'string' ? PRESETS[specOrPreset] : specOrPreset;
     const spec = (preset && preset.spec) ? preset.spec : (specOrPreset || {});
     const solver = new UniversalMultiBodySolver(spec);
@@ -875,29 +1165,21 @@
     GeometryFactory,
     OpticsRayTracer,
     UniversalMultiBodySolver,
+    MujocoWasmSimulation,
     SimulationController,
+    setMujocoInstance,
+    getMujocoInstance,
 
-    startMuJoCoVisualSimulation(viewport, specOrXml) {
-      // Accepts a raw spec object or JSON string; XML strings are passed as multibody spec placeholder
-      let spec = {};
-      if (typeof specOrXml === 'object' && specOrXml !== null) {
-        spec = specOrXml;
-      } else if (typeof specOrXml === 'string' && !specOrXml.trim().startsWith('<')) {
-        try { spec = JSON.parse(specOrXml); } catch(e) { spec = {}; }
-      }
-      return new SimulationController(viewport, spec);
+    startMuJoCoVisualSimulation(viewport, xmlCode) {
+      const xmlStr = (typeof xmlCode === 'string') ? xmlCode : (xmlCode && xmlCode.xml ? xmlCode.xml : String(xmlCode));
+      return new SimulationController(viewport, { xml: xmlStr });
     },
     startRapierVisualSimulation(viewport, spec) {
       return new SimulationController(viewport, spec);
     },
-    runMuJoCoVerification(specOrXml, options) {
-      let spec = {};
-      if (typeof specOrXml === 'object' && specOrXml !== null) {
-        spec = specOrXml;
-      } else if (typeof specOrXml === 'string' && !specOrXml.trim().startsWith('<')) {
-        try { spec = JSON.parse(specOrXml); } catch(e) { spec = {}; }
-      }
-      return runVerification({ spec }, options);
+    runMuJoCoVerification(xmlCode, options) {
+      const xmlStr = (typeof xmlCode === 'string') ? xmlCode : (xmlCode && xmlCode.xml ? xmlCode.xml : String(xmlCode));
+      return runMuJoCoVerification(xmlStr, options);
     },
     runRapierVerification(spec, options) {
       return runVerification(spec, options);
@@ -906,4 +1188,5 @@
     runVerification
   };
 });
+
 

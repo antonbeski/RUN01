@@ -24,6 +24,12 @@
   <link rel="preload"
         href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
         as="script" crossorigin />
+  <link rel="preload"
+        href="{{ url_for('static', filename='mujoco_wasm.js') }}"
+        as="script" />
+  <link rel="preload"
+        href="{{ url_for('static', filename='mujoco.wasm') }}"
+        as="fetch" crossorigin />
 
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
@@ -817,6 +823,8 @@
   <!-- Three.js for 3D Physics Viewports and Visual Simulations -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin
           onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+  <!-- MuJoCo WASM Engine -->
+  <script src="{{ url_for('static', filename='mujoco_wasm.js') }}"></script>
   <!-- Physics Engine (MuJoCo, Rapier, Solvers, Verifiers) -->
   <script src="{{ url_for('static', filename='physics-engine.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"

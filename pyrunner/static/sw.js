@@ -9,7 +9,7 @@
                   Plotly.js (~3 MB), Google Fonts.
    ================================================================ */
 
-const CACHE_VERSION = 'run01-v2';
+const CACHE_VERSION = 'run01-v3';
 
 const CACHE_ORIGINS = [
   'https://cdn.jsdelivr.net',
@@ -18,9 +18,24 @@ const CACHE_ORIGINS = [
   'https://fonts.gstatic.com',
 ];
 
-// ── Install: take control immediately ─────────────────────
+// Precache list for critical local assets including MuJoCo WASM and physics engine
+const PRECACHE_ASSETS = [
+  '/static/mujoco_wasm.js',
+  '/static/mujoco.wasm',
+  '/static/mujoco_wasm.wasm',
+  '/static/physics-engine.js'
+];
+
+// ── Install: take control immediately & precache WASM assets ──
 self.addEventListener('install', (evt) => {
   self.skipWaiting();
+  evt.waitUntil(
+    caches.open(CACHE_VERSION).then((cache) => {
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn('[SW] Precache non-blocking failure:', err);
+      });
+    })
+  );
 });
 
 // ── Activate: claim clients, purge old caches ─────────────
@@ -37,14 +52,16 @@ self.addEventListener('activate', (evt) => {
   );
 });
 
-// ── Fetch: cache-first for CDN, passthrough for everything else ──
+// ── Fetch: cache-first for CDN and MuJoCo/Physics WASM, passthrough for everything else ──
 self.addEventListener('fetch', (evt) => {
   const { request } = evt;
 
-  // Only cache GET requests to whitelisted CDN origins
+  // Only cache GET requests
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
   const isCDN = CACHE_ORIGINS.some((o) => request.url.startsWith(o));
-  if (!isCDN) return;
+  const isPrecacheLocal = PRECACHE_ASSETS.some((p) => url.pathname === p);
+  if (!isCDN && !isPrecacheLocal) return;
 
   evt.respondWith(
     caches.open(CACHE_VERSION).then(async (cache) => {
