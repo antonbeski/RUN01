@@ -59,7 +59,8 @@ For classical mechanics, rigid bodies, springs, pulleys, falling objects, and bu
   "waterLevel": -1.0,              // Y coordinate plane below which buoyancy & water drag apply
   "bodies": [],                    // Array of Body objects (Required)
   "springs": [],                   // Array of Spring objects (Optional)
-  "pulleys": []                    // Array of Pulley objects (Optional)
+  "pulleys": [],                   // Array of Pulley objects (Optional)
+  "joints": []                     // Array of Joint objects (fixed, revolute, spherical, rope, prismatic) (Optional)
 }
 ```
 
@@ -87,21 +88,26 @@ Every body MUST have a unique `name`.
   
   // Hollow / Shell geometry parameters:
   "isHollow": false,               // Set true to compute hollow shell moment of inertia
-  "wallThickness": 0.05            // Wall thickness for hollow geometries (meters)
+  "wallThickness": 0.05,           // Wall thickness for hollow geometries (meters)
+
+  // Sensor / Trigger zone:
+  "sensor": false                  // Set true to detect intersections without generating physical collision response
 }
 ```
 
-### Spring Specification (`springs` items)
-Connects two bodies or one body to a fixed world anchor:
+### Joint Specification (`joints` items)
+Connects two bodies with constraints (Fixed, Revolute hinge, Spherical ball-and-socket, Rope, Prismatic slider):
 ```json
 {
-  "bodyA": "mass_1",               // Name of first body (or omit if anchorA is used)
-  "bodyB": "mass_2",               // Name of second body (or omit if anchorB is used)
-  "anchorA": [0, 3.0, 0],          // World [x, y, z] anchor if bodyA is omitted
-  "anchorB": [0, 0, 0],            // World [x, y, z] anchor if bodyB is omitted
-  "k": 50.0,                       // Spring stiffness constant (N/m)
-  "c": 0.3,                        // Viscous damping coefficient
-  "restLength": 1.5                // Equilibrium natural length (meters)
+  "type": "revolute",              // "revolute" | "fixed" | "spherical" | "rope" | "prismatic"
+  "bodyA": "chassis",              // Name of first body
+  "bodyB": "wheel",                // Name of second body (or omit if anchorB is a world position)
+  "anchorA": [0, -0.2, 0.5],       // Anchor position in bodyA local frame
+  "anchorB": [0, 0, 0],            // Anchor position in bodyB local frame
+  "axis": [0, 0, 1],               // Joint axis (e.g. rotation axis for revolute, translation axis for prismatic)
+  "length": 2.0,                   // For rope joints: maximum distance
+  "stiffness": 800.0,              // Constraint stiffness
+  "damping": 15.0                  // Constraint damping
 }
 ```
 
@@ -117,7 +123,32 @@ Couples two bodies with mechanical advantage:
 
 ---
 
-## 3. Geometric Optics & Wave Physics Schema
+## 3. React-Three-Rapier & Rapier Core Simulation Catalog
+
+For complete, verbatim code patterns derived from `@react-three/rapier` (`pmndrs/react-three-rapier`), consult the dedicated reference catalog:
+👉 **[references/rapier-simulation-patterns.md](file:///f:/ANTBSK/starfish/code_editor/.agents/skills/physics-simulation/references/rapier-simulation-patterns.md)**
+
+It covers all 16 fundamental physics simulation building blocks:
+1. **The Physics Component**: `<Physics gravity={[0, -9.81, 0]} timeStep={1/60} substeps={4} interpolate colliders="cuboid" />`
+2. **The RigidBody Component**: `type="dynamic" | "fixed" | "kinematicPosition" | "kinematicVelocity"`
+3. **Automatic Colliders**: `"cuboid" | "ball" | "trimesh" | "hull" | false`
+4. **Collider Components & Compound Shapes**: `<CuboidCollider />`, `<BallCollider />`, `<MeshCollider />`, multi-collider compounds
+5. **Instanced Meshes**: `<InstancedRigidBodies />`, instance matrices, large scale simulations
+6. **Debug**: Live collider wireframes and contacts via `<Physics debug />`
+7. **Forces & Impulses**: `applyImpulse()`, `addForce()`, `applyTorqueImpulse()`, `addTorque()`, `setLinvel()`, `setAngvel()`, `vec3()`, `quat()`, `euler()`
+8. **Collision Events & Filtering**: `onCollisionEnter`, `onCollisionExit`, `onSleep`, `onWake`, bitmasks via `interactionGroups()`
+9. **Contact Force Events**: `onContactForce`, `totalForceMagnitude`, `maxForceDirection`
+10. **Sensors**: `<CuboidCollider sensor onIntersectionEnter={...} />` for non-physical trigger zones
+11. **Time Step Size**: `timeStep={1/60}` fixed vs `timeStep="vary"`
+12. **Joints**: `useFixedJoint`, `useSphericalJoint`, `useRevoluteJoint`, `usePrismaticJoint`, `useRopeJoint`, `useSpringJoint`
+13. **Advanced Hooks & Collision Filtering**: `useRapier`, `useBeforePhysicsStep`, `useFilterContactPair` (one-way platforms)
+14. **Manual Stepping**: `useRapier().step(dt)` for deterministic turn-based physics
+15. **On-Demand Rendering**: `<Physics updateLoop="independent" />`
+16. **Snapshots**: `world.takeSnapshot()` and `world.restoreSnapshot()` state serialization
+
+---
+
+## 4. Geometric Optics & Wave Physics Schema
 
 For Snell's law refraction, chromatic prism dispersion, lenses, and parabolic mirrors.
 
@@ -178,7 +209,7 @@ For Snell's law refraction, chromatic prism dispersion, lenses, and parabolic mi
 
 ---
 
-## 4. Native MuJoCo MJCF XML Specification
+## 5. Native MuJoCo MJCF XML Specification
 
 RUN01 runs the real **MuJoCo 3.x WASM engine** in the browser. You can generate standard MJCF XML definitions for advanced multibody dynamics, robotic arms, inverted pendulums, ragdolls, and tendon-driven mechanisms.
 
@@ -241,7 +272,7 @@ physics.show_mujoco(xml_code, title="Inverted Pendulum")
 
 ---
 
-## 5. Best Practices to Guarantee Zero Errors
+## 6. Best Practices to Guarantee Zero Errors
 
 1. **Always Include a Ground/Floor**: When simulating falling objects, include a `fixed` box at `pos: [0, -0.2, 0]` with `size: [16, 0.4, 8]` (or in MJCF: `<geom type="plane" size="5 5 0.1"/>`) so objects don't fall infinitely into the void.
 2. **Valid Mass Values**: Always provide `mass > 0` for `dynamic` objects (typically `0.5` to `10.0`). Do not set mass to 0 for dynamic objects.

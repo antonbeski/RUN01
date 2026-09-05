@@ -372,6 +372,7 @@
       this.waterLevel = spec.waterLevel !== undefined ? spec.waterLevel : -1.0;
       this.springs = spec.springs || [];
       this.pulleys = spec.pulleys || [];
+      this.joints = spec.joints || [];
       this.bodies = JSON.parse(JSON.stringify(spec.bodies || []));
 
       this.bodies.forEach(b => {
@@ -481,6 +482,48 @@
         }
       });
 
+      // Joints constraint handling (Fixed, Spherical, Revolute, Prismatic, Rope, Spring)
+      this.joints.forEach(j => {
+        const bA = this.bodies.find(b => b.name === j.bodyA);
+        const bB = this.bodies.find(b => b.name === j.bodyB);
+        if (!bA && !bB) return;
+
+        const pA = bA ? [bA.pos[0] + (j.anchorA ? j.anchorA[0] : 0), bA.pos[1] + (j.anchorA ? j.anchorA[1] : 0), bA.pos[2] + (j.anchorA ? j.anchorA[2] : 0)] : (j.anchorA || [0, 0, 0]);
+        const pB = bB ? [bB.pos[0] + (j.anchorB ? j.anchorB[0] : 0), bB.pos[1] + (j.anchorB ? j.anchorB[1] : 0), bB.pos[2] + (j.anchorB ? j.anchorB[2] : 0)] : (j.anchorB || [0, 0, 0]);
+
+        const dx = pB[0] - pA[0];
+        const dy = pB[1] - pA[1];
+        const dz = pB[2] - pA[2];
+        const dist = Math.hypot(dx, dy, dz) || 1e-5;
+
+        if (j.type === 'rope') {
+          const maxDist = j.length || j.distance || 1.0;
+          if (dist > maxDist) {
+            const excess = dist - maxDist;
+            const kRope = j.stiffness || 500.0;
+            const fx = (dx / dist) * (excess * kRope);
+            const fy = (dy / dist) * (excess * kRope);
+            const fz = (dz / dist) * (excess * kRope);
+            if (bA && bA.type === 'dynamic') { bA.force[0] += fx; bA.force[1] += fy; bA.force[2] += fz; }
+            if (bB && bB.type === 'dynamic') { bB.force[0] -= fx; bB.force[1] -= fy; bB.force[2] -= fz; }
+          }
+        } else if (j.type === 'fixed' || j.type === 'spherical' || j.type === 'revolute') {
+          // Strong positional constraint holding anchors together
+          const kJoint = j.stiffness || 800.0;
+          const dJoint = j.damping || 15.0;
+          const vRelX = (bB ? bB.linvel[0] : 0) - (bA ? bA.linvel[0] : 0);
+          const vRelY = (bB ? bB.linvel[1] : 0) - (bA ? bA.linvel[1] : 0);
+          const vRelZ = (bB ? bB.linvel[2] : 0) - (bA ? bA.linvel[2] : 0);
+
+          const fx = dx * kJoint + vRelX * dJoint;
+          const fy = dy * kJoint + vRelY * dJoint;
+          const fz = dz * kJoint + vRelZ * dJoint;
+
+          if (bA && bA.type === 'dynamic') { bA.force[0] += fx; bA.force[1] += fy; bA.force[2] += fz; }
+          if (bB && bB.type === 'dynamic') { bB.force[0] -= fx; bB.force[1] -= fy; bB.force[2] -= fz; }
+        }
+      });
+
       this.pulleys.forEach(pul => {
         const load = this.bodies.find(b => b.name === pul.loadBody);
         const effort = this.bodies.find(b => b.name === pul.effortBody);
@@ -530,6 +573,10 @@
           const bA = this.bodies[i];
           const bB = this.bodies[j];
           if (bA.type === 'fixed' && bB.type === 'fixed') continue;
+          if (bA.sensor || bB.sensor) {
+            // Sensor trigger mode: do not apply physical impulse
+            continue;
+          }
 
           const dx = bB.pos[0] - bA.pos[0];
           const dy = bB.pos[1] - bA.pos[1];

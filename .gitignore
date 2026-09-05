@@ -22,5 +22,9 @@ Thumbs.db
 .idea/
 
 # Customizations / Temporary Files
-.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/physics-simulation/
+!.agents/skills/desmos/
 temp_skill/
