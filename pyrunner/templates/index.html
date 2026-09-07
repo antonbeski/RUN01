@@ -64,6 +64,7 @@
         <a href="#landingStack">STACK</a>
         <a href="#landingFeatures">FEATURES</a>
         <a href="#landingWhy">ADVANTAGE</a>
+        <a href="#whyIBuilt">FOUNDER'S NOTE</a>
       </nav>
       <div class="landing-header-actions">
         <button class="pixel-button pixel-button-ghost btn-landing-auth" id="btnLandingAuth" title="Sign In or Sign Up">SIGN IN</button>
@@ -226,6 +227,67 @@
           OPEN RUN01
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         </button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         FOUNDER'S NOTE: WHY I BUILT RUN01
+         ════════════════════════════════════════════════════════════════ -->
+    <section id="whyIBuilt" class="founder-section" aria-labelledby="founder-title">
+      <div class="founder-container">
+        <!-- Founder Portrait (strict full image, zero crop, zero resize) -->
+        <div class="founder-visual-col">
+          <div class="founder-portrait-frame">
+            <div class="founder-tag">[ 01 // FOUNDER ]</div>
+            <img src="{{ url_for('static', filename='anton.png') }}"
+                 alt="Anton, Founder of RUN01"
+                 class="founder-portrait-img"
+                 loading="lazy" />
+            <div class="founder-caption">
+              <span class="founder-caption-name">ANTON</span>
+              <span class="founder-caption-role">FOUNDER // RUN01</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Founder Note Story -->
+        <div class="founder-story-col">
+          <p class="kicker">FOUNDER NOTE</p>
+          <h2 id="founder-title">WHY I BUILT RUN01</h2>
+
+          <div class="founder-letter">
+            <p class="founder-statement">Most AI can only talk. It cannot show you.</p>
+
+            <p>Ask it to explain some math, a chart, a piece of logic &mdash; it gives you a nice paragraph. It sounds smart. But you have no way to check if it's actually right. You just have to trust it.</p>
+
+            <p class="founder-highlight">I didn't want to trust it. I wanted to see it. So I built RUN01.</p>
+
+            <p>RUN01 runs real Python code, right in your browser. No install, no setup. You write the code, you hit run, and you see the real result &mdash; the actual numbers, the actual chart &mdash; right there, instantly.</p>
+
+            <p>Perplexity's big idea was: don't just answer, show your sources. That was a great step. But a source only shows that someone else said something. It doesn't prove it's true. I do admire Perplexity but</p>
+
+            <p class="founder-highlight">RUN01 goes one level deeper. Instead of a source, you get proof. You don't have to believe the math is right &mdash; you run it and watch it happen. You don't have to trust the chart &mdash; you build it yourself, live, in seconds.</p>
+
+            <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to check them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves &mdash; fast, simple, no blind trust needed.</p>
+
+            <p>That's the bet behind RUN01. Not another coding tool. A way to see if something is actually true, in seconds, with your own eyes.</p>
+
+            <blockquote class="founder-quote">
+              &ldquo;Don't just read the answer. Run it.&rdquo;
+            </blockquote>
+
+            <div class="founder-signoff">
+              &mdash; Anton, Founder of RUN01
+            </div>
+          </div>
+
+          <div class="founder-action">
+            <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnFounderLaunchIDE">
+              RUN IT NOW
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 

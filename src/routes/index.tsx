@@ -78,6 +78,7 @@ function Index() {
           <a href="#engine">ENGINE</a>
           <a href="#stack">STACK</a>
           <a href="#why">WHY RUN01</a>
+          <a href="#founder">WHY I BUILT RUN01</a>
         </nav>
         <a className="pixel-button pixel-button-dark" href="#engine">RUN IDE <Play size={13} fill="currentColor" /></a>
       </header>
@@ -177,6 +178,63 @@ function Index() {
           <h2>THE FASTEST PATH FROM IDEA TO WORKING MODEL.</h2>
           <p>Built for people who would rather test the thought than configure the environment.</p>
           <a className="pixel-button pixel-button-accent" href="#top">OPEN RUN01 <ArrowUpRight size={16} /></a>
+        </div>
+      </section>
+
+      <section id="founder" className="founder-section" aria-labelledby="founder-title">
+        <div className="founder-container">
+          <div className="founder-visual-col">
+            <div className="founder-portrait-frame">
+              <div className="founder-tag">[ 01 // FOUNDER ]</div>
+              <img
+                src="/anton.png"
+                alt="Anton, Founder of RUN01"
+                className="founder-portrait-img"
+                loading="lazy"
+              />
+              <div className="founder-caption">
+                <span className="founder-caption-name">ANTON</span>
+                <span className="founder-caption-role">FOUNDER // RUN01</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="founder-story-col">
+            <p className="kicker">FOUNDER NOTE</p>
+            <h2 id="founder-title">WHY I BUILT RUN01</h2>
+
+            <div className="founder-letter">
+              <p className="founder-statement">Most AI can only talk. It cannot show you.</p>
+
+              <p>Ask it to explain some math, a chart, a piece of logic — it gives you a nice paragraph. It sounds smart. But you have no way to check if it's actually right. You just have to trust it.</p>
+
+              <p className="founder-highlight">I didn't want to trust it. I wanted to see it. So I built RUN01.</p>
+
+              <p>RUN01 runs real Python code, right in your browser. No install, no setup. You write the code, you hit run, and you see the real result — the actual numbers, the actual chart — right there, instantly.</p>
+
+              <p>Perplexity's big idea was: don't just answer, show your sources. That was a great step. But a source only shows that someone else said something. It doesn't prove it's true. I do admire Perplexity but</p>
+
+              <p className="founder-highlight">RUN01 goes one level deeper. Instead of a source, you get proof. You don't have to believe the math is right — you run it and watch it happen. You don't have to trust the chart — you build it yourself, live, in seconds.</p>
+
+              <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to check them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves — fast, simple, no blind trust needed.</p>
+
+              <p>That's the bet behind RUN01. Not another coding tool. A way to see if something is actually true, in seconds, with your own eyes.</p>
+
+              <blockquote className="founder-quote">
+                &ldquo;Don't just read the answer. Run it.&rdquo;
+              </blockquote>
+
+              <div className="founder-signoff">
+                — Anton, Founder of RUN01
+              </div>
+            </div>
+
+            <div className="founder-action">
+              <a className="pixel-button pixel-button-accent" href="#top">
+                RUN IT NOW <ArrowUpRight size={16} />
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 

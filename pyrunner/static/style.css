@@ -4111,6 +4111,199 @@ body::after {
   font-size: 14px;
 }
 
+/* ── Founder's Note Section (Why I Built RUN01) ─────────── */
+.founder-section {
+  padding: clamp(64px, 8vw, 120px) clamp(24px, 6vw, 90px);
+  background: #020202;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.18);
+  position: relative;
+}
+
+.founder-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) 1fr;
+  gap: clamp(40px, 6vw, 84px);
+  align-items: start;
+}
+
+.founder-visual-col {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.founder-portrait-frame {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: #000000;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 8px 8px 0 rgba(255, 255, 255, 0.15);
+}
+
+.founder-tag {
+  position: absolute;
+  top: -12px;
+  left: 14px;
+  background: #ffffff;
+  color: #000000;
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  letter-spacing: 0.08em;
+  z-index: 2;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* Crucial: absolutely no resizing or cropping of the user image */
+.founder-portrait-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.founder-caption {
+  padding: 12px 16px;
+  background: #080808;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+}
+
+.founder-caption-name {
+  color: #ffffff;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.founder-caption-role {
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.05em;
+}
+
+.founder-story-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.founder-story-col .kicker {
+  margin-bottom: 12px;
+}
+
+#founder-title {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: clamp(30px, 4.2vw, 48px);
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  margin-bottom: 28px;
+}
+
+.founder-letter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.founder-letter p {
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(13px, 1.1vw, 14.5px);
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.85;
+}
+
+.founder-statement {
+  font-size: clamp(16px, 1.35vw, 19px) !important;
+  color: #ffffff !important;
+  font-weight: 500;
+  border-left: 3px solid #ffffff;
+  padding-left: 14px;
+  line-height: 1.6 !important;
+}
+
+.founder-highlight {
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+.founder-quote {
+  margin: 8px 0;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid #ffffff;
+  font-family: 'Pixelify Sans', monospace;
+  font-size: clamp(18px, 1.8vw, 24px);
+  color: #ffffff;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.founder-signoff {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+}
+
+.founder-action {
+  margin-top: 32px;
+}
+
+/* Light theme support */
+[data-theme="light"] .founder-section {
+  background: #EAEAEF;
+  border-bottom-color: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] .founder-portrait-frame {
+  background: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.3);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .founder-tag {
+  background: #000000;
+  color: #FFFFFF;
+}
+[data-theme="light"] .founder-caption {
+  background: #F5F5F7;
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .founder-caption-name {
+  color: #000000;
+}
+[data-theme="light"] .founder-caption-role {
+  color: rgba(0, 0, 0, 0.6);
+}
+[data-theme="light"] #founder-title {
+  color: #000000;
+}
+[data-theme="light"] .founder-statement {
+  color: #000000 !important;
+  border-left-color: #000000;
+}
+[data-theme="light"] .founder-letter p {
+  color: rgba(0, 0, 0, 0.75);
+}
+[data-theme="light"] .founder-highlight {
+  color: #000000 !important;
+}
+[data-theme="light"] .founder-quote {
+  background: rgba(0, 0, 0, 0.04);
+  border-left-color: #000000;
+  color: #000000;
+}
+[data-theme="light"] .founder-signoff {
+  color: #000000;
+}
+
 /* ── Landing Footer ─────────────────────────────────────── */
 .landing-footer {
   min-height: 100px;
@@ -4147,12 +4340,16 @@ body::after {
   .pipeline-section { grid-template-columns: 1fr; min-height: auto; }
   .pipeline-visual { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.15); }
   .proof-copy { padding: 50px 24px; }
+  .founder-container { grid-template-columns: 1fr; gap: 40px; }
+  .founder-portrait-frame { max-width: 360px; margin: 0 auto; }
   .hidden-mobile { display: none !important; }
 }
 
 @media (max-width: 600px) {
   .site-header { height: 64px; padding: 0 16px; }
   .hero-copy h1 { font-size: 44px; }
+  .founder-section { padding: 48px 16px; }
+  .founder-portrait-frame { max-width: 100%; }
   .terminal-row { grid-template-columns: 22px 1fr; }
   .terminal-row span { grid-column: 2; }
   .landing-footer { flex-direction: column; gap: 16px; align-items: flex-start; }
