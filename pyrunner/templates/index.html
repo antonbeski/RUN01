@@ -25,11 +25,8 @@
         href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
         as="script" crossorigin />
   <link rel="preload"
-        href="{{ url_for('static', filename='mujoco_wasm.js') }}"
-        as="script" />
-  <link rel="preload"
-        href="{{ url_for('static', filename='mujoco.wasm') }}"
-        as="fetch" crossorigin />
+        href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
+        as="script" crossorigin />
 
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
@@ -429,18 +426,19 @@
         Desmos
       </button>
 
+
+
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
 
-      <!-- Physics Simulation Studio toggle -->
-      <button class="btn btn-ghost btn-physics" id="btnPhysics" title="MuJoCo & Rapier Physics Simulation Studio & Verification Hub" aria-label="Toggle Physics Studio">
+      <!-- AI Parametric CAD Studio toggle -->
+      <button class="btn btn-ghost btn-cad" id="btnCAD" title="AI Parametric CAD Studio — OpenSCAD WASM" aria-label="Toggle CAD Studio">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 2a10 10 0 0 0-7.07 17.07"/>
-          <path d="M12 22a10 10 0 0 0 7.07-17.07"/>
-          <path d="M2.05 10.5a10 10 0 0 0 19.9 0"/>
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
         </svg>
-        Physics
+        CAD
       </button>
 
       <!-- Divider -->
@@ -783,107 +781,118 @@
     </div>
   </div>
 
-  <!-- ══ PHYSICS SIMULATION STUDIO MODAL ═══════════════════════════════════════ -->
-  <div class="physics-modal-overlay hidden" id="physicsModalOverlay" role="dialog"
-       aria-modal="true" aria-labelledby="physicsModalTitle">
-    <div class="physics-modal-card">
+  <!-- ══ AI PARAMETRIC CAD STUDIO MODAL ═══════════════════════════════════════ -->
+  <div class="cad-modal-overlay hidden" id="cadModalOverlay" role="dialog"
+       aria-modal="true" aria-labelledby="cadModalTitle">
+    <div class="cad-modal-card">
 
       <!-- Header -->
-      <div class="physics-modal-header">
-        <div class="physics-modal-header-left">
-          <span class="physics-modal-title" id="physicsModalTitle">Physics Simulation Studio</span>
+      <div class="cad-modal-header">
+        <div class="cad-modal-header-left">
+          <span class="cad-badge">CAD</span>
+          <span class="cad-modal-title" id="cadModalTitle">AI Parametric CAD Studio</span>
+          <span class="cad-engine-badge" id="cadEngineBadge">OpenSCAD WASM</span>
         </div>
-        <button class="physics-modal-close" id="btnClosePhysicsModal"
-                aria-label="Close Physics Studio">&times;</button>
+        <div class="cad-modal-header-right">
+          <button class="btn btn-ghost cad-hdr-btn" id="btnCadNewProject" title="New project">New</button>
+          <button class="btn btn-ghost cad-hdr-btn" id="btnCadSaveProject" title="Save to browser">Save</button>
+          <button class="btn btn-ghost cad-hdr-btn" id="btnCadOpenProject" title="Open saved project">Open</button>
+          <button class="cad-modal-close" id="btnCloseCADModal" aria-label="Close CAD Studio">&times;</button>
+        </div>
       </div>
 
-      <!-- Body -->
-      <div class="physics-modal-body">
+      <!-- Body: 3-column layout -->
+      <div class="cad-modal-body">
 
-        <!-- 3D Viewport -->
-        <div class="physics-viewport-wrap">
-          <div id="physicsMainViewport" class="physics-canvas-container"></div>
-
-          <!-- HUD -->
-          <div class="physics-telemetry-hud" id="physicsTelemetryHud">
-            <div class="hud-item"><span class="hud-label">FPS</span><span class="hud-value" id="hudFps">60</span></div>
-            <div class="hud-item"><span class="hud-label">Energy Drift</span><span class="hud-value hud-pass" id="hudEnergy">E: --</span></div>
-            <div class="hud-item"><span class="hud-label">Solver</span><span class="hud-value" id="hudSolver">Verlet Symplectic</span></div>
-            <div class="hud-item"><span class="hud-label">Invariants</span><span class="hud-value hud-pass" id="hudInvariants">CONSERVED</span></div>
-          </div>
-
-          <!-- Transport Controls -->
-          <div class="physics-transport-bar">
-            <button class="btn btn-physics-control" id="btnPhysicsPlay" title="Play / Pause">
-              <span id="physicsPlayIcon">Pause</span>
-            </button>
-            <button class="btn btn-physics-control" id="btnPhysicsReset" title="Reset State">Reset</button>
-            <button class="btn btn-physics-control" id="btnPhysicsImpulse" title="Apply Perturbation Force">Perturb</button>
-            <div class="physics-speed-wrap">
-              <label for="physicsSpeedRange">Speed:</label>
-              <input type="range" id="physicsSpeedRange" min="0.1" max="2.0" step="0.1" value="1.0">
-              <span id="physicsSpeedLabel">1.0x</span>
-            </div>
-            <button class="btn btn-physics-action" id="btnPhysicsVerifyNow" title="Run Headless Physics Proof">Verify Proof</button>
-            <button class="btn btn-physics-action" id="btnPhysicsPlotDesmos" title="Plot Analytical Proof in Desmos">Desmos Proof</button>
-          </div>
-        </div>
-
-        <!-- Proof + Spec Tabs -->
-        <div class="physics-details-pane">
-          <div class="physics-tabs">
-            <button class="physics-tab active" id="tabPhysProof" data-tab="proof">Verification Proof</button>
-            <button class="physics-tab" id="tabPhysSpec" data-tab="spec">Model Spec (XML / JSON)</button>
-          </div>
-
-          <div class="physics-tab-content active" id="panePhysProof">
-            <div class="proof-card" id="physicsProofCard">
-              <div class="proof-header">
-                <span class="proof-status-badge pass" id="proofStatusBadge">REAL-TIME SIMULATION</span>
-                <span class="proof-engine-label" id="proofEngineLabel">MuJoCo 3.x WASM Engine</span>
-              </div>
-              <div class="proof-metrics-grid" id="proofMetricsGrid">
-                <div class="proof-metric">
-                  <div class="metric-name">Energy Conservation</div>
-                  <div class="metric-val text-green" id="mEnergyVal">--</div>
-                </div>
-                <div class="proof-metric">
-                  <div class="metric-name">Kinematic Constraints</div>
-                  <div class="metric-val text-green" id="mConstraintVal">--</div>
-                </div>
-                <div class="proof-metric">
-                  <div class="metric-name">Analytical Correlation</div>
-                  <div class="metric-val text-blue" id="mR2Val">--</div>
-                </div>
-                <div class="proof-metric">
-                  <div class="metric-name">Lyapunov Stability</div>
-                  <div class="metric-val text-yellow" id="mStabilityVal">--</div>
-                </div>
-              </div>
-              <div class="proof-description" id="proofDescription">
-                Live simulation telemetry will be computed dynamically from the active physics model.
+        <!-- LEFT: AI conversation + prompt -->
+        <div class="cad-left-pane">
+          <div class="cad-chat-messages" id="cadChatMessages">
+            <div class="cad-chat-msg cad-chat-system">
+              <div class="cad-chat-bubble">
+                <strong>AI CAD Studio</strong><br>
+                Describe the 3D object you want to create. I will generate a parametric OpenSCAD design, render it in the viewport, and provide editable parameters and source code.
               </div>
             </div>
           </div>
 
-          <div class="physics-tab-content" id="panePhysSpec">
-            <textarea class="physics-spec-editor" id="physicsSpecEditor" spellcheck="false"></textarea>
-            <button class="btn btn-primary btn-apply-spec" id="btnApplyPhysicsSpec">Apply Model &amp; Re-simulate</button>
+          <!-- Parameters panel (populated after generation) -->
+          <div class="cad-params-panel hidden" id="cadParamsPanel">
+            <div class="cad-params-header">
+              <span class="cad-params-title">Parameters</span>
+              <button class="cad-params-regen-btn" id="btnCadRegen" title="Regenerate with current parameters">↺ Regenerate</button>
+            </div>
+            <div class="cad-params-grid" id="cadParamsGrid"></div>
+          </div>
+
+          <!-- Prompt input -->
+          <div class="cad-prompt-wrap">
+            <div class="cad-quick-prompts">
+              <button class="cad-quick-btn" data-prompt="Create a small wall-mounted phone holder with cable slot and rounded edges">Phone Stand</button>
+              <button class="cad-quick-btn" data-prompt="Design a parametric electronics enclosure with lid, screw posts, and ventilation slots">Enclosure</button>
+              <button class="cad-quick-btn" data-prompt="Create a bracket with two mounting holes, 3mm wall thickness, right angle">Bracket</button>
+              <button class="cad-quick-btn" data-prompt="Design a filament spool hub for 200mm spools with bearing seat">Spool Hub</button>
+            </div>
+            <div class="cad-textarea-row">
+              <textarea class="cad-textarea" id="cadPromptInput"
+                placeholder="Describe the 3D object… e.g. 'Create a wall-mounted phone stand for a 6.7-inch phone, 5mm thick base, 12-degree viewing angle, two cable slots, rounded edges, and four mounting holes.'"></textarea>
+              <button class="cad-send-btn" id="btnCadGenerate" aria-label="Generate CAD">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+            <div class="cad-status-bar" id="cadStatusBar">Ready — enter a description and click Generate</div>
           </div>
         </div>
 
-      </div><!-- /.physics-modal-body -->
-    </div><!-- /.physics-modal-card -->
-  </div><!-- /#physicsModalOverlay -->
+        <!-- CENTER: 3D Viewport -->
+        <div class="cad-center-pane">
+          <div class="cad-viewport-wrap">
+            <div id="cadViewport" class="cad-canvas-container">
+              <div class="cad-viewport-placeholder" id="cadViewportPlaceholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                  <path d="M2 12l10 5 10-5"/>
+                </svg>
+                <p>3D model will appear here</p>
+              </div>
+            </div>
+
+            <!-- Viewport toolbar -->
+            <div class="cad-viewport-toolbar">
+              <button class="cad-vp-btn" id="btnCadWireframe" title="Toggle wireframe">Wire</button>
+              <button class="cad-vp-btn" id="btnCadResetView" title="Reset camera">⟳</button>
+              <div class="cad-vp-sep"></div>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadScad" title="Download .scad source">↓ .scad</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadStl" title="Download .stl mesh">↓ .stl</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadJson" title="Download design spec JSON">↓ .json</button>
+            </div>
+          </div>
+
+          <!-- Source code pane (bottom of center) -->
+          <div class="cad-source-pane">
+            <div class="cad-source-header">
+              <span class="cad-source-title">OpenSCAD Source</span>
+              <div class="cad-source-actions">
+                <button class="cad-src-btn" id="btnCadCopySource" title="Copy source">Copy</button>
+                <button class="cad-src-btn cad-src-run" id="btnCadRunSource" title="Compile and preview">▶ Preview</button>
+              </div>
+            </div>
+            <textarea class="cad-source-editor" id="cadSourceEditor" spellcheck="false"
+              placeholder="// OpenSCAD source will appear here after generation
+// You can also type or paste OpenSCAD code directly and click Preview"></textarea>
+          </div>
+        </div>
+
+      </div><!-- /.cad-modal-body -->
+    </div><!-- /.cad-modal-card -->
+  </div><!-- /#cadModalOverlay -->
+
+
 
   <!-- â•â• SCRIPTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
-  <!-- Three.js for 3D Physics Viewports and Visual Simulations -->
+  <!-- Three.js for 3D CAD Viewport -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin
           onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
-  <!-- MuJoCo WASM Engine -->
-  <script src="{{ url_for('static', filename='mujoco_wasm.js') }}"></script>
-  <!-- Physics Engine (MuJoCo, Rapier, Solvers, Verifiers) -->
-  <script src="{{ url_for('static', filename='physics-engine.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
           crossorigin
           onerror="var s=document.createElement('script');s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>

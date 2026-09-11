@@ -58,33 +58,6 @@ desmos = _DesmosModule()
 def show_desmos(*expressions, title="Desmos Math Graph"):
     desmos.plot(*expressions, title=title)
 
-# ── Physics & Simulation Verification Module ─────────────────
-class _PhysicsModule:
-    def verify_mujoco(self, xml_str, duration=3.0):
-        import json, js
-        opts = json.dumps({"duration": duration})
-        res_json = js.window._runHeadlessPhysicsVerification("mujoco", xml_str, opts)
-        return json.loads(res_json) if res_json else {}
-
-    def show_mujoco(self, xml_str, title="MuJoCo 3D Simulation"):
-        import js
-        js.window._renderPhysicsSimulationInOutput("mujoco", xml_str, title)
-
-    def verify_rapier(self, spec_dict, duration=2.5):
-        import json, js
-        spec_str = json.dumps(spec_dict) if isinstance(spec_dict, dict) else str(spec_dict)
-        opts = json.dumps({"duration": duration})
-        res_json = js.window._runHeadlessPhysicsVerification("rapier", spec_str, opts)
-        return json.loads(res_json) if res_json else {}
-
-    def show_rapier(self, spec_dict, title="Rapier 3D Simulation"):
-        import json, js
-        spec_str = json.dumps(spec_dict) if isinstance(spec_dict, dict) else str(spec_dict)
-        js.window._renderPhysicsSimulationInOutput("rapier", spec_str, title)
-
-physics = _PhysicsModule()
-mujoco = _PhysicsModule()
-rapier = _PhysicsModule()
 
 # ── yf_download: fetch OHLCV via Run01 server proxy ────────
 async def yf_download(ticker, period="1mo", interval="1d"):
@@ -649,35 +622,6 @@ const monacoReady = new Promise((resolve) => {
   tryInit();
 });
 
-// ── MuJoCo WASM initialisation in parallel ────────────────
-let mujocoInstance = null;
-const mujocoReady = (async function initMujocoWasm() {
-  try {
-    let loader = window.loadMujoco;
-    if (!loader && typeof globalThis !== 'undefined') {
-      loader = globalThis.loadMujoco;
-    }
-    if (!loader) {
-      // Dynamic import fallback
-      const m = await import('/static/mujoco_wasm.js');
-      loader = m.default || m.loadMujoco;
-    }
-    if (typeof loader === 'function') {
-      mujocoInstance = await loader({
-        locateFile: (path) => '/static/' + path
-      });
-      window.mujoco = mujocoInstance;
-      if (window.PhysicsEngine && window.PhysicsEngine.setMujocoInstance) {
-        window.PhysicsEngine.setMujocoInstance(mujocoInstance);
-      }
-      console.log('[MuJoCo WASM] Loaded & ready successfully');
-    }
-  } catch (err) {
-    console.warn('[MuJoCo WASM] Init non-blocking warning:', err);
-  }
-  return mujocoInstance;
-})();
-
 // ── Pyodide initialisation ────────────────────────────────
 async function initPyodide() {
   setStatus('loading', 'Loading Python runtime…');
@@ -725,7 +669,7 @@ function startPyodideInit() {
     appendToOutput(` Failed to initialise Python:\n${err.message ?? err}`, 'err');
   });
 
-  Promise.all([monacoReady, pyodideInitPromise, mujocoReady]).then(() => {
+  Promise.all([monacoReady, pyodideInitPromise]).then(() => {
     setStatus('ready', 'Ready - all packages loaded');
     btnRun.disabled = false;
     hideOverlay();
@@ -2897,17 +2841,15 @@ document.addEventListener('keydown', (e) => {
         return;
       }
 
-      // ── MuJoCo Physics & Math Verification Simulation Block ───────
-      if (part.startsWith('```mujoco')) {
+      // ── MuJoCo/OpenSCAD block — show as code, offer to open CAD studio ──
+      if (part.startsWith('```mujoco') || part.startsWith('```openscad') || part.startsWith('```scad')) {
         const xmlCode = part.replace(/^```mujoco\n?/, '').replace(/\n?```$/, '').trim();
         const card = document.createElement('div');
         card.className = 'physics-chat-card';
 
         // Run headless verification
         let proof = null;
-        if (window.PhysicsEngine) {
-          proof = window.PhysicsEngine.runMuJoCoVerification(xmlCode);
-        }
+        // PhysicsEngine removed — CAD studio handles geometry
 
         const header = document.createElement('div');
         header.className = 'physics-chat-header';
@@ -2927,10 +2869,11 @@ document.addEventListener('keydown', (e) => {
         openStudioBtn.className = 'ai-code-btn';
         openStudioBtn.style.color = '#34d399';
         openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = ' Open in Physics Studio';
+        openStudioBtn.textContent = '▶ Open in CAD Studio';
         openStudioBtn.addEventListener('click', () => {
           if (window.openPhysicsStudioWithSpec) {
-            window.openPhysicsStudioWithSpec('mujoco', xmlCode, 'AI MuJoCo Simulation');
+            if (window.btnCAD) window.btnCAD.click();
+              if (window.cadSourceEditor) window.cadSourceEditor.value = xmlCode;
           }
         });
 
@@ -2964,9 +2907,7 @@ document.addEventListener('keydown', (e) => {
         element.appendChild(card);
 
         setTimeout(() => {
-          if (window.PhysicsEngine && window.THREE) {
-            window.PhysicsEngine.startMuJoCoVisualSimulation(viewport, xmlCode);
-          }
+          // PhysicsEngine removed
         }, 150);
         return;
       }
@@ -3005,7 +2946,7 @@ document.addEventListener('keydown', (e) => {
         openStudioBtn.className = 'ai-code-btn';
         openStudioBtn.style.color = '#34d399';
         openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = ' Open in Physics Studio';
+        openStudioBtn.textContent = '▶ Open in CAD Studio';
         openStudioBtn.addEventListener('click', () => {
           if (window.openPhysicsStudioWithSpec) {
             window.openPhysicsStudioWithSpec('rapier', JSON.stringify(specObj, null, 2), 'Rapier 3D Simulation');
@@ -4199,330 +4140,889 @@ window.ViewManager = (function() {
 
 // ══════════════════════════════════════════════════════════════════
 // MUJOCO & RAPIER PHYSICS SIMULATION STUDIO & VERIFICATION HUB
+
+
+
+
 // ══════════════════════════════════════════════════════════════════
-(function initPhysicsStudio() {
-  const btnPhysics = document.getElementById('btnPhysics');
-  const physicsModalOverlay = document.getElementById('physicsModalOverlay');
-  const btnClosePhysicsModal = document.getElementById('btnClosePhysicsModal');
-  const physicsMainViewport = document.getElementById('physicsMainViewport');
+// AI PARAMETRIC CAD STUDIO — OpenSCAD WASM + Three.js + IndexedDB
+// Zero server-side geometry. All computation runs in the browser.
+// ══════════════════════════════════════════════════════════════════
+(function initCADStudio() {
+  // ── DOM refs ──────────────────────────────────────────────────
+  const btnCAD            = document.getElementById('btnCAD');
+  const cadModalOverlay   = document.getElementById('cadModalOverlay');
+  const btnCloseCADModal  = document.getElementById('btnCloseCADModal');
+  const cadChatMessages   = document.getElementById('cadChatMessages');
+  const cadPromptInput    = document.getElementById('cadPromptInput');
+  const btnCadGenerate    = document.getElementById('btnCadGenerate');
+  const cadStatusBar      = document.getElementById('cadStatusBar');
+  const cadParamsPanel    = document.getElementById('cadParamsPanel');
+  const cadParamsGrid     = document.getElementById('cadParamsGrid');
+  const btnCadRegen       = document.getElementById('btnCadRegen');
+  const cadViewport       = document.getElementById('cadViewport');
+  const cadViewportPlaceholder = document.getElementById('cadViewportPlaceholder');
+  const cadSourceEditor   = document.getElementById('cadSourceEditor');
+  const btnCadRunSource   = document.getElementById('btnCadRunSource');
+  const btnCadCopySource  = document.getElementById('btnCadCopySource');
+  const btnCadWireframe   = document.getElementById('btnCadWireframe');
+  const btnCadResetView   = document.getElementById('btnCadResetView');
+  const btnCadDownloadScad = document.getElementById('btnCadDownloadScad');
+  const btnCadDownloadStl  = document.getElementById('btnCadDownloadStl');
+  const btnCadDownloadJson = document.getElementById('btnCadDownloadJson');
+  const btnCadNewProject  = document.getElementById('btnCadNewProject');
+  const btnCadSaveProject = document.getElementById('btnCadSaveProject');
+  const btnCadOpenProject = document.getElementById('btnCadOpenProject');
 
-  const btnPhysicsPlay = document.getElementById('btnPhysicsPlay');
-  const physicsPlayIcon = document.getElementById('physicsPlayIcon');
-  const btnPhysicsReset = document.getElementById('btnPhysicsReset');
-  const btnPhysicsImpulse = document.getElementById('btnPhysicsImpulse');
-  const physicsSpeedRange = document.getElementById('physicsSpeedRange');
-  const physicsSpeedLabel = document.getElementById('physicsSpeedLabel');
-  const btnPhysicsVerifyNow = document.getElementById('btnPhysicsVerifyNow');
-  const btnPhysicsPlotDesmos = document.getElementById('btnPhysicsPlotDesmos');
+  window.btnCAD = btnCAD;
+  window.cadSourceEditorEl = cadSourceEditor;
+  if (!btnCAD || !cadModalOverlay) return;
 
-  const tabPhysProof = document.getElementById('tabPhysProof');
-  const tabPhysSpec = document.getElementById('tabPhysSpec');
-  const panePhysProof = document.getElementById('panePhysProof');
-  const panePhysSpec = document.getElementById('panePhysSpec');
-  const physicsSpecEditor = document.getElementById('physicsSpecEditor');
-  const btnApplyPhysicsSpec = document.getElementById('btnApplyPhysicsSpec');
+  // ── Studio State ──────────────────────────────────────────────
+  let currentSpec    = null;   // structured design spec JSON
+  let currentScad    = '';     // OpenSCAD source code string
+  let currentStlData = null;   // Uint8Array STL binary (if compiled)
+  let cadScene       = null;   // Three.js scene
+  let cadCamera      = null;
+  let cadRenderer    = null;
+  let cadControls    = null;
+  let cadMesh        = null;
+  let cadWireframe   = false;
+  let cadAnimId      = null;
+  let openscadWasm   = null;   // OpenSCAD WASM module instance
+  let openscadLoading = false;
 
-  const hudEnergy = document.getElementById('hudEnergy');
-  const hudSolver = document.getElementById('hudSolver');
-  const hudInvariants = document.getElementById('hudInvariants');
-  const proofEngineLabel = document.getElementById('proofEngineLabel');
-  const mEnergyVal = document.getElementById('mEnergyVal');
-  const mConstraintVal = document.getElementById('mConstraintVal');
-  const mR2Val = document.getElementById('mR2Val');
-  const mStabilityVal = document.getElementById('mStabilityVal');
-  const proofDescription = document.getElementById('proofDescription');
-
-  let currentSimulation = null;
-  let currentPresetKey = 'custom';
-
-  function openPhysicsModal() {
-    if (!physicsModalOverlay) return;
-    physicsModalOverlay.classList.remove('hidden');
-    physicsModalOverlay.style.display = 'flex';
-    // If the spec editor already has content, apply it automatically
-    const existingSpec = physicsSpecEditor && physicsSpecEditor.value.trim();
-    if (existingSpec) {
-      applySpecFromEditor();
-    } else {
-      // Provide a clean starter XML template ready to run
-      const defaultStarter = `<mujoco model="double_pendulum">
-  <option gravity="0 0 -9.81" timestep="0.002"/>
-  <worldbody>
-    <light diffuse=".5 .5 .5" pos="0 0 3" dir="0 0 -1"/>
-    <geom type="plane" size="2 2 0.1" rgba=".9 .9 .9 1"/>
-    <geom type="sphere" size="0.05" pos="0 0 1.5" rgba="0.5 0.5 0.5 1"/>
-    <body pos="0 0 1.5">
-      <joint name="pin1" type="hinge" axis="0 1 0"/>
-      <geom name="link1" type="capsule" size="0.03 0.3" pos="0 0 -0.3" rgba="0.2 0.8 0.4 1" mass="1"/>
-      <body pos="0 0 -0.6">
-        <joint name="pin2" type="hinge" axis="0 1 0"/>
-        <geom name="link2" type="sphere" size="0.08" pos="0 0 0" rgba="0.9 0.3 0.3 1" mass="1.5"/>
-      </body>
-    </body>
-  </worldbody>
-</mujoco>`;
-      if (physicsSpecEditor) physicsSpecEditor.value = defaultStarter;
-      applySpecFromEditor();
-    }
+  // ── Modal open / close ────────────────────────────────────────
+  function openCADModal() {
+    cadModalOverlay.classList.remove('hidden');
+    initThreeViewport();
   }
 
-  function closePhysicsModal() {
-    if (physicsModalOverlay) {
-      physicsModalOverlay.classList.add('hidden');
-      physicsModalOverlay.style.display = 'none';
-    }
-    if (currentSimulation) {
-      currentSimulation.destroy();
-      currentSimulation = null;
-    }
+  function closeCADModal() {
+    cadModalOverlay.classList.add('hidden');
+    if (cadAnimId) { cancelAnimationFrame(cadAnimId); cadAnimId = null; }
   }
 
-  if (btnPhysics) btnPhysics.addEventListener('click', openPhysicsModal);
-  if (btnClosePhysicsModal) btnClosePhysicsModal.addEventListener('click', closePhysicsModal);
-  if (physicsModalOverlay) {
-    physicsModalOverlay.addEventListener('click', (e) => {
-      if (e.target === physicsModalOverlay) closePhysicsModal();
+  btnCAD.addEventListener('click', openCADModal);
+  btnCloseCADModal.addEventListener('click', closeCADModal);
+  cadModalOverlay.addEventListener('click', (e) => {
+    if (e.target === cadModalOverlay) closeCADModal();
+  });
+
+  // ── Quick-prompt buttons ──────────────────────────────────────
+  document.querySelectorAll('.cad-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      cadPromptInput.value = btn.dataset.prompt || '';
+      cadPromptInput.focus();
     });
+  });
+
+  // ── Enter to send ─────────────────────────────────────────────
+  cadPromptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      generateCAD();
+    }
+  });
+  btnCadGenerate.addEventListener('click', generateCAD);
+
+  // ── Three.js Viewport ─────────────────────────────────────────
+  function initThreeViewport() {
+    if (cadRenderer) return; // already initialized
+    if (!window.THREE) { cadStatusBar.textContent = 'Three.js not loaded — refresh and try again.'; return; }
+
+    const THREE = window.THREE;
+
+    cadScene    = new THREE.Scene();
+    cadScene.background = new THREE.Color(0x0d0d0d);
+    cadCamera   = new THREE.PerspectiveCamera(45, cadViewport.clientWidth / cadViewport.clientHeight, 0.1, 10000);
+    cadCamera.position.set(80, 80, 120);
+    cadRenderer = new THREE.WebGLRenderer({ antialias: true });
+    cadRenderer.setPixelRatio(window.devicePixelRatio);
+    cadRenderer.setSize(cadViewport.clientWidth, cadViewport.clientHeight);
+    cadViewport.appendChild(cadRenderer.domElement);
+
+    // Grid
+    const grid = new THREE.GridHelper(200, 20, 0x222222, 0x181818);
+    cadScene.add(grid);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    cadScene.add(ambient);
+    const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
+    dir1.position.set(1, 2, 1.5);
+    cadScene.add(dir1);
+    const dir2 = new THREE.DirectionalLight(0xffffff, 0.3);
+    dir2.position.set(-1, -1, -1);
+    cadScene.add(dir2);
+
+    // Orbit controls (inline — no import needed, Three.js is loaded globally)
+    cadControls = initOrbitControls(cadCamera, cadRenderer.domElement);
+
+    // Animate
+    function animate() {
+      cadAnimId = requestAnimationFrame(animate);
+      if (cadControls && cadControls.update) cadControls.update();
+      cadRenderer.render(cadScene, cadCamera);
+    }
+    animate();
+
+    // Resize
+    new ResizeObserver(() => {
+      const w = cadViewport.clientWidth;
+      const h = cadViewport.clientHeight;
+      if (!w || !h) return;
+      cadCamera.aspect = w / h;
+      cadCamera.updateProjectionMatrix();
+      cadRenderer.setSize(w, h);
+    }).observe(cadViewport);
   }
 
-  // Tab switching
-  if (tabPhysProof && tabPhysSpec) {
-    tabPhysProof.addEventListener('click', () => {
-      tabPhysProof.classList.add('active');
-      tabPhysSpec.classList.remove('active');
-      panePhysProof.classList.add('active');
-      panePhysSpec.classList.remove('active');
+  // Minimal orbit controls without importing OrbitControls module
+  function initOrbitControls(camera, domEl) {
+    let isDragging = false, lastX = 0, lastY = 0;
+    let phi = Math.PI / 4, theta = Math.PI / 4, radius = 200;
+    const target = { x: 0, y: 20, z: 0 };
+
+    function updateCamera() {
+      camera.position.x = target.x + radius * Math.sin(phi) * Math.cos(theta);
+      camera.position.y = target.y + radius * Math.cos(phi);
+      camera.position.z = target.z + radius * Math.sin(phi) * Math.sin(theta);
+      camera.lookAt(target.x, target.y, target.z);
+    }
+    updateCamera();
+
+    domEl.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      theta -= dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
+      lastX = e.clientX; lastY = e.clientY;
+      updateCamera();
     });
-    tabPhysSpec.addEventListener('click', () => {
-      tabPhysSpec.classList.add('active');
-      tabPhysProof.classList.remove('active');
-      panePhysSpec.classList.add('active');
-      panePhysProof.classList.remove('active');
+    domEl.addEventListener('wheel', e => {
+      radius = Math.max(10, Math.min(1000, radius + e.deltaY * 0.3));
+      updateCamera(); e.preventDefault();
+    }, { passive: false });
+    // Touch support
+    let lastTouchDist = 0;
+    domEl.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+      if (e.touches.length === 2) { lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
     });
+    domEl.addEventListener('touchend', () => { isDragging = false; });
+    domEl.addEventListener('touchmove', e => {
+      if (e.touches.length === 1 && isDragging) {
+        const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+        theta -= dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        updateCamera();
+      }
+      if (e.touches.length === 2) {
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        radius = Math.max(10, Math.min(1000, radius - (dist - lastTouchDist) * 0.5));
+        lastTouchDist = dist; updateCamera();
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    return { update: () => {}, reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); } };
   }
 
-  // ── applySpecFromEditor: core function — reads JSON from spec editor and starts simulation ──
-  function applySpecFromEditor() {
-    if (!window.PhysicsEngine) return;
-    const text = physicsSpecEditor ? physicsSpecEditor.value.trim() : '';
-    if (!text) return;
+  // ── STL Parser + Three.js mesh rendering ─────────────────────
+  function loadSTLIntoViewport(stlBuffer) {
+    if (!window.THREE || !cadScene) return;
+    const THREE = window.THREE;
+    const geometry = parseSTLBinary(stlBuffer);
 
-    if (currentSimulation) { currentSimulation.destroy(); currentSimulation = null; }
-    if (physicsMainViewport) physicsMainViewport.innerHTML = '';
+    // Remove old mesh
+    if (cadMesh) { cadScene.remove(cadMesh); cadMesh.geometry.dispose(); cadMesh.material.dispose(); cadMesh = null; }
 
-    // Check if input is XML (MuJoCo MJCF)
-    if (text.startsWith('<')) {
-      const proof = window.PhysicsEngine.runMuJoCoVerification(text);
-      if (proofEngineLabel) proofEngineLabel.textContent = 'MuJoCo 3.x WASM Rigorous Engine';
-      if (hudSolver) hudSolver.textContent = 'MuJoCo Symplectic Integrator';
-      if (hudEnergy) hudEnergy.textContent = `dE: ${proof.invariants.maxEnergyDriftPercent}%`;
-      if (mEnergyVal) mEnergyVal.textContent = `PASS (dE = ${proof.invariants.maxEnergyDriftPercent}%)`;
-      if (mConstraintVal) mConstraintVal.textContent = 'PASS (Constraints & Invariants Satisfied)';
-      if (mR2Val) mR2Val.textContent = 'R² = 0.9999 (REAL MUJOCO)';
-      if (mStabilityVal) mStabilityVal.textContent = proof.invariants.lyapunovStability || 'MuJoCo Conservative Hamiltonian';
-      if (proofDescription) {
-        proofDescription.textContent = `Simulated ${proof.stepsComputed} headless steps in real MuJoCo WASM. Energy conserved from E₀ = ${proof.invariants.initialEnergy} J to Eᶠ = ${proof.invariants.finalEnergy} J.`;
+    const mat = new THREE.MeshStandardMaterial({ color: 0x7aa2f7, roughness: 0.5, metalness: 0.15, side: THREE.DoubleSide });
+    cadMesh = new THREE.Mesh(geometry, mat);
+
+    // Center and scale model
+    geometry.computeBoundingBox();
+    const box = geometry.boundingBox;
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    cadMesh.position.sub(center);
+    cadMesh.scale.setScalar(100 / maxDim);
+
+    cadScene.add(cadMesh);
+
+    // Hide placeholder
+    if (cadViewportPlaceholder) cadViewportPlaceholder.style.display = 'none';
+
+    currentStlData = stlBuffer;
+    if (cadControls && cadControls.reset) cadControls.reset();
+  }
+
+  function parseSTLBinary(buffer) {
+    const THREE = window.THREE;
+    const geometry = new THREE.BufferGeometry();
+    const view = new DataView(buffer.buffer || buffer);
+    const triCount = view.getUint32(80, true);
+    const positions = new Float32Array(triCount * 9);
+    const normals   = new Float32Array(triCount * 9);
+    let offset = 84;
+    for (let i = 0; i < triCount; i++) {
+      const nx = view.getFloat32(offset, true);
+      const ny = view.getFloat32(offset + 4, true);
+      const nz = view.getFloat32(offset + 8, true);
+      offset += 12;
+      for (let v = 0; v < 3; v++) {
+        positions[i * 9 + v * 3]     = view.getFloat32(offset, true);
+        positions[i * 9 + v * 3 + 1] = view.getFloat32(offset + 4, true);
+        positions[i * 9 + v * 3 + 2] = view.getFloat32(offset + 8, true);
+        normals[i * 9 + v * 3]     = nx;
+        normals[i * 9 + v * 3 + 1] = ny;
+        normals[i * 9 + v * 3 + 2] = nz;
+        offset += 12;
+      }
+      offset += 2; // attribute byte count
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('normal',   new THREE.BufferAttribute(normals, 3));
+    return geometry;
+  }
+
+  // ── OpenSCAD WASM Loading ─────────────────────────────────────
+  async function ensureOpenSCAD() {
+    if (openscadWasm) return openscadWasm;
+    if (openscadLoading) {
+      // wait for existing load
+      while (openscadLoading) await new Promise(r => setTimeout(r, 100));
+      return openscadWasm;
+    }
+    openscadLoading = true;
+    setStatus('Loading OpenSCAD WASM…');
+
+    try {
+      // Load openscad-wasm from CDN
+      if (!window.OpenSCAD) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          // Use the openscad-wasm npm package via CDN
+          script.src = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.1.12/dist/openscad.wasm.js';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Failed to load OpenSCAD WASM script'));
+          document.head.appendChild(script);
+        });
       }
 
-      currentSimulation = window.PhysicsEngine.startMuJoCoVisualSimulation(physicsMainViewport, text);
-      if (physicsPlayIcon) physicsPlayIcon.textContent = 'Pause';
+      if (typeof OpenSCAD === 'undefined') {
+        throw new Error('OpenSCAD WASM not available after script load');
+      }
+
+      openscadWasm = await OpenSCAD({ noInitialRun: true });
+      openscadLoading = false;
+      return openscadWasm;
+    } catch (err) {
+      openscadLoading = false;
+      throw new Error(`OpenSCAD WASM load failed: ${err.message}. The OpenSCAD engine may not be available in this browser.`);
+    }
+  }
+
+  // ── Compile OpenSCAD to STL ───────────────────────────────────
+  async function compileScadToSTL(scadCode) {
+    const osc = await ensureOpenSCAD();
+
+    // Write the .scad file into the WASM virtual filesystem
+    osc.FS.writeFile('/model.scad', scadCode);
+
+    let stderr = '';
+    const origErr = osc.printErr;
+    osc.printErr = (msg) => { stderr += msg + '\n'; };
+
+    // Compile to STL
+    try {
+      osc.callMain(['-o', '/model.stl', '--export-format', 'binstl', '/model.scad']);
+    } catch (e) {
+      // OpenSCAD may throw on exit — that is expected
+    } finally {
+      osc.printErr = origErr;
+    }
+
+    // Try to read output STL
+    let stlData = null;
+    try {
+      stlData = osc.FS.readFile('/model.stl');
+    } catch (e) {
+      throw new Error('OpenSCAD compile failed:\n' + (stderr || 'Unknown error'));
+    }
+
+    if (!stlData || stlData.length < 84) {
+      throw new Error('OpenSCAD produced an empty or invalid STL.\n' + stderr);
+    }
+
+    return stlData;
+  }
+
+  // ── AI Two-Stage CAD Generation ───────────────────────────────
+  async function generateCAD(revisionInstruction) {
+    const prompt = revisionInstruction || cadPromptInput.value.trim();
+    if (!prompt) { cadPromptInput.focus(); return; }
+
+    // Disable generate button
+    btnCadGenerate.disabled = true;
+    setStatus('⏳ Stage 1: Generating CAD specification…');
+    appendChatMsg('user', prompt);
+
+    // ── Stage 1: Structured specification ────────────────────────
+    const specSystemPrompt = `You are a parametric CAD specification generator.
+The user will describe a 3D object. You MUST respond with ONLY valid JSON, no markdown, no explanation, no code fences.
+Use this exact schema:
+{
+  "name": "snake_case_identifier",
+  "title": "Human Readable Title",
+  "units": "mm",
+  "parameters": {
+    "param_name": <number>
+  },
+  "features": ["feature1", "feature2"],
+  "constraints": ["constraint description"]
+}
+Rules:
+- All dimensions must be realistic for the described object (millimetres).
+- Use 4-12 parameters covering the key design dimensions.
+- features: list all geometric features (holes, slots, fillets, chamfers, supports etc).
+- constraints: list geometric validity rules.
+- Output ONLY the JSON object. No other text.`;
+
+    let specJson = null;
+    try {
+      const specResp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash-0731',
+          messages: [
+            { role: 'system', content: specSystemPrompt },
+            { role: 'user', content: prompt }
+          ]
+        })
+      });
+
+      if (!specResp.ok) throw new Error('AI provider unavailable');
+
+      let rawSpec = '';
+      const reader = specResp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            try { rawSpec += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
+          }
+        }
+      }
+
+      // Extract JSON from the response (strip any accidental markdown fences)
+      const jsonMatch = rawSpec.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI did not produce valid JSON specification');
+      specJson = JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      setStatus(`Stage 1 failed: ${err.message}`);
+      appendChatMsg('assistant', `❌ Could not generate design specification: ${err.message}`, true);
+      btnCadGenerate.disabled = false;
       return;
     }
 
+    currentSpec = specJson;
+    setStatus('⏳ Stage 2: Generating OpenSCAD code…');
+
+    // ── Stage 2: OpenSCAD code ────────────────────────────────────
+    const codeSystemPrompt = `You are a parametric OpenSCAD code generator.
+You receive a CAD design specification as JSON and must output ONLY executable OpenSCAD code.
+Rules (strictly enforced):
+- Output ONLY OpenSCAD code. No markdown fences, no explanation, no comments beyond inline parameter comments.
+- Start with parameter variable declarations using EXACTLY the parameter names and values from the JSON spec.
+- Use modules for logical grouping of features.
+- Call the main module at the end so the object renders.
+- All dimensions in millimetres.
+- Use difference(), union(), intersection(), cylinder(), cube(), sphere(), rotate_extrude(), linear_extrude() appropriately.
+- For holes: use negative cylinder() or cube() inside difference().
+- For fillets/rounded edges: use minkowski() with sphere() or offset + extrude.
+- No filesystem or network access. No echo statements.
+- The output must compile successfully in OpenSCAD.`;
+
+    const codeUserMsg = `Specification:\n${JSON.stringify(specJson, null, 2)}\n\nGenerate the OpenSCAD code now.`;
+
+    let scadCode = '';
     try {
-      const spec = JSON.parse(text);
-      // Determine type: optics specs have 'elements' array with type lens/prism/mirror
-      const isOptics = spec.elements && spec.elements.length > 0 &&
-        ['lens','prism','mirror'].includes((spec.elements[0] || {}).type);
-      const presetObj = { type: isOptics ? 'optics' : 'multibody', spec };
+      const codeResp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash-0731',
+          messages: [
+            { role: 'system', content: codeSystemPrompt },
+            { role: 'user', content: codeUserMsg }
+          ]
+        })
+      });
 
-      if (isOptics) {
-        if (proofEngineLabel) proofEngineLabel.textContent = 'Geometric Optics Ray Matrix Engine';
-        if (hudSolver) hudSolver.textContent = 'Snell Ray Tracer & Cauchy Dispersion';
-        if (hudEnergy) hudEnergy.textContent = 'Focal Invariants: VERIFIED';
-        if (mEnergyVal) mEnergyVal.textContent = 'PASS (Snell Law Validated)';
-        if (mConstraintVal) mConstraintVal.textContent = 'PASS (TIR Boundary Conserved)';
-        if (mR2Val) mR2Val.textContent = 'R² = 1.0000 (EXACT)';
-        if (mStabilityVal) mStabilityVal.textContent = 'Optical Equilibrium';
-        if (proofDescription) proofDescription.textContent =
-          'Simulated multi-wavelength geometric ray paths with Snell\'s Law refraction, TIR, and Cauchy dispersion.';
-      } else {
-        const proof = window.PhysicsEngine.runVerification(presetObj);
-        if (proofEngineLabel) proofEngineLabel.textContent = 'Universal Multi-Body Symplectic Engine';
-        if (hudSolver) hudSolver.textContent = 'Verlet Symplectic Solver';
-        if (hudEnergy) hudEnergy.textContent = `dE: ${proof.invariants.maxEnergyDriftPercent}%`;
-        if (mEnergyVal) mEnergyVal.textContent = `PASS (dE = ${proof.invariants.maxEnergyDriftPercent}%)`;
-        if (mConstraintVal) mConstraintVal.textContent = 'PASS (Constraints Satisfied)';
-        if (mR2Val) mR2Val.textContent = 'R² = 0.9998 (PROVEN)';
-        if (mStabilityVal) mStabilityVal.textContent = proof.invariants.lyapunovStability || 'Conservative Hamiltonian';
-        if (proofDescription) proofDescription.textContent =
-          `Simulated ${proof.stepsComputed} headless steps. Energy conserved from E₀ = ${proof.invariants.initialEnergy} J to Eᶠ = ${proof.invariants.finalEnergy} J.`;
-      }
+      if (!codeResp.ok) throw new Error('AI provider unavailable for code generation');
 
-      currentSimulation = new window.PhysicsEngine.SimulationController(physicsMainViewport, presetObj);
-      if (physicsPlayIcon) physicsPlayIcon.textContent = 'Pause';
-
-    } catch (err) {
-      if (physicsMainViewport) physicsMainViewport.innerHTML =
-        `<div style="color:#f55;font-family:monospace;padding:16px;font-size:12px;">
-          <b>Specification Parse Error:</b><br>${err.message}<br><br>
-          Check the Model Spec tab and ensure valid JSON or MuJoCo XML, then click Apply.
-        </div>`;
-    }
-  }
-
-  if (btnPhysicsPlay) {
-    btnPhysicsPlay.addEventListener('click', () => {
-      if (currentSimulation) {
-        const isRunning = currentSimulation.togglePlay();
-        if (physicsPlayIcon) physicsPlayIcon.textContent = isRunning ? '⏸' : '▶';
-        btnPhysicsPlay.innerHTML = `<span id="physicsPlayIcon">${isRunning ? '⏸' : '▶'}</span> ${isRunning ? 'Pause' : 'Play'}`;
-      }
-    });
-  }
-
-  if (btnPhysicsReset) {
-    btnPhysicsReset.addEventListener('click', () => {
-      if (currentSimulation) currentSimulation.reset();
-    });
-  }
-
-  if (btnPhysicsImpulse) {
-    btnPhysicsImpulse.addEventListener('click', () => {
-      if (currentSimulation && currentSimulation.applyImpulse) {
-        currentSimulation.applyImpulse([0, (Math.random() - 0.5) * 4.0, 0]);
-      }
-    });
-  }
-
-  if (physicsSpeedRange) {
-    physicsSpeedRange.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      if (physicsSpeedLabel) physicsSpeedLabel.textContent = `${val.toFixed(1)}x`;
-      if (currentSimulation && currentSimulation.setSpeed) currentSimulation.setSpeed(val);
-    });
-  }
-
-  if (btnPhysicsVerifyNow) {
-    btnPhysicsVerifyNow.addEventListener('click', () => {
-      applySpecFromEditor();
-      if (currentSimulation) {
-        alert('✓ Physics Verification Complete!\nAll mechanical invariants & constraints satisfied.\nSee Verification Proof tab for details.');
-      }
-    });
-  }
-
-  if (btnPhysicsPlotDesmos) {
-    btnPhysicsPlotDesmos.addEventListener('click', () => {
-      if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
-        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, 'custom');
-        window.loadIntoDesmosPanel(latex, 'Physics Simulation — Analytical Proof');
-      }
-    });
-  }
-
-  if (btnApplyPhysicsSpec) {
-    btnApplyPhysicsSpec.addEventListener('click', applySpecFromEditor);
-  }
-
-  // Global helper for opening studio with custom specification
-  window.openPhysicsStudioWithSpec = function(type, specOrXml, title = 'Custom Simulation') {
-    openPhysicsModal();
-    const titleEl = document.getElementById('physicsModalTitle');
-    if (titleEl) {
-      titleEl.innerHTML = `<span class="physics-badge">${type.toUpperCase()}</span> ${title}`;
-    }
-    if (physicsSpecEditor) physicsSpecEditor.value = specOrXml;
-    if (tabPhysSpec) tabPhysSpec.click();
-    if (btnApplyPhysicsSpec) btnApplyPhysicsSpec.click();
-  };
-
-  // Python Pyodide Bridge: Headless Verification
-  window._runHeadlessPhysicsVerification = function(type, specOrXml, optionsJson) {
-    if (!window.PhysicsEngine) return JSON.stringify({ error: 'PhysicsEngine not loaded' });
-    let options = {};
-    try { options = JSON.parse(optionsJson || '{}'); } catch(e) {}
-
-    let res;
-    if (type === 'mujoco') {
-      res = window.PhysicsEngine.runMuJoCoVerification(specOrXml, options);
-    } else {
-      let spec = specOrXml;
-      if (typeof specOrXml === 'string') {
-        try { spec = JSON.parse(specOrXml); } catch(e) {}
-      }
-      res = window.PhysicsEngine.runRapierVerification(spec, options);
-    }
-    return JSON.stringify(res);
-  };
-
-  // Python Pyodide Bridge: Render 3D Physics Simulation in Output Console
-  window._renderPhysicsSimulationInOutput = function(type, specOrXml, title = 'Physics 3D Simulation') {
-    const outputEl = document.getElementById('output');
-    if (!outputEl) return;
-
-    const card = document.createElement('div');
-    card.className = 'physics-chat-card';
-    card.style.margin = '12px 0';
-
-    const header = document.createElement('div');
-    header.className = 'physics-chat-header';
-    header.innerHTML = `
-      <span><span class="physics-badge">${type.toUpperCase()}</span> ${title}</span>
-      <span style="color:#34d399; font-size:10.5px; font-weight:700;">✓ 3D SIMULATION ACTIVE</span>
-    `;
-
-    const viewport = document.createElement('div');
-    viewport.className = 'physics-chat-container';
-    viewport.id = 'phys_out_' + Math.random().toString(36).substr(2, 9);
-
-    const footer = document.createElement('div');
-    footer.className = 'physics-chat-footer';
-
-    const openStudioBtn = document.createElement('button');
-    openStudioBtn.className = 'ai-code-btn';
-    openStudioBtn.style.color = '#34d399';
-    openStudioBtn.style.fontWeight = 'bold';
-    openStudioBtn.textContent = ' Open in Physics Studio';
-    openStudioBtn.addEventListener('click', () => {
-      window.openPhysicsStudioWithSpec(type, specOrXml, title);
-    });
-
-    const desmosProofBtn = document.createElement('button');
-    desmosProofBtn.className = 'ai-code-btn';
-    desmosProofBtn.style.color = '#38bdf8';
-    desmosProofBtn.textContent = '📊 Desmos Proof';
-    desmosProofBtn.addEventListener('click', () => {
-      if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
-        const latex = window.PhysicsEngine.generateDesmosVerificationLatex(null, 'custom');
-        window.loadIntoDesmosPanel(latex, `${title} Proof`);
-      }
-    });
-
-    footer.appendChild(openStudioBtn);
-    footer.appendChild(desmosProofBtn);
-
-    card.appendChild(header);
-    card.appendChild(viewport);
-    card.appendChild(footer);
-    outputEl.appendChild(card);
-    outputEl.scrollTop = outputEl.scrollHeight;
-
-    setTimeout(() => {
-      if (window.PhysicsEngine && window.THREE) {
-        if (type === 'mujoco') {
-          window.PhysicsEngine.startMuJoCoVisualSimulation(viewport, specOrXml);
-        } else {
-          let spec = specOrXml;
-          if (typeof specOrXml === 'string') {
-            try { spec = JSON.parse(specOrXml); } catch(e) {}
+      const reader = codeResp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            try { scadCode += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
           }
-          window.PhysicsEngine.startRapierVisualSimulation(viewport, spec);
         }
       }
-    }, 150);
-  };
+
+      // Strip any accidental markdown fences
+      scadCode = scadCode.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+      if (!scadCode) throw new Error('AI produced empty code');
+    } catch (err) {
+      setStatus(`Stage 2 failed: ${err.message}`);
+      appendChatMsg('assistant', `❌ Could not generate OpenSCAD code: ${err.message}`, true);
+      btnCadGenerate.disabled = false;
+      return;
+    }
+
+    currentScad = scadCode;
+    cadSourceEditor.value = scadCode;
+
+    // Show spec summary in chat
+    const paramsSummary = Object.entries(specJson.parameters || {})
+      .map(([k, v]) => `${k}: ${v} ${specJson.units || 'mm'}`)
+      .join(' · ');
+    appendChatMsg('assistant',
+      `✅ **${specJson.title || specJson.name}** generated.\n\n` +
+      `**Parameters:** ${paramsSummary}\n\n` +
+      `**Features:** ${(specJson.features || []).join(', ')}\n\n` +
+      `Rendering 3D preview…`
+    );
+
+    // Render parameter controls
+    renderParamControls(specJson.parameters || {}, specJson.units || 'mm');
+
+    // ── Auto-compile with repair loop ────────────────────────────
+    await compileAndRenderWithRetry(scadCode, specJson, prompt, 0);
+
+    btnCadGenerate.disabled = false;
+  }
+
+  // ── Auto-repair loop (up to 3 attempts) ──────────────────────
+  async function compileAndRenderWithRetry(scadCode, specJson, originalPrompt, attempt) {
+    setStatus(`⏳ Compiling with OpenSCAD WASM… (attempt ${attempt + 1}/3)`);
+    try {
+      const stlData = await compileScadToSTL(scadCode);
+      loadSTLIntoViewport(stlData);
+      setStatus(`✅ ${specJson.title || 'Model'} — rendered ${(stlData.length / 1024).toFixed(0)} KB STL`);
+      appendChatMsg('assistant', `✅ 3D model compiled and rendered. Use the viewport to inspect, download buttons for files, and edit parameters above to regenerate.`);
+    } catch (err) {
+      if (attempt < 2) {
+        setStatus(`⚠️ Compile error — asking AI to repair… (attempt ${attempt + 1}/3)`);
+        appendChatMsg('assistant', `⚠️ Compile error on attempt ${attempt + 1}:\n\`\`\`\n${err.message}\n\`\`\`\nAsking AI to repair…`);
+
+        const repairedCode = await repairScadCode(scadCode, err.message, attempt);
+        if (repairedCode) {
+          currentScad = repairedCode;
+          cadSourceEditor.value = repairedCode;
+          await compileAndRenderWithRetry(repairedCode, specJson, originalPrompt, attempt + 1);
+        } else {
+          setStatus('❌ Could not repair — showing source for manual editing');
+          showCompileError(err.message);
+        }
+      } else {
+        setStatus('❌ Compile failed after 3 attempts — edit source manually');
+        showCompileError(err.message);
+        appendChatMsg('assistant',
+          `❌ Could not compile after 3 attempts. The source is shown in the editor below.\n\n` +
+          `**Error:** ${err.message}\n\n` +
+          `Try reducing fillet radii or simplifying the geometry, then click ▶ Preview.`, true);
+      }
+    }
+  }
+
+  async function repairScadCode(brokenCode, errorMsg, attempt) {
+    const repairPrompt = `This OpenSCAD code has a compile error. Fix it and return ONLY the corrected OpenSCAD code, no explanation, no fences.
+Error: ${errorMsg}
+Code:
+${brokenCode}`;
+    try {
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-v4-flash-0731',
+          messages: [
+            { role: 'system', content: 'You are an OpenSCAD expert. Fix compile errors. Output ONLY corrected OpenSCAD code. No markdown, no explanation.' },
+            { role: 'user', content: repairPrompt }
+          ]
+        })
+      });
+      if (!resp.ok) return null;
+      let code = '';
+      const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      while (true) {
+        const { value, done } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
+        for (const line of lines) {
+          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            try { code += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
+          }
+        }
+      }
+      return code.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim() || null;
+    } catch { return null; }
+  }
+
+  function showCompileError(msg) {
+    if (!cadViewportPlaceholder) return;
+    cadViewportPlaceholder.style.display = 'flex';
+    cadViewportPlaceholder.innerHTML = `
+      <div style="color:#f87171;font-family:monospace;font-size:11px;padding:16px;white-space:pre-wrap;text-align:left;max-height:200px;overflow:auto;">
+        <b>Compile Error:</b>\n${msg}
+      </div>`;
+  }
+
+  // ── Parameter Controls ────────────────────────────────────────
+  function renderParamControls(params, units) {
+    if (!cadParamsGrid) return;
+    cadParamsGrid.innerHTML = '';
+    cadParamsPanel.classList.remove('hidden');
+
+    Object.entries(params).forEach(([key, value]) => {
+      const row = document.createElement('div');
+      row.className = 'cad-param-row';
+
+      const label = document.createElement('label');
+      label.className = 'cad-param-label';
+      label.textContent = key.replace(/_/g, ' ');
+      label.htmlFor = `cadp_${key}`;
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.className = 'cad-param-input';
+      input.id = `cadp_${key}`;
+      input.value = value;
+      input.step = value >= 10 ? 1 : 0.5;
+      input.min = 0.1;
+
+      const unit = document.createElement('span');
+      unit.className = 'cad-param-unit';
+      unit.textContent = units;
+
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(unit);
+      cadParamsGrid.appendChild(row);
+
+      // Update currentSpec on change
+      input.addEventListener('change', () => {
+        if (currentSpec && currentSpec.parameters) {
+          currentSpec.parameters[key] = parseFloat(input.value) || value;
+        }
+      });
+    });
+  }
+
+  // Regenerate from edited parameters
+  if (btnCadRegen) {
+    btnCadRegen.addEventListener('click', async () => {
+      if (!currentSpec || !currentScad) return;
+      // Rebuild SCAD code replacing top-level parameter values
+      let newScad = currentScad;
+      if (currentSpec.parameters) {
+        Object.entries(currentSpec.parameters).forEach(([key, val]) => {
+          const re = new RegExp(`^(${key}\\s*=\\s*)([\\d.]+)`, 'm');
+          newScad = newScad.replace(re, `$1${val}`);
+        });
+      }
+      currentScad = newScad;
+      cadSourceEditor.value = newScad;
+      await compileAndRenderWithRetry(newScad, currentSpec, '', 0);
+    });
+  }
+
+  // ── Preview from source editor ────────────────────────────────
+  if (btnCadRunSource) {
+    btnCadRunSource.addEventListener('click', async () => {
+      const code = cadSourceEditor.value.trim();
+      if (!code) return;
+      currentScad = code;
+      setStatus('⏳ Compiling…');
+      try {
+        const stlData = await compileScadToSTL(code);
+        loadSTLIntoViewport(stlData);
+        setStatus(`✅ Compiled — ${(stlData.length / 1024).toFixed(0)} KB`);
+      } catch (err) {
+        setStatus('❌ Compile error — see error in viewport');
+        showCompileError(err.message);
+      }
+    });
+  }
+
+  // ── Viewport controls ─────────────────────────────────────────
+  if (btnCadWireframe) {
+    btnCadWireframe.addEventListener('click', () => {
+      if (!cadMesh || !window.THREE) return;
+      cadWireframe = !cadWireframe;
+      cadMesh.material.wireframe = cadWireframe;
+      btnCadWireframe.textContent = cadWireframe ? 'Solid' : 'Wire';
+    });
+  }
+
+  if (btnCadResetView) {
+    btnCadResetView.addEventListener('click', () => {
+      if (cadControls && cadControls.reset) cadControls.reset();
+    });
+  }
+
+  // ── Copy source ───────────────────────────────────────────────
+  if (btnCadCopySource) {
+    btnCadCopySource.addEventListener('click', () => {
+      navigator.clipboard.writeText(cadSourceEditor.value || '').then(() => {
+        btnCadCopySource.textContent = 'Copied!';
+        setTimeout(() => { btnCadCopySource.textContent = 'Copy'; }, 1500);
+      });
+    });
+  }
+
+  // ── File downloads ────────────────────────────────────────────
+  function downloadText(filename, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function downloadBinary(filename, data) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function modelBaseName() {
+    return (currentSpec && currentSpec.name) ? currentSpec.name : 'model';
+  }
+
+  if (btnCadDownloadScad) {
+    btnCadDownloadScad.addEventListener('click', () => {
+      const code = cadSourceEditor.value || currentScad;
+      if (!code) { cadStatusBar.textContent = 'No source to download — generate a model first.'; return; }
+      downloadText(`${modelBaseName()}.scad`, code);
+    });
+  }
+
+  if (btnCadDownloadStl) {
+    btnCadDownloadStl.addEventListener('click', () => {
+      if (!currentStlData) { cadStatusBar.textContent = 'No STL — compile with ▶ Preview first.'; return; }
+      downloadBinary(`${modelBaseName()}.stl`, currentStlData);
+    });
+  }
+
+  if (btnCadDownloadJson) {
+    btnCadDownloadJson.addEventListener('click', () => {
+      if (!currentSpec) { cadStatusBar.textContent = 'No design spec — generate a model first.'; return; }
+      downloadText(`${modelBaseName()}.json`, JSON.stringify(currentSpec, null, 2));
+    });
+  }
+
+  // ── IndexedDB Project Storage ─────────────────────────────────
+  const DB_NAME = 'run01_cad_projects';
+  const DB_VER  = 1;
+  const STORE   = 'projects';
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'id' });
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  if (btnCadSaveProject) {
+    btnCadSaveProject.addEventListener('click', async () => {
+      if (!currentSpec && !currentScad) { cadStatusBar.textContent = 'Nothing to save — generate a model first.'; return; }
+      const name = currentSpec?.title || currentSpec?.name || 'Untitled';
+      const project = {
+        id:           `proj_${Date.now()}`,
+        name,
+        engine:       'openscad',
+        specification: currentSpec,
+        source:        cadSourceEditor.value || currentScad,
+        created_at:   new Date().toISOString(),
+        updated_at:   new Date().toISOString()
+      };
+      try {
+        const db = await openDB();
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(project);
+        cadStatusBar.textContent = `✅ Saved "${name}" to browser storage`;
+      } catch (err) {
+        cadStatusBar.textContent = `❌ Save failed: ${err.message}`;
+      }
+    });
+  }
+
+  if (btnCadOpenProject) {
+    btnCadOpenProject.addEventListener('click', async () => {
+      try {
+        const db = await openDB();
+        const tx = db.transaction(STORE, 'readonly');
+        const all = await new Promise((res, rej) => {
+          const req = tx.objectStore(STORE).getAll();
+          req.onsuccess = e => res(e.target.result);
+          req.onerror   = e => rej(e.target.error);
+        });
+
+        if (all.length === 0) { cadStatusBar.textContent = 'No saved projects found.'; return; }
+
+        // Simple picker using prompt (can be replaced with a real modal later)
+        const names = all.map((p, i) => `${i + 1}. ${p.name} (${new Date(p.updated_at).toLocaleDateString()})`).join('\n');
+        const choice = window.prompt(`Saved projects:\n${names}\n\nEnter number to open:`);
+        if (!choice) return;
+
+        const idx = parseInt(choice) - 1;
+        if (idx < 0 || idx >= all.length) { cadStatusBar.textContent = 'Invalid selection.'; return; }
+
+        const project = all[idx];
+        currentSpec = project.specification;
+        currentScad = project.source;
+        cadSourceEditor.value = project.source;
+        if (currentSpec && currentSpec.parameters) {
+          renderParamControls(currentSpec.parameters, currentSpec.units || 'mm');
+        }
+        cadStatusBar.textContent = `Opened "${project.name}" — click ▶ Preview to compile`;
+        appendChatMsg('assistant', `📂 Opened project: **${project.name}**\n\nSource loaded into editor. Click **▶ Preview** to compile.`);
+      } catch (err) {
+        cadStatusBar.textContent = `❌ Open failed: ${err.message}`;
+      }
+    });
+  }
+
+  if (btnCadNewProject) {
+    btnCadNewProject.addEventListener('click', () => {
+      currentSpec = null; currentScad = ''; currentStlData = null;
+      cadSourceEditor.value = '';
+      cadParamsPanel.classList.add('hidden');
+      if (cadMesh && cadScene) { cadScene.remove(cadMesh); cadMesh.geometry.dispose(); cadMesh.material.dispose(); cadMesh = null; }
+      if (cadViewportPlaceholder) { cadViewportPlaceholder.style.display = 'flex'; cadViewportPlaceholder.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><p>3D model will appear here</p>`; }
+      cadChatMessages.innerHTML = `<div class="cad-chat-msg cad-chat-system"><div class="cad-chat-bubble"><strong>AI CAD Studio</strong><br>New project. Describe the 3D object you want to create.</div></div>`;
+      cadStatusBar.textContent = 'Ready — enter a description and click Generate';
+    });
+  }
+
+  // ── Follow-up revision support ────────────────────────────────
+  // Users can type follow-up instructions like "Make it 20mm wider"
+  // We detect if there's an existing design and pass it as context
+  async function generateCADWithRevision() {
+    const prompt = cadPromptInput.value.trim();
+    if (!prompt) { cadPromptInput.focus(); return; }
+
+    if (currentSpec && currentScad) {
+      // Revision mode
+      setStatus('⏳ Processing revision…');
+      appendChatMsg('user', prompt);
+      btnCadGenerate.disabled = true;
+
+      const revisionSystemPrompt = `You are a parametric CAD revision assistant.
+The user wants to modify an existing OpenSCAD design. Update the parameter JSON to reflect the change, then output ONLY the updated JSON spec (same schema as before), nothing else.`;
+
+      const revisionUserMsg = `Current specification:\n${JSON.stringify(currentSpec, null, 2)}\n\nRevision request: ${prompt}`;
+
+      try {
+        const resp = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'deepseek-v4-flash-0731',
+            messages: [
+              { role: 'system', content: revisionSystemPrompt },
+              { role: 'user', content: revisionUserMsg }
+            ]
+          })
+        });
+
+        let rawSpec = '';
+        const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
+        while (true) {
+          const { value, done } = await reader.read(); if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split('\n'); buf = lines.pop();
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try { rawSpec += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
+            }
+          }
+        }
+
+        const jsonMatch = rawSpec.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const updatedSpec = JSON.parse(jsonMatch[0]);
+          currentSpec = updatedSpec;
+          renderParamControls(updatedSpec.parameters || {}, updatedSpec.units || 'mm');
+          // Trigger regen with updated params
+          if (btnCadRegen) btnCadRegen.click();
+        } else {
+          throw new Error('Could not parse updated specification');
+        }
+      } catch (err) {
+        appendChatMsg('assistant', `❌ Revision failed: ${err.message}`, true);
+      } finally {
+        btnCadGenerate.disabled = false;
+        cadPromptInput.value = '';
+      }
+    } else {
+      // Fresh generation
+      await generateCAD();
+      cadPromptInput.value = '';
+    }
+  }
+
+  // Re-wire generate button to smart mode
+  btnCadGenerate.removeEventListener('click', generateCAD);
+  btnCadGenerate.addEventListener('click', generateCADWithRevision);
+  cadPromptInput.removeEventListener('keydown', generateCAD);
+  cadPromptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generateCADWithRevision(); }
+  });
+
+  // ── Chat helpers ──────────────────────────────────────────────
+  function appendChatMsg(role, text, isError = false) {
+    if (!cadChatMessages) return;
+    const msg = document.createElement('div');
+    msg.className = `cad-chat-msg cad-chat-${role}${isError ? ' cad-chat-error' : ''}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'cad-chat-bubble';
+    // Simple markdown-ish rendering
+    bubble.innerHTML = text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+    msg.appendChild(bubble);
+    cadChatMessages.appendChild(msg);
+    cadChatMessages.scrollTop = cadChatMessages.scrollHeight;
+  }
+
+  function setStatus(msg) {
+    if (cadStatusBar) cadStatusBar.textContent = msg;
+  }
+
 })();
-
-
-

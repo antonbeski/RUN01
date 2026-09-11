@@ -4580,3 +4580,112 @@ body:has(#ideView.hidden) .physics-modal-overlay {
   background: #fff;
 }
 
+
+
+/* ══════════════════════════════════════════════════════════════
+   AI PARAMETRIC CAD STUDIO
+   ══════════════════════════════════════════════════════════════ */
+
+/* nav button */
+.btn-cad{color:var(--text-secondary);font-size:11.5px;font-weight:600;letter-spacing:.03em;gap:5px}
+.btn-cad:hover{color:#a78bfa}
+.btn-cad svg{color:#a78bfa}
+
+/* modal overlay */
+.cad-modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}
+.cad-modal-overlay.hidden{display:none!important}
+
+/* modal card */
+.cad-modal-card{background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;width:100%;max-width:1300px;height:90vh;max-height:900px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.8)}
+
+/* header */
+.cad-modal-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1a1a1a;background:#0a0a0a;flex-shrink:0}
+.cad-modal-header-left{display:flex;align-items:center;gap:10px}
+.cad-modal-header-right{display:flex;align-items:center;gap:6px}
+.cad-badge{background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px}
+.cad-modal-title{font-size:13px;font-weight:600;color:var(--text-primary)}
+.cad-engine-badge{font-size:9px;color:var(--text-muted);background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 6px;border-radius:4px}
+.cad-hdr-btn{font-size:11px;padding:4px 10px;border-radius:5px;color:var(--text-secondary)}
+.cad-hdr-btn:hover{background:#1e1e1e;color:var(--text-primary)}
+.cad-modal-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:4px;line-height:1}
+.cad-modal-close:hover{color:var(--text-primary);background:#1e1e1e}
+
+/* body layout */
+.cad-modal-body{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0;overflow:hidden}
+
+/* LEFT PANE */
+.cad-left-pane{display:flex;flex-direction:column;border-right:1px solid #1a1a1a;background:#080808;overflow:hidden}
+
+/* chat */
+.cad-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;min-height:0}
+.cad-chat-msg{display:flex}
+.cad-chat-system .cad-chat-bubble,
+.cad-chat-assistant .cad-chat-bubble{background:#111;border:1px solid #1e1e1e;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:11.5px;color:var(--text-secondary);max-width:100%;line-height:1.6}
+.cad-chat-user{justify-content:flex-end}
+.cad-chat-user .cad-chat-bubble{background:#1a1030;border:1px solid #a78bfa33;border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:11.5px;color:#c4b5fd;max-width:90%}
+.cad-chat-error .cad-chat-bubble{border-color:#f8717133;background:#1a0808;color:#fca5a5}
+.cad-chat-bubble strong{color:#a78bfa;font-weight:700}
+.cad-chat-bubble code{background:#1e1e1e;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#e2e8f0}
+
+/* params */
+.cad-params-panel{border-top:1px solid #1a1a1a;padding:10px 12px;background:#0a0a0a;flex-shrink:0}
+.cad-params-panel.hidden{display:none}
+.cad-params-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cad-params-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase}
+.cad-params-regen-btn{background:#a78bfa22;border:1px solid #a78bfa44;color:#a78bfa;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer}
+.cad-params-regen-btn:hover{background:#a78bfa33}
+.cad-params-grid{display:flex;flex-direction:column;gap:5px;max-height:155px;overflow-y:auto}
+.cad-param-row{display:grid;grid-template-columns:1fr 72px 28px;align-items:center;gap:6px}
+.cad-param-label{font-size:10.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize}
+.cad-param-input{background:#111;border:1px solid #2a2a2a;border-radius:4px;color:var(--text-primary);font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 6px;width:100%;text-align:right}
+.cad-param-input:focus{outline:none;border-color:#a78bfa66}
+.cad-param-unit{font-size:9.5px;color:var(--text-muted)}
+
+/* prompt area */
+.cad-prompt-wrap{border-top:1px solid #1a1a1a;padding:10px 12px;background:#080808;flex-shrink:0}
+.cad-quick-prompts{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.cad-quick-btn{font-size:10px;padding:3px 9px;border-radius:4px;background:#141414;border:1px solid #252525;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.cad-quick-btn:hover{background:#1e1e1e;color:var(--text-secondary);border-color:#333}
+.cad-textarea-row{display:flex;gap:6px;align-items:flex-end}
+.cad-textarea{flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:var(--text-primary);font-size:12px;font-family:inherit;padding:8px 10px;resize:none;min-height:52px;max-height:120px;line-height:1.5;overflow-y:auto}
+.cad-textarea:focus{outline:none;border-color:#a78bfa66}
+.cad-textarea::placeholder{color:var(--text-muted);font-size:11px}
+.cad-send-btn{background:#a78bfa;border:none;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;transition:background .15s}
+.cad-send-btn:hover{background:#9061f9}
+.cad-send-btn:disabled{background:#333;cursor:not-allowed}
+.cad-status-bar{margin-top:6px;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* CENTER PANE */
+.cad-center-pane{display:flex;flex-direction:column;overflow:hidden;background:#0a0a0a}
+
+/* viewport */
+.cad-viewport-wrap{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
+.cad-canvas-container{flex:1;position:relative;background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
+.cad-canvas-container canvas{display:block}
+.cad-viewport-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-muted);font-size:12px;pointer-events:none}
+.cad-viewport-toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-top:1px solid #1a1a1a;background:#080808;flex-shrink:0}
+.cad-vp-btn{background:#111;border:1px solid #222;color:var(--text-secondary);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer}
+.cad-vp-btn:hover{background:#1e1e1e;color:var(--text-primary)}
+.cad-vp-sep{flex:1}
+.cad-vp-download{color:#a78bfa;border-color:#a78bfa33;background:#a78bfa11}
+.cad-vp-download:hover{background:#a78bfa22}
+
+/* source editor pane */
+.cad-source-pane{height:210px;display:flex;flex-direction:column;border-top:1px solid #1a1a1a;flex-shrink:0}
+.cad-source-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #141414;background:#080808;flex-shrink:0}
+.cad-source-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase}
+.cad-source-actions{display:flex;gap:6px}
+.cad-src-btn{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;background:#111;border:1px solid #222;color:var(--text-secondary);cursor:pointer}
+.cad-src-btn:hover{background:#1e1e1e;color:var(--text-primary)}
+.cad-src-run{background:#a78bfa22;border-color:#a78bfa44;color:#a78bfa}
+.cad-src-run:hover{background:#a78bfa33}
+.cad-source-editor{flex:1;background:#080808;border:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;padding:10px 14px;resize:none;outline:none;overflow-y:auto}
+.cad-source-editor::placeholder{color:var(--text-muted)}
+
+/* scrollbars */
+.cad-chat-messages::-webkit-scrollbar,
+.cad-params-grid::-webkit-scrollbar,
+.cad-source-editor::-webkit-scrollbar{width:4px}
+.cad-chat-messages::-webkit-scrollbar-thumb,
+.cad-params-grid::-webkit-scrollbar-thumb,
+.cad-source-editor::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}

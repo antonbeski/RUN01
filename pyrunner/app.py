@@ -1023,6 +1023,20 @@ def ai_chat():
             "(v \\cdot t \\cdot \\cos(a), v \\cdot t \\cdot \\sin(a) - 0.5 \\cdot g \\cdot t^2)\n"
             "```"
         )
+
+# ── Inject OpenSCAD CAD Studio context ─────────────────────────
+        system_parts.append(
+            "The web application has a built-in AI Parametric CAD Studio.\n"
+            "When the user asks to create, model, or design a 3D object, you may generate OpenSCAD code.\n"
+            "Output OpenSCAD code in a fenced block: ```openscad\n[code]\n```\n"
+            "Always declare named parameters at the top, use modules, and call the main module at the end.\n"
+            "Example:\n"
+            "```openscad\n"
+            "width = 80; height = 50; depth = 40; wall = 3;\n"
+            "module box() { difference() { cube([width, depth, height]); translate([wall,wall,wall]) cube([width-2*wall, depth-2*wall, height]); } }\n"
+            "box();\n"
+            "```\n"
+        )
         if not messages or messages[0].get("role") != "system":
             messages.insert(0, {"role": "system", "content": physics_sys_prompt})
         else:
