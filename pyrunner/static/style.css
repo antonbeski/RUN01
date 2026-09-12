@@ -4602,6 +4602,10 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-modal-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1a1a1a;background:#0a0a0a;flex-shrink:0}
 .cad-modal-header-left{display:flex;align-items:center;gap:10px}
 .cad-modal-header-right{display:flex;align-items:center;gap:6px}
+.cad-model-select{background:#111;border:1px solid #2a2a2a;border-radius:6px;color:var(--text-primary);font-size:11px;padding:4px 8px;max-width:220px;cursor:pointer}
+.cad-model-select:hover{border-color:#444}
+.cad-model-select:focus{outline:none;border-color:#a78bfa66}
+.cad-model-select option,.cad-model-select optgroup{background:#111;color:var(--text-primary)}
 .cad-badge{background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px}
 .cad-modal-title{font-size:13px;font-weight:600;color:var(--text-primary)}
 .cad-engine-badge{font-size:9px;color:var(--text-muted);background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 6px;border-radius:4px}

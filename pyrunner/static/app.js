@@ -4173,10 +4173,107 @@ window.ViewManager = (function() {
   const btnCadNewProject  = document.getElementById('btnCadNewProject');
   const btnCadSaveProject = document.getElementById('btnCadSaveProject');
   const btnCadOpenProject = document.getElementById('btnCadOpenProject');
+  const cadModelSelect    = document.getElementById('cadModelSelect');
 
   window.btnCAD = btnCAD;
   window.cadSourceEditorEl = cadSourceEditor;
   if (!btnCAD || !cadModalOverlay) return;
+
+  // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq)
+  const CAD_MODEL_CATALOG = [
+    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
+    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
+    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
+    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
+    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
+    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+  ];
+  const CAD_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+
+  function seedCadModelSelect(models) {
+    if (!cadModelSelect) return;
+    cadModelSelect.innerHTML = '';
+    const groups = {};
+    const order = [];
+    models.forEach(m => {
+      const groupName = m.provider || 'Other';
+      if (!groups[groupName]) {
+        groups[groupName] = document.createElement('optgroup');
+        groups[groupName].label = groupName;
+        order.push(groupName);
+      }
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      groups[groupName].appendChild(opt);
+    });
+    order.forEach(g => cadModelSelect.appendChild(groups[g]));
+    const hasDefault = models.some(m => m.id === CAD_DEFAULT_MODEL);
+    cadModelSelect.value = hasDefault ? CAD_DEFAULT_MODEL : (models[0] ? models[0].id : '');
+  }
+  seedCadModelSelect(CAD_MODEL_CATALOG);
+  (async () => {
+    try {
+      const resp = await fetch('/api/ai/models');
+      if (!resp.ok) return;
+      const models = await resp.json();
+      if (Array.isArray(models) && models.length) {
+        const prev = cadModelSelect ? cadModelSelect.value : '';
+        seedCadModelSelect(models);
+        if (prev && cadModelSelect && [...cadModelSelect.options].some(o => o.value === prev)) {
+          cadModelSelect.value = prev;
+        }
+      }
+    } catch (_) { /* keep static catalog */ }
+  })();
+
+  function getCadModel() {
+    return (cadModelSelect && cadModelSelect.value) || CAD_DEFAULT_MODEL;
+  }
+
+  /** Stream /api/ai/chat (same NVIDIA/Groq backend as the code editor). */
+  async function streamCadAI(messages) {
+    const resp = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: getCadModel(),
+        context: 'cad',
+        messages
+      })
+    });
+
+    const ct = (resp.headers.get('content-type') || '').toLowerCase();
+    if (!resp.ok || ct.includes('application/json')) {
+      let errMsg = 'AI provider unavailable';
+      try {
+        const errBody = await resp.json();
+        if (errBody && errBody.error) errMsg = errBody.error;
+      } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    let text = '';
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            text += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '';
+          } catch (_) {}
+        }
+      }
+    }
+    return text;
+  }
 
   // ── Studio State ──────────────────────────────────────────────
   let currentSpec    = null;   // structured design spec JSON
@@ -4189,8 +4286,83 @@ window.ViewManager = (function() {
   let cadMesh        = null;
   let cadWireframe   = false;
   let cadAnimId      = null;
-  let openscadWasm   = null;   // OpenSCAD WASM module instance
+  let openscadFactory = null; // ES module factory (cached)
+  let openscadWasm   = null;   // last instance (may be single-use after callMain)
   let openscadLoading = false;
+
+  // ── OpenSCAD WASM Loading ─────────────────────────────────────
+  async function ensureOpenSCADFactory() {
+    if (openscadFactory) return openscadFactory;
+    if (openscadLoading) {
+      while (openscadLoading) await new Promise(r => setTimeout(r, 100));
+      return openscadFactory;
+    }
+    openscadLoading = true;
+    setStatus('Loading OpenSCAD WASM…');
+    try {
+      const CDN = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4';
+      const mod = await import(`${CDN}/openscad.js`);
+      const factory = mod.default || mod.OpenSCAD || mod;
+      if (typeof factory !== 'function') {
+        throw new Error('openscad-wasm module did not export a factory function');
+      }
+      openscadFactory = factory;
+      openscadFactory._cdn = CDN;
+      openscadLoading = false;
+      return openscadFactory;
+    } catch (err) {
+      openscadLoading = false;
+      throw new Error(`OpenSCAD WASM load failed: ${err.message}`);
+    }
+  }
+
+  async function createOpenSCADInstance() {
+    const factory = await ensureOpenSCADFactory();
+    const CDN = factory._cdn || 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4';
+    openscadWasm = await factory({
+      noInitialRun: true,
+      locateFile: (path) => `${CDN}/${path}`
+    });
+    return openscadWasm;
+  }
+
+  // ── Compile OpenSCAD to STL ───────────────────────────────────
+  async function compileScadToSTL(scadCode) {
+    // Fresh instance per compile — callMain is effectively single-shot
+    const osc = await createOpenSCADInstance();
+
+    osc.FS.writeFile('/model.scad', scadCode);
+
+    let stderr = '';
+    const origErr = osc.printErr;
+    const origOut = osc.print;
+    osc.printErr = (msg) => { stderr += msg + '\n'; };
+    osc.print = () => {};
+
+    try {
+      // Match openscad-wasm README; request binary STL for our Three.js parser
+      osc.callMain(['/model.scad', '--enable=manifold', '-o', 'model.stl', '--export-format=binstl']);
+    } catch (e) {
+      // Emscripten may throw on process exit — expected
+    } finally {
+      osc.printErr = origErr;
+      if (origOut) osc.print = origOut;
+    }
+
+    let stlData = null;
+    for (const path of ['/model.stl', 'model.stl', './model.stl']) {
+      try {
+        stlData = osc.FS.readFile(path);
+        if (stlData && stlData.length >= 84) break;
+      } catch (_) {}
+    }
+
+    if (!stlData || stlData.length < 84) {
+      throw new Error('OpenSCAD compile failed:\n' + (stderr || 'Empty or invalid STL output'));
+    }
+
+    return stlData instanceof Uint8Array ? stlData : new Uint8Array(stlData);
+  }
 
   // ── Modal open / close ────────────────────────────────────────
   function openCADModal() {
@@ -4217,13 +4389,6 @@ window.ViewManager = (function() {
     });
   });
 
-  // ── Enter to send ─────────────────────────────────────────────
-  cadPromptInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      generateCAD();
-    }
-  });
   btnCadGenerate.addEventListener('click', generateCAD);
 
   // ── Three.js Viewport ─────────────────────────────────────────
@@ -4364,9 +4529,18 @@ window.ViewManager = (function() {
 
   function parseSTLBinary(buffer) {
     const THREE = window.THREE;
+    const u8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer.buffer || buffer);
+    // ASCII STL fallback (starts with "solid")
+    const head = String.fromCharCode(...u8.slice(0, Math.min(80, u8.length)));
+    if (/^solid\s/i.test(head) && !head.includes('\0')) {
+      return parseSTLAscii(new TextDecoder().decode(u8));
+    }
     const geometry = new THREE.BufferGeometry();
-    const view = new DataView(buffer.buffer || buffer);
+    const view = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
     const triCount = view.getUint32(80, true);
+    if (triCount <= 0 || 84 + triCount * 50 > u8.byteLength) {
+      throw new Error('Invalid binary STL triangle count');
+    }
     const positions = new Float32Array(triCount * 9);
     const normals   = new Float32Array(triCount * 9);
     let offset = 84;
@@ -4391,89 +4565,49 @@ window.ViewManager = (function() {
     return geometry;
   }
 
-  // ── OpenSCAD WASM Loading ─────────────────────────────────────
-  async function ensureOpenSCAD() {
-    if (openscadWasm) return openscadWasm;
-    if (openscadLoading) {
-      // wait for existing load
-      while (openscadLoading) await new Promise(r => setTimeout(r, 100));
-      return openscadWasm;
-    }
-    openscadLoading = true;
-    setStatus('Loading OpenSCAD WASM…');
-
-    try {
-      // Load openscad-wasm from CDN
-      if (!window.OpenSCAD) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          // Use the openscad-wasm npm package via CDN
-          script.src = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.1.12/dist/openscad.wasm.js';
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load OpenSCAD WASM script'));
-          document.head.appendChild(script);
-        });
+  function parseSTLAscii(text) {
+    const THREE = window.THREE;
+    const positions = [];
+    const normals = [];
+    const facetRe = /facet\s+normal\s+([-\d.eE]+)\s+([-\d.eE]+)\s+([-\d.eE]+)([\s\S]*?)endfacet/g;
+    const vertRe = /vertex\s+([-\d.eE]+)\s+([-\d.eE]+)\s+([-\d.eE]+)/g;
+    let m;
+    while ((m = facetRe.exec(text))) {
+      const nx = parseFloat(m[1]), ny = parseFloat(m[2]), nz = parseFloat(m[3]);
+      const block = m[4];
+      const verts = [];
+      let vm;
+      while ((vm = vertRe.exec(block))) {
+        verts.push(parseFloat(vm[1]), parseFloat(vm[2]), parseFloat(vm[3]));
       }
-
-      if (typeof OpenSCAD === 'undefined') {
-        throw new Error('OpenSCAD WASM not available after script load');
+      vertRe.lastIndex = 0;
+      if (verts.length >= 9) {
+        for (let i = 0; i < 9; i++) positions.push(verts[i]);
+        for (let i = 0; i < 3; i++) normals.push(nx, ny, nz);
       }
-
-      openscadWasm = await OpenSCAD({ noInitialRun: true });
-      openscadLoading = false;
-      return openscadWasm;
-    } catch (err) {
-      openscadLoading = false;
-      throw new Error(`OpenSCAD WASM load failed: ${err.message}. The OpenSCAD engine may not be available in this browser.`);
     }
-  }
-
-  // ── Compile OpenSCAD to STL ───────────────────────────────────
-  async function compileScadToSTL(scadCode) {
-    const osc = await ensureOpenSCAD();
-
-    // Write the .scad file into the WASM virtual filesystem
-    osc.FS.writeFile('/model.scad', scadCode);
-
-    let stderr = '';
-    const origErr = osc.printErr;
-    osc.printErr = (msg) => { stderr += msg + '\n'; };
-
-    // Compile to STL
-    try {
-      osc.callMain(['-o', '/model.stl', '--export-format', 'binstl', '/model.scad']);
-    } catch (e) {
-      // OpenSCAD may throw on exit — that is expected
-    } finally {
-      osc.printErr = origErr;
-    }
-
-    // Try to read output STL
-    let stlData = null;
-    try {
-      stlData = osc.FS.readFile('/model.stl');
-    } catch (e) {
-      throw new Error('OpenSCAD compile failed:\n' + (stderr || 'Unknown error'));
-    }
-
-    if (!stlData || stlData.length < 84) {
-      throw new Error('OpenSCAD produced an empty or invalid STL.\n' + stderr);
-    }
-
-    return stlData;
+    if (!positions.length) throw new Error('ASCII STL contained no triangles');
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3));
+    return geometry;
   }
 
   // ── AI Two-Stage CAD Generation ───────────────────────────────
   async function generateCAD(revisionInstruction) {
-    const prompt = revisionInstruction || cadPromptInput.value.trim();
+    const prompt = (typeof revisionInstruction === 'string' && revisionInstruction.trim())
+      ? revisionInstruction.trim()
+      : cadPromptInput.value.trim();
     if (!prompt) { cadPromptInput.focus(); return; }
 
-    // Disable generate button
     btnCadGenerate.disabled = true;
     setStatus('⏳ Stage 1: Generating CAD specification…');
-    appendChatMsg('user', prompt);
+    // Only echo the short user-facing prompt in chat (not the full revision context blob)
+    const chatPrompt = cadPromptInput.value.trim() || prompt.split('\n').pop() || prompt;
+    if (!revisionInstruction || typeof revisionInstruction !== 'string' || revisionInstruction === chatPrompt) {
+      appendChatMsg('user', chatPrompt);
+    }
 
-    // ── Stage 1: Structured specification ────────────────────────
     const specSystemPrompt = `You are a parametric CAD specification generator.
 The user will describe a 3D object. You MUST respond with ONLY valid JSON, no markdown, no explanation, no code fences.
 Use this exact schema:
@@ -4496,37 +4630,11 @@ Rules:
 
     let specJson = null;
     try {
-      const specResp = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'deepseek-v4-flash-0731',
-          messages: [
-            { role: 'system', content: specSystemPrompt },
-            { role: 'user', content: prompt }
-          ]
-        })
-      });
+      const rawSpec = await streamCadAI([
+        { role: 'system', content: specSystemPrompt },
+        { role: 'user', content: prompt }
+      ]);
 
-      if (!specResp.ok) throw new Error('AI provider unavailable');
-
-      let rawSpec = '';
-      const reader = specResp.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n'); buf = lines.pop();
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try { rawSpec += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
-          }
-        }
-      }
-
-      // Extract JSON from the response (strip any accidental markdown fences)
       const jsonMatch = rawSpec.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('AI did not produce valid JSON specification');
       specJson = JSON.parse(jsonMatch[0]);
@@ -4540,7 +4648,6 @@ Rules:
     currentSpec = specJson;
     setStatus('⏳ Stage 2: Generating OpenSCAD code…');
 
-    // ── Stage 2: OpenSCAD code ────────────────────────────────────
     const codeSystemPrompt = `You are a parametric OpenSCAD code generator.
 You receive a CAD design specification as JSON and must output ONLY executable OpenSCAD code.
 Rules (strictly enforced):
@@ -4551,7 +4658,7 @@ Rules (strictly enforced):
 - All dimensions in millimetres.
 - Use difference(), union(), intersection(), cylinder(), cube(), sphere(), rotate_extrude(), linear_extrude() appropriately.
 - For holes: use negative cylinder() or cube() inside difference().
-- For fillets/rounded edges: use minkowski() with sphere() or offset + extrude.
+- Prefer simple robust geometry over complex fillets (avoid minkowski unless essential).
 - No filesystem or network access. No echo statements.
 - The output must compile successfully in OpenSCAD.`;
 
@@ -4559,36 +4666,11 @@ Rules (strictly enforced):
 
     let scadCode = '';
     try {
-      const codeResp = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'deepseek-v4-flash-0731',
-          messages: [
-            { role: 'system', content: codeSystemPrompt },
-            { role: 'user', content: codeUserMsg }
-          ]
-        })
-      });
+      scadCode = await streamCadAI([
+        { role: 'system', content: codeSystemPrompt },
+        { role: 'user', content: codeUserMsg }
+      ]);
 
-      if (!codeResp.ok) throw new Error('AI provider unavailable for code generation');
-
-      const reader = codeResp.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n'); buf = lines.pop();
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try { scadCode += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
-          }
-        }
-      }
-
-      // Strip any accidental markdown fences
       scadCode = scadCode.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
       if (!scadCode) throw new Error('AI produced empty code');
     } catch (err) {
@@ -4601,7 +4683,6 @@ Rules (strictly enforced):
     currentScad = scadCode;
     cadSourceEditor.value = scadCode;
 
-    // Show spec summary in chat
     const paramsSummary = Object.entries(specJson.parameters || {})
       .map(([k, v]) => `${k}: ${v} ${specJson.units || 'mm'}`)
       .join(' · ');
@@ -4612,13 +4693,11 @@ Rules (strictly enforced):
       `Rendering 3D preview…`
     );
 
-    // Render parameter controls
     renderParamControls(specJson.parameters || {}, specJson.units || 'mm');
-
-    // ── Auto-compile with repair loop ────────────────────────────
     await compileAndRenderWithRetry(scadCode, specJson, prompt, 0);
 
     btnCadGenerate.disabled = false;
+    cadPromptInput.value = '';
   }
 
   // ── Auto-repair loop (up to 3 attempts) ──────────────────────
@@ -4660,30 +4739,10 @@ Error: ${errorMsg}
 Code:
 ${brokenCode}`;
     try {
-      const resp = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'deepseek-v4-flash-0731',
-          messages: [
-            { role: 'system', content: 'You are an OpenSCAD expert. Fix compile errors. Output ONLY corrected OpenSCAD code. No markdown, no explanation.' },
-            { role: 'user', content: repairPrompt }
-          ]
-        })
-      });
-      if (!resp.ok) return null;
-      let code = '';
-      const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
-      while (true) {
-        const { value, done } = await reader.read(); if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n'); buf = lines.pop();
-        for (const line of lines) {
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try { code += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
-          }
-        }
-      }
+      let code = await streamCadAI([
+        { role: 'system', content: 'You are an OpenSCAD expert. Fix compile errors. Output ONLY corrected OpenSCAD code. No markdown, no explanation. Prefer simple geometry; avoid minkowski if it caused the error.' },
+        { role: 'user', content: repairPrompt }
+      ]);
       return code.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim() || null;
     } catch { return null; }
   }
@@ -4931,77 +4990,33 @@ ${brokenCode}`;
 
   // ── Follow-up revision support ────────────────────────────────
   // Users can type follow-up instructions like "Make it 20mm wider"
-  // We detect if there's an existing design and pass it as context
+  // Re-run full two-stage generation with existing design as context.
   async function generateCADWithRevision() {
     const prompt = cadPromptInput.value.trim();
     if (!prompt) { cadPromptInput.focus(); return; }
 
     if (currentSpec && currentScad) {
-      // Revision mode
-      setStatus('⏳ Processing revision…');
       appendChatMsg('user', prompt);
-      btnCadGenerate.disabled = true;
-
-      const revisionSystemPrompt = `You are a parametric CAD revision assistant.
-The user wants to modify an existing OpenSCAD design. Update the parameter JSON to reflect the change, then output ONLY the updated JSON spec (same schema as before), nothing else.`;
-
-      const revisionUserMsg = `Current specification:\n${JSON.stringify(currentSpec, null, 2)}\n\nRevision request: ${prompt}`;
-
-      try {
-        const resp = await fetch('/api/ai/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'deepseek-v4-flash-0731',
-            messages: [
-              { role: 'system', content: revisionSystemPrompt },
-              { role: 'user', content: revisionUserMsg }
-            ]
-          })
-        });
-
-        let rawSpec = '';
-        const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
-        while (true) {
-          const { value, done } = await reader.read(); if (done) break;
-          buf += dec.decode(value, { stream: true });
-          const lines = buf.split('\n'); buf = lines.pop();
-          for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-              try { rawSpec += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || ''; } catch {}
-            }
-          }
-        }
-
-        const jsonMatch = rawSpec.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const updatedSpec = JSON.parse(jsonMatch[0]);
-          currentSpec = updatedSpec;
-          renderParamControls(updatedSpec.parameters || {}, updatedSpec.units || 'mm');
-          // Trigger regen with updated params
-          if (btnCadRegen) btnCadRegen.click();
-        } else {
-          throw new Error('Could not parse updated specification');
-        }
-      } catch (err) {
-        appendChatMsg('assistant', `❌ Revision failed: ${err.message}`, true);
-      } finally {
-        btnCadGenerate.disabled = false;
-        cadPromptInput.value = '';
-      }
+      const revisionContext =
+        `REVISION of an existing parametric OpenSCAD design.\n\n` +
+        `Current specification JSON:\n${JSON.stringify(currentSpec, null, 2)}\n\n` +
+        `Current OpenSCAD source:\n${currentScad}\n\n` +
+        `Requested change: ${prompt}\n\n` +
+        `Produce an UPDATED specification that applies the change while keeping unrelated parameters stable.`;
+      await generateCAD(revisionContext);
     } else {
-      // Fresh generation
       await generateCAD();
-      cadPromptInput.value = '';
     }
   }
 
-  // Re-wire generate button to smart mode
+  // Re-wire generate button to smart mode (Enter or Ctrl+Enter)
   btnCadGenerate.removeEventListener('click', generateCAD);
   btnCadGenerate.addEventListener('click', generateCADWithRevision);
-  cadPromptInput.removeEventListener('keydown', generateCAD);
   cadPromptInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); generateCADWithRevision(); }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      generateCADWithRevision();
+    }
   });
 
   // ── Chat helpers ──────────────────────────────────────────────

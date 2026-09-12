@@ -4,6 +4,33 @@ import os
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Load local .env for NVIDIA_API_KEY / GROQ_API_KEY* without requiring python-dotenv.
+# Existing process env (e.g. Vercel) always wins — never overwrite.
+def _load_dotenv():
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", ".env"),
+        os.path.join(os.getcwd(), ".env"),
+    ]
+    for path in candidates:
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                for raw in fh:
+                    line = raw.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, val = line.partition("=")
+                    key = key.strip()
+                    val = val.strip().strip('"').strip("'")
+                    if key and key not in os.environ:
+                        os.environ[key] = val
+        except OSError:
+            pass
+        break
+
+_load_dotenv()
+
 # Use __name__ so Flask can locate the templates/static folders correctly.
 app = Flask(__name__)
 app.name = "run01"
@@ -946,101 +973,102 @@ def ai_chat():
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
         model    = body.get("model", "deepseek-v4-flash-0731")
+        # "cad" = CAD Studio chat (JSON/OpenSCAD only). Do NOT inject physics prompts.
+        # "editor" (default) = code editor assistant with physics + CAD tips.
+        context  = (body.get("context") or "editor").strip().lower()
 
-        # ── Inject Universal MuJoCo, Rapier & Desmos Simulation Instructions ───────
-        physics_sys_prompt = (
-            "You are an expert AI Kinematics, Dynamics & Physics Simulation Assistant embedded inside RUN01.\n"
-            "The web application has FULL BUILT-IN Google DeepMind MuJoCo WASM, Rapier 3D/2D Physics, Three.js 3D Viewport, and Desmos Graphing Calculator verification engines.\n"
-            "Whenever the user asks any question related to physics, kinematics, multi-body dynamics, robotics, mechanical linkages, calculus, trajectories, collisions, springs, or vibrations:\n"
-            "YOU MUST ALWAYS SIMULATE AND MATHEMATICALLY VERIFY THE SCENARIO IN ADDITION TO EXPLAINING IT.\n\n"
-            "SIMULATION ENGINE BLOCK SPECIFICATIONS:\n\n"
-            "1. Google DeepMind MuJoCo MJCF Simulation (Articulated kinematics, robotic arms, N-link pendulums, cart-poles, linkages):\n"
-            "Generate a ```mujoco block containing valid MJCF XML. Define hierarchical <worldbody>, <body>, <joint>, and <geom> tags.\n"
-            "Supported Joint Types: 'hinge' (revolute), 'slide' (prismatic), 'ball' (spherical), 'free' (6-DOF).\n"
-            "Supported Geoms: 'capsule' (use fromto='x1 y1 z1 x2 y2 z2' size='r'), 'sphere' (size='r'), 'cylinder' (size='r half_h'), 'box' (size='hx hy hz'), 'plane' (size='x y z').\n"
-            "Example MuJoCo Block:\n"
-            "```mujoco\n"
-            "<mujoco model=\"kinematic_mechanism\">\n"
-            "  <compiler angle=\"radian\" coordinate=\"local\"/>\n"
-            "  <option timestep=\"0.002\" gravity=\"0 0 -9.81\" integrator=\"RK4\"/>\n"
-            "  <worldbody>\n"
-            "    <light diffuse=\"0.9 0.9 0.9\" pos=\"0 0 5\" dir=\"0 0 -1\"/>\n"
-            "    <geom name=\"floor\" type=\"plane\" size=\"6 6 0.1\" rgba=\"0.1 0.1 0.1 1\"/>\n"
-            "    <body name=\"base_link\" pos=\"0 0 2.0\">\n"
-            "      <joint name=\"j1\" type=\"hinge\" axis=\"0 1 0\" damping=\"0.001\"/>\n"
-            "      <geom name=\"rod1\" type=\"capsule\" fromto=\"0 0 0 0 0 -0.8\" size=\"0.035\" rgba=\"0.9 0.9 0.9 1\" mass=\"1.0\"/>\n"
-            "      <body name=\"tip_link\" pos=\"0 0 -0.8\">\n"
-            "        <joint name=\"j2\" type=\"hinge\" axis=\"0 1 0\" damping=\"0.001\"/>\n"
-            "        <geom name=\"rod2\" type=\"capsule\" fromto=\"0 0 0 0 0 -0.7\" size=\"0.03\" rgba=\"0.7 0.7 0.7 1\" mass=\"0.8\"/>\n"
-            "        <geom name=\"bob\" type=\"sphere\" pos=\"0 0 -0.7\" size=\"0.08\" rgba=\"1 1 1 1\" mass=\"1.2\"/>\n"
-            "      </body>\n"
-            "    </body>\n"
-            "  </worldbody>\n"
-            "</mujoco>\n"
-            "```\n\n"
-            "2. Rapier 3D/2D Physics Simulation (Rigid bodies, contact forces, domino chains, spring oscillators, projectile aerodynamic drag, elastic bounces):\n"
-            "Generate a ```rapier block containing valid JSON specification:\n"
-            "Schema properties:\n"
-            "- gravity: [gx, gy, gz] (e.g. [0, -9.81, 0])\n"
-            "- timestep: dt (default 0.00833 for 120Hz)\n"
-            "- dragCoeff: optional quadratic aerodynamic air drag coefficient (e.g. 0.15)\n"
-            "- springs: optional array of [{ k: 45.0, c: 0.8, restLength: 1.5, anchor: [0, 3.5, 0], body: 'name' }]\n"
-            "- bodies: array of objects with:\n"
-            "    name: string\n"
-            "    type: 'dynamic' | 'fixed' | 'kinematic'\n"
-            "    shape: 'box' (size: [w,h,d]) | 'sphere' (radius: r) | 'cylinder' (radius: r, height: h)\n"
-            "    pos: [x, y, z]\n"
-            "    mass: float\n"
-            "    linvel: [vx, vy, vz]\n"
-            "    restitution: float (0 to 1)\n"
-            "    friction: float (0 to 1)\n"
-            "    color: hex integer (e.g. 0xffffff)\n"
-            "Example Rapier Block:\n"
-            "```rapier\n"
-            "{\n"
-            "  \"gravity\": [0, -9.81, 0],\n"
-            "  \"timestep\": 0.00833,\n"
-            "  \"bodies\": [\n"
-            "    { \"name\": \"ground\", \"type\": \"fixed\", \"pos\": [0, -0.2, 0], \"shape\": \"box\", \"size\": [12, 0.4, 4], \"color\": 1118481, \"friction\": 0.8 },\n"
-            "    { \"name\": \"ball\", \"type\": \"dynamic\", \"pos\": [-2.5, 2.0, 0], \"shape\": \"sphere\", \"radius\": 0.3, \"mass\": 1.0, \"color\": 16777215, \"linvel\": [4.0, 2.0, 0], \"restitution\": 0.85 }\n"
-            "  ]\n"
-            "}\n"
-            "```\n\n"
-            "3. Desmos Mathematical Graph & Phase-Space Analytical Proof:\n"
-            "Generate a ```desmos block containing equations formatted strictly according to Desmos LaTeX rules:\n"
-            "• NO COMMENTS: Strictly NO '#' or '//' comments inside ```desmos blocks.\n"
-            "• NO ASTERISKS: Do NOT use '*' for multiplication. Write '\\cdot' or write variables directly (e.g. 'y = a \\cdot \\sin(b \\cdot x)').\n"
-            "• NO FUNCTION NOTATION: Do NOT write 'x(t) =' or 'y(t) ='. To plot parametric curves, directly write '(x_expr, y_expr)'.\n"
-            "• SLIDERS: Define parameters as simple single variables (e.g. 'v = 20', 'g = 9.81', 't = 0').\n"
-            "• STANDARD LATEX: Use '\\theta', '\\pi', '\\alpha', '\\omega', '\\sqrt{...}'.\n"
-            "Example Desmos Block:\n"
-            "```desmos\n"
-            "v = 20\n"
-            "a = 0.785\n"
-            "g = 9.81\n"
-            "t = 1\n"
-            "y = x \\cdot \\tan(a) - (g \\cdot x^2) / (2 \\cdot v^2 \\cdot (\\cos(a))^2)\n"
-            "(v \\cdot t \\cdot \\cos(a), v \\cdot t \\cdot \\sin(a) - 0.5 \\cdot g \\cdot t^2)\n"
-            "```"
-        )
-
-# ── Inject OpenSCAD CAD Studio context ─────────────────────────
-        system_parts.append(
-            "The web application has a built-in AI Parametric CAD Studio.\n"
-            "When the user asks to create, model, or design a 3D object, you may generate OpenSCAD code.\n"
-            "Output OpenSCAD code in a fenced block: ```openscad\n[code]\n```\n"
-            "Always declare named parameters at the top, use modules, and call the main module at the end.\n"
-            "Example:\n"
-            "```openscad\n"
-            "width = 80; height = 50; depth = 40; wall = 3;\n"
-            "module box() { difference() { cube([width, depth, height]); translate([wall,wall,wall]) cube([width-2*wall, depth-2*wall, height]); } }\n"
-            "box();\n"
-            "```\n"
-        )
-        if not messages or messages[0].get("role") != "system":
-            messages.insert(0, {"role": "system", "content": physics_sys_prompt})
-        else:
-            messages[0]["content"] = physics_sys_prompt + "\n\n" + messages[0]["content"]
+        if context != "cad":
+            # ── Inject Universal MuJoCo, Rapier & Desmos Simulation Instructions ───────
+            physics_sys_prompt = (
+                "You are an expert AI Kinematics, Dynamics & Physics Simulation Assistant embedded inside RUN01.\n"
+                "The web application has FULL BUILT-IN Google DeepMind MuJoCo WASM, Rapier 3D/2D Physics, Three.js 3D Viewport, and Desmos Graphing Calculator verification engines.\n"
+                "Whenever the user asks any question related to physics, kinematics, multi-body dynamics, robotics, mechanical linkages, calculus, trajectories, collisions, springs, or vibrations:\n"
+                "YOU MUST ALWAYS SIMULATE AND MATHEMATICALLY VERIFY THE SCENARIO IN ADDITION TO EXPLAINING IT.\n\n"
+                "SIMULATION ENGINE BLOCK SPECIFICATIONS:\n\n"
+                "1. Google DeepMind MuJoCo MJCF Simulation (Articulated kinematics, robotic arms, N-link pendulums, cart-poles, linkages):\n"
+                "Generate a ```mujoco block containing valid MJCF XML. Define hierarchical <worldbody>, <body>, <joint>, and <geom> tags.\n"
+                "Supported Joint Types: 'hinge' (revolute), 'slide' (prismatic), 'ball' (spherical), 'free' (6-DOF).\n"
+                "Supported Geoms: 'capsule' (use fromto='x1 y1 z1 x2 y2 z2' size='r'), 'sphere' (size='r'), 'cylinder' (size='r half_h'), 'box' (size='hx hy hz'), 'plane' (size='x y z').\n"
+                "Example MuJoCo Block:\n"
+                "```mujoco\n"
+                "<mujoco model=\"kinematic_mechanism\">\n"
+                "  <compiler angle=\"radian\" coordinate=\"local\"/>\n"
+                "  <option timestep=\"0.002\" gravity=\"0 0 -9.81\" integrator=\"RK4\"/>\n"
+                "  <worldbody>\n"
+                "    <light diffuse=\"0.9 0.9 0.9\" pos=\"0 0 5\" dir=\"0 0 -1\"/>\n"
+                "    <geom name=\"floor\" type=\"plane\" size=\"6 6 0.1\" rgba=\"0.1 0.1 0.1 1\"/>\n"
+                "    <body name=\"base_link\" pos=\"0 0 2.0\">\n"
+                "      <joint name=\"j1\" type=\"hinge\" axis=\"0 1 0\" damping=\"0.001\"/>\n"
+                "      <geom name=\"rod1\" type=\"capsule\" fromto=\"0 0 0 0 0 -0.8\" size=\"0.035\" rgba=\"0.9 0.9 0.9 1\" mass=\"1.0\"/>\n"
+                "      <body name=\"tip_link\" pos=\"0 0 -0.8\">\n"
+                "        <joint name=\"j2\" type=\"hinge\" axis=\"0 1 0\" damping=\"0.001\"/>\n"
+                "        <geom name=\"rod2\" type=\"capsule\" fromto=\"0 0 0 0 0 -0.7\" size=\"0.03\" rgba=\"0.7 0.7 0.7 1\" mass=\"0.8\"/>\n"
+                "        <geom name=\"bob\" type=\"sphere\" pos=\"0 0 -0.7\" size=\"0.08\" rgba=\"1 1 1 1\" mass=\"1.2\"/>\n"
+                "      </body>\n"
+                "    </body>\n"
+                "  </worldbody>\n"
+                "</mujoco>\n"
+                "```\n\n"
+                "2. Rapier 3D/2D Physics Simulation (Rigid bodies, contact forces, domino chains, spring oscillators, projectile aerodynamic drag, elastic bounces):\n"
+                "Generate a ```rapier block containing valid JSON specification:\n"
+                "Schema properties:\n"
+                "- gravity: [gx, gy, gz] (e.g. [0, -9.81, 0])\n"
+                "- timestep: dt (default 0.00833 for 120Hz)\n"
+                "- dragCoeff: optional quadratic aerodynamic air drag coefficient (e.g. 0.15)\n"
+                "- springs: optional array of [{ k: 45.0, c: 0.8, restLength: 1.5, anchor: [0, 3.5, 0], body: 'name' }]\n"
+                "- bodies: array of objects with:\n"
+                "    name: string\n"
+                "    type: 'dynamic' | 'fixed' | 'kinematic'\n"
+                "    shape: 'box' (size: [w,h,d]) | 'sphere' (radius: r) | 'cylinder' (radius: r, height: h)\n"
+                "    pos: [x, y, z]\n"
+                "    mass: float\n"
+                "    linvel: [vx, vy, vz]\n"
+                "    restitution: float (0 to 1)\n"
+                "    friction: float (0 to 1)\n"
+                "    color: hex integer (e.g. 0xffffff)\n"
+                "Example Rapier Block:\n"
+                "```rapier\n"
+                "{\n"
+                "  \"gravity\": [0, -9.81, 0],\n"
+                "  \"timestep\": 0.00833,\n"
+                "  \"bodies\": [\n"
+                "    { \"name\": \"ground\", \"type\": \"fixed\", \"pos\": [0, -0.2, 0], \"shape\": \"box\", \"size\": [12, 0.4, 4], \"color\": 1118481, \"friction\": 0.8 },\n"
+                "    { \"name\": \"ball\", \"type\": \"dynamic\", \"pos\": [-2.5, 2.0, 0], \"shape\": \"sphere\", \"radius\": 0.3, \"mass\": 1.0, \"color\": 16777215, \"linvel\": [4.0, 2.0, 0], \"restitution\": 0.85 }\n"
+                "  ]\n"
+                "}\n"
+                "```\n\n"
+                "3. Desmos Mathematical Graph & Phase-Space Analytical Proof:\n"
+                "Generate a ```desmos block containing equations formatted strictly according to Desmos LaTeX rules:\n"
+                "• NO COMMENTS: Strictly NO '#' or '//' comments inside ```desmos blocks.\n"
+                "• NO ASTERISKS: Do NOT use '*' for multiplication. Write '\\cdot' or write variables directly (e.g. 'y = a \\cdot \\sin(b \\cdot x)').\n"
+                "• NO FUNCTION NOTATION: Do NOT write 'x(t) =' or 'y(t) ='. To plot parametric curves, directly write '(x_expr, y_expr)'.\n"
+                "• SLIDERS: Define parameters as simple single variables (e.g. 'v = 20', 'g = 9.81', 't = 0').\n"
+                "• STANDARD LATEX: Use '\\theta', '\\pi', '\\alpha', '\\omega', '\\sqrt{...}'.\n"
+                "Example Desmos Block:\n"
+                "```desmos\n"
+                "v = 20\n"
+                "a = 0.785\n"
+                "g = 9.81\n"
+                "t = 1\n"
+                "y = x \\cdot \\tan(a) - (g \\cdot x^2) / (2 \\cdot v^2 \\cdot (\\cos(a))^2)\n"
+                "(v \\cdot t \\cdot \\cos(a), v \\cdot t \\cdot \\sin(a) - 0.5 \\cdot g \\cdot t^2)\n"
+                "```\n\n"
+                # ── OpenSCAD CAD Studio tip for the code editor ───────────────
+                "The web application also has a built-in AI Parametric CAD Studio.\n"
+                "When the user asks to create, model, or design a 3D object, you may generate OpenSCAD code.\n"
+                "Output OpenSCAD code in a fenced block: ```openscad\n[code]\n```\n"
+                "Always declare named parameters at the top, use modules, and call the main module at the end.\n"
+                "Example:\n"
+                "```openscad\n"
+                "width = 80; height = 50; depth = 40; wall = 3;\n"
+                "module box() { difference() { cube([width, depth, height]); translate([wall,wall,wall]) cube([width-2*wall, depth-2*wall, height]); } }\n"
+                "box();\n"
+                "```\n"
+            )
+            if not messages or messages[0].get("role") != "system":
+                messages.insert(0, {"role": "system", "content": physics_sys_prompt})
+            else:
+                messages[0]["content"] = physics_sys_prompt + "\n\n" + messages[0]["content"]
 
         # ── Resolve which provider each candidate model belongs to ────────
         requested_provider = _model_provider(model)
