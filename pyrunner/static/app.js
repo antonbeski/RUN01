@@ -4286,82 +4286,106 @@ window.ViewManager = (function() {
   let cadMesh        = null;
   let cadWireframe   = false;
   let cadAnimId      = null;
-  let openscadFactory = null; // ES module factory (cached)
-  let openscadWasm   = null;   // last instance (may be single-use after callMain)
+  let createOpenSCADFn = null; // named export from openscad-wasm (cached)
   let openscadLoading = false;
+  const OPENSCAD_CDN = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js';
 
   // ── OpenSCAD WASM Loading ─────────────────────────────────────
-  async function ensureOpenSCADFactory() {
-    if (openscadFactory) return openscadFactory;
+  // openscad-wasm@0.0.4 ESM exports: { createOpenSCAD }  (NO default export).
+  // createOpenSCAD() → { renderToStl(code), getInstance() }
+  async function ensureCreateOpenSCAD() {
+    if (createOpenSCADFn) return createOpenSCADFn;
     if (openscadLoading) {
       while (openscadLoading) await new Promise(r => setTimeout(r, 100));
-      return openscadFactory;
+      if (createOpenSCADFn) return createOpenSCADFn;
+      throw new Error('OpenSCAD WASM failed to load');
     }
     openscadLoading = true;
     setStatus('Loading OpenSCAD WASM…');
     try {
-      const CDN = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4';
-      const mod = await import(`${CDN}/openscad.js`);
-      const factory = mod.default || mod.OpenSCAD || mod;
-      if (typeof factory !== 'function') {
-        throw new Error('openscad-wasm module did not export a factory function');
+      const mod = await import(OPENSCAD_CDN);
+      const fn = mod.createOpenSCAD || mod.default?.createOpenSCAD || mod.default;
+      if (typeof fn !== 'function') {
+        const keys = mod && typeof mod === 'object' ? Object.keys(mod).join(',') : typeof mod;
+        throw new Error(`Unexpected openscad-wasm exports (${keys || 'none'}); expected createOpenSCAD`);
       }
-      openscadFactory = factory;
-      openscadFactory._cdn = CDN;
+      createOpenSCADFn = fn;
       openscadLoading = false;
-      return openscadFactory;
+      return createOpenSCADFn;
     } catch (err) {
       openscadLoading = false;
+      createOpenSCADFn = null;
       throw new Error(`OpenSCAD WASM load failed: ${err.message}`);
     }
   }
 
-  async function createOpenSCADInstance() {
-    const factory = await ensureOpenSCADFactory();
-    const CDN = factory._cdn || 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4';
-    openscadWasm = await factory({
-      noInitialRun: true,
-      locateFile: (path) => `${CDN}/${path}`
-    });
-    return openscadWasm;
-  }
-
   // ── Compile OpenSCAD to STL ───────────────────────────────────
   async function compileScadToSTL(scadCode) {
-    // Fresh instance per compile — callMain is effectively single-shot
-    const osc = await createOpenSCADInstance();
-
-    osc.FS.writeFile('/model.scad', scadCode);
-
+    const createOpenSCAD = await ensureCreateOpenSCAD();
     let stderr = '';
-    const origErr = osc.printErr;
-    const origOut = osc.print;
-    osc.printErr = (msg) => { stderr += msg + '\n'; };
-    osc.print = () => {};
 
+    // Path 1: low-level FS + callMain (handles Emscripten exit throws)
     try {
-      // Match openscad-wasm README; request binary STL for our Three.js parser
-      osc.callMain(['/model.scad', '--enable=manifold', '-o', 'model.stl', '--export-format=binstl']);
-    } catch (e) {
-      // Emscripten may throw on process exit — expected
-    } finally {
-      osc.printErr = origErr;
-      if (origOut) osc.print = origOut;
-    }
+      const api = await createOpenSCAD({
+        print: () => {},
+        printErr: (msg) => { stderr += String(msg) + '\n'; },
+      });
+      const osc = api.getInstance();
+      try { osc.FS.unlink('/input.scad'); } catch (_) {}
+      try { osc.FS.unlink('/output.stl'); } catch (_) {}
+      osc.FS.writeFile('/input.scad', scadCode);
 
-    let stlData = null;
-    for (const path of ['/model.stl', 'model.stl', './model.stl']) {
       try {
-        stlData = osc.FS.readFile(path);
-        if (stlData && stlData.length >= 84) break;
+        osc.callMain(['/input.scad', '--enable=manifold', '-o', '/output.stl']);
+      } catch (_) {
+        // Emscripten often throws on process.exit — ignore if STL was written
+      }
+
+      for (const path of ['/output.stl', 'output.stl']) {
+        try {
+          const stlData = osc.FS.readFile(path);
+          if (stlData && stlData.length >= 80) {
+            return stlData instanceof Uint8Array ? stlData : new Uint8Array(stlData);
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      stderr += (e && e.message ? e.message : String(e)) + '\n';
+    }
+
+    // Path 2: fresh instance + high-level renderToStl (ASCII STL string)
+    try {
+      const api2 = await createOpenSCAD({
+        print: () => {},
+        printErr: (msg) => { stderr += String(msg) + '\n'; },
+      });
+      // Wrap callMain exit throws the package itself does not catch
+      const osc2 = api2.getInstance();
+      try { osc2.FS.unlink('/input.scad'); } catch (_) {}
+      try { osc2.FS.unlink('/output.stl'); } catch (_) {}
+      osc2.FS.writeFile('/input.scad', scadCode);
+      try {
+        osc2.callMain(['/input.scad', '-o', '/output.stl']);
       } catch (_) {}
+      let stlText = null;
+      try {
+        stlText = osc2.FS.readFile('/output.stl', { encoding: 'utf8' });
+      } catch (_) {
+        try {
+          const bin = osc2.FS.readFile('/output.stl');
+          if (bin && bin.length >= 80) {
+            return bin instanceof Uint8Array ? bin : new Uint8Array(bin);
+          }
+        } catch (_) {}
+      }
+      if (stlText && String(stlText).length > 80) {
+        return new TextEncoder().encode(String(stlText));
+      }
+    } catch (e) {
+      stderr += (e && e.message ? e.message : String(e)) + '\n';
     }
 
-    if (!stlData || stlData.length < 84) {
-      throw new Error('OpenSCAD compile failed:\n' + (stderr || 'Empty or invalid STL output'));
-    }
-
-    return stlData instanceof Uint8Array ? stlData : new Uint8Array(stlData);
+    throw new Error('OpenSCAD compile failed:\n' + (stderr.trim() || 'Empty or invalid STL output'));
   }
 
   // ── Modal open / close ────────────────────────────────────────
