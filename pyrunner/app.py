@@ -1146,7 +1146,7 @@ _FALLBACK_STATUS_CODES = {404, 429, 500, 502, 503, 504}
 def ai_chat():
     """Chat endpoint with automatic dual-provider, dual-key fallback.
     Dynamically injects ONLY the respective skill corresponding to the
-    active panel context ('cad', 'desmos', 'physics', 'data', 'editor').
+    active panel context ('cad', 'desmos', 'data', 'editor').
     """
     try:
         import os
@@ -1161,7 +1161,6 @@ def ai_chat():
         # Resolves active panel context and loads ONLY its respective SKILL.md:
         #   • "cad"     -> OpenSCAD 3D Modeling & CSG Skill
         #   • "desmos"  -> Desmos LaTeX Math & Analysis Skill
-        #   • "physics" -> MuJoCo & Rapier Physics Simulation Skill
         #   • "data"    -> FRED & Yahoo Finance Data Explorer Skill
         #   • "editor"  -> Pyodide Scientific Python & Visualization Skill
         context = (body.get("context") or "editor").strip().lower()

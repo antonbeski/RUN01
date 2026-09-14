@@ -25,7 +25,6 @@ Thumbs.db
 .agents/*
 !.agents/skills/
 .agents/skills/*
-!.agents/skills/physics-simulation/
 !.agents/skills/desmos/
 !.agents/skills/cad-studio/
 !.agents/skills/data-explorer/

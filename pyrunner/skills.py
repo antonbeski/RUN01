@@ -9,7 +9,6 @@ at its peak with exact prompt engineering for the active panel:
   - Code Editor (Python Data Science / Pyodide WASM)
   - AI Parametric CAD Studio (OpenSCAD WASM)
   - Desmos Mathematical Graphing Calculator
-  - Multi-Body Physics & Kinematics Studio (MuJoCo / Rapier)
   - Macroeconomic & Financial Data Explorer (FRED / yfinance)
 ============================================================
 """
@@ -25,14 +24,12 @@ logger = logging.getLogger("run01.skills")
 _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SKILLS_DIR = os.path.join(_BASE_DIR, ".agents", "skills")
 
-# Mapping of panel context keys to their respective skill definition files
+# Mapping of active panel context keys to their respective skill definition files
 PANEL_SKILL_MAP = {
     "cad": os.path.join(_SKILLS_DIR, "cad-studio", "SKILL.md"),
     "cad-studio": os.path.join(_SKILLS_DIR, "cad-studio", "SKILL.md"),
     "desmos": os.path.join(_SKILLS_DIR, "desmos", "SKILL.md"),
     "math": os.path.join(_SKILLS_DIR, "desmos", "SKILL.md"),
-    "physics": os.path.join(_SKILLS_DIR, "physics-simulation", "SKILL.md"),
-    "simulation": os.path.join(_SKILLS_DIR, "physics-simulation", "SKILL.md"),
     "data": os.path.join(_SKILLS_DIR, "data-explorer", "SKILL.md"),
     "financial": os.path.join(_SKILLS_DIR, "data-explorer", "SKILL.md"),
     "editor": os.path.join(_SKILLS_DIR, "python-data-science", "SKILL.md"),

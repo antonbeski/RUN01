@@ -2732,8 +2732,8 @@ document.addEventListener('keydown', (e) => {
   }
 
   function renderMarkdown(element, text) {
-    // Split on code fences, desmos blocks, mujoco blocks, rapier blocks, AND surgical edit blocks
-    const parts = text.split(/(```desmos[\s\S]*?```|```mujoco[\s\S]*?```|```rapier[\s\S]*?```|```physics[\s\S]*?```|```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
+    // Split on code fences, desmos blocks, openscad/cad blocks, python blocks, AND surgical edit blocks
+    const parts = text.split(/(```desmos[\s\S]*?```|```openscad[\s\S]*?```|```scad[\s\S]*?```|```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
     element.innerHTML = '';
     parts.forEach(part => {
       // ── Surgical edit diff block ──────────────────────────────────
@@ -2841,29 +2841,25 @@ document.addEventListener('keydown', (e) => {
         return;
       }
 
-      // ── MuJoCo/OpenSCAD block — show as code, offer to open CAD studio ──
-      if (part.startsWith('```mujoco') || part.startsWith('```openscad') || part.startsWith('```scad')) {
-        const xmlCode = part.replace(/^```mujoco\n?/, '').replace(/\n?```$/, '').trim();
+      // ── OpenSCAD 3D CAD block — show as code, offer to open CAD studio ──
+      if (part.startsWith('```openscad') || part.startsWith('```scad')) {
+        const scadCode = part.replace(/^```(openscad|scad)\n?/, '').replace(/\n?```$/, '').trim();
         const card = document.createElement('div');
-        card.className = 'physics-chat-card';
-
-        // Run headless verification
-        let proof = null;
-        // PhysicsEngine removed — CAD studio handles geometry
+        card.className = 'cad-chat-card';
 
         const header = document.createElement('div');
-        header.className = 'physics-chat-header';
+        header.className = 'cad-chat-header';
         header.innerHTML = `
-          <span><span class="physics-badge">MUJOCO WASM</span> Physics Verification & 3D Simulation</span>
-          <span style="color:#34d399; font-size:10.5px; font-weight:700;">✓ VERIFIED (ΔE < 0.01%)</span>
+          <span><span class="cad-badge">OPENSCAD WASM</span> Parametric 3D CAD Model</span>
+          <span style="color:#34d399; font-size:10.5px; font-weight:700;">✓ CSG GEOMETRY</span>
         `;
 
-        const viewport = document.createElement('div');
-        viewport.className = 'physics-chat-container';
-        viewport.id = 'phys_chat_' + Math.random().toString(36).substr(2, 9);
+        const pre = document.createElement('pre');
+        pre.className = 'cad-chat-code-preview';
+        pre.textContent = scadCode;
 
         const footer = document.createElement('div');
-        footer.className = 'physics-chat-footer';
+        footer.className = 'cad-chat-footer';
 
         const openStudioBtn = document.createElement('button');
         openStudioBtn.className = 'ai-code-btn';
@@ -2871,122 +2867,30 @@ document.addEventListener('keydown', (e) => {
         openStudioBtn.style.fontWeight = 'bold';
         openStudioBtn.textContent = '▶ Open in CAD Studio';
         openStudioBtn.addEventListener('click', () => {
-          if (window.openPhysicsStudioWithSpec) {
-            if (window.btnCAD) window.btnCAD.click();
-              if (window.cadSourceEditor) window.cadSourceEditor.value = xmlCode;
-          }
-        });
-
-        const desmosProofBtn = document.createElement('button');
-        desmosProofBtn.className = 'ai-code-btn';
-        desmosProofBtn.style.color = '#38bdf8';
-        desmosProofBtn.textContent = '📊 Desmos Proof';
-        desmosProofBtn.addEventListener('click', () => {
-          if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
-            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'custom');
-            window.loadIntoDesmosPanel(latexLines, 'MuJoCo Simulation Proof');
+          if (window.btnCAD) window.btnCAD.click();
+          if (window.cadSourceEditorEl) {
+            window.cadSourceEditorEl.value = scadCode;
+            const btnRun = document.getElementById('btnCadRunSource');
+            if (btnRun) setTimeout(() => btnRun.click(), 100);
           }
         });
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'ai-code-btn';
-        copyBtn.textContent = 'Copy XML';
+        copyBtn.textContent = 'Copy SCAD';
         copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(xmlCode);
+          navigator.clipboard.writeText(scadCode);
           copyBtn.textContent = 'Copied!';
-          setTimeout(() => copyBtn.textContent = 'Copy XML', 2000);
+          setTimeout(() => copyBtn.textContent = 'Copy SCAD', 2000);
         });
 
         footer.appendChild(openStudioBtn);
-        footer.appendChild(desmosProofBtn);
         footer.appendChild(copyBtn);
 
         card.appendChild(header);
-        card.appendChild(viewport);
+        card.appendChild(pre);
         card.appendChild(footer);
         element.appendChild(card);
-
-        setTimeout(() => {
-          // PhysicsEngine removed
-        }, 150);
-        return;
-      }
-
-      // ── Rapier 3D Physics Simulation Block ─────────────────────────
-      if (part.startsWith('```rapier') || part.startsWith('```physics')) {
-        const rawCode = part.replace(/^```(rapier|physics)\n?/, '').replace(/\n?```$/, '').trim();
-        let specObj = {};
-        try { specObj = JSON.parse(rawCode); } catch(e) {
-          specObj = {};
-        }
-
-        const card = document.createElement('div');
-        card.className = 'physics-chat-card';
-
-        let proof = null;
-        if (window.PhysicsEngine) {
-          proof = window.PhysicsEngine.runRapierVerification(specObj);
-        }
-
-        const header = document.createElement('div');
-        header.className = 'physics-chat-header';
-        header.innerHTML = `
-          <span><span class="physics-badge">RAPIER 3D</span> Rigid Body Verification & 3D Simulation</span>
-          <span style="color:#34d399; font-size:10.5px; font-weight:700;">✓ CONSTRAINTS PASSED</span>
-        `;
-
-        const viewport = document.createElement('div');
-        viewport.className = 'physics-chat-container';
-        viewport.id = 'rapier_chat_' + Math.random().toString(36).substr(2, 9);
-
-        const footer = document.createElement('div');
-        footer.className = 'physics-chat-footer';
-
-        const openStudioBtn = document.createElement('button');
-        openStudioBtn.className = 'ai-code-btn';
-        openStudioBtn.style.color = '#34d399';
-        openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = '▶ Open in CAD Studio';
-        openStudioBtn.addEventListener('click', () => {
-          if (window.openPhysicsStudioWithSpec) {
-            window.openPhysicsStudioWithSpec('rapier', JSON.stringify(specObj, null, 2), 'Rapier 3D Simulation');
-          }
-        });
-
-        const desmosProofBtn = document.createElement('button');
-        desmosProofBtn.className = 'ai-code-btn';
-        desmosProofBtn.style.color = '#38bdf8';
-        desmosProofBtn.textContent = '📊 Desmos Proof';
-        desmosProofBtn.addEventListener('click', () => {
-          if (window.PhysicsEngine && window.loadIntoDesmosPanel) {
-            const latexLines = window.PhysicsEngine.generateDesmosVerificationLatex(proof, 'custom');
-            window.loadIntoDesmosPanel(latexLines, 'Physics Simulation Proof');
-          }
-        });
-
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'ai-code-btn';
-        copyBtn.textContent = 'Copy JSON';
-        copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(rawCode);
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => copyBtn.textContent = 'Copy JSON', 2000);
-        });
-
-        footer.appendChild(openStudioBtn);
-        footer.appendChild(desmosProofBtn);
-        footer.appendChild(copyBtn);
-
-        card.appendChild(header);
-        card.appendChild(viewport);
-        card.appendChild(footer);
-        element.appendChild(card);
-
-        setTimeout(() => {
-          if (window.PhysicsEngine && window.THREE) {
-            window.PhysicsEngine.startRapierVisualSimulation(viewport, specObj);
-          }
-        }, 150);
         return;
       }
 
@@ -4094,12 +3998,6 @@ window.ViewManager = (function() {
     showIDE
   };
 })();
-
-// ══════════════════════════════════════════════════════════════════
-// MUJOCO & RAPIER PHYSICS SIMULATION STUDIO & VERIFICATION HUB
-
-
-
 
 // ══════════════════════════════════════════════════════════════════
 // AI PARAMETRIC CAD STUDIO — OpenSCAD WASM + Three.js + IndexedDB

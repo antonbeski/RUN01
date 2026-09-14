@@ -24,7 +24,6 @@ class TestPanelSkills(unittest.TestCase):
         self.assertIn("CSG", prompt)
         self.assertNotIn("yfinance", prompt)
         self.assertNotIn("fred_download", prompt)
-        self.assertNotIn("show_mujoco", prompt)
 
     def test_desmos_skill_isolation(self):
         skill = resolve_panel_skill("desmos")
@@ -32,16 +31,6 @@ class TestPanelSkills(unittest.TestCase):
         prompt = build_panel_system_prompt("desmos")
         self.assertIn("Desmos", prompt)
         self.assertIn("LaTeX", prompt)
-        self.assertNotIn("OpenSCAD", prompt)
-        self.assertNotIn("yf_download", prompt)
-        self.assertNotIn("show_mujoco", prompt)
-
-    def test_physics_skill_isolation(self):
-        skill = resolve_panel_skill("physics")
-        self.assertIn("physics", skill["key"])
-        prompt = build_panel_system_prompt("physics")
-        self.assertIn("physics", prompt.lower())
-        self.assertIn("mujoco", prompt.lower())
         self.assertNotIn("OpenSCAD", prompt)
         self.assertNotIn("yf_download", prompt)
 
@@ -52,7 +41,6 @@ class TestPanelSkills(unittest.TestCase):
         self.assertIn("FRED", prompt)
         self.assertIn("yf_download", prompt)
         self.assertNotIn("OpenSCAD", prompt)
-        self.assertNotIn("show_mujoco", prompt)
 
     def test_editor_skill_isolation(self):
         skill = resolve_panel_skill("editor")
@@ -68,8 +56,9 @@ class TestPanelSkills(unittest.TestCase):
         data = resp.get_json()
         self.assertIsInstance(data, list)
         panel_keys = [item["panel_key"] for item in data]
-        for expected in ["cad", "desmos", "physics", "data", "editor"]:
+        for expected in ["cad", "desmos", "data", "editor"]:
             self.assertIn(expected, panel_keys)
+        self.assertNotIn("physics", panel_keys)
 
 if __name__ == "__main__":
     unittest.main()

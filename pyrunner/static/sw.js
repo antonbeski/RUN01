@@ -9,7 +9,7 @@
                   Plotly.js (~3 MB), Google Fonts.
    ================================================================ */
 
-const CACHE_VERSION = 'run01-v3';
+const CACHE_VERSION = 'run01-v4';
 
 const CACHE_ORIGINS = [
   'https://cdn.jsdelivr.net',
@@ -18,13 +18,8 @@ const CACHE_ORIGINS = [
   'https://fonts.gstatic.com',
 ];
 
-// Precache list for critical local assets including MuJoCo WASM and physics engine
-const PRECACHE_ASSETS = [
-  '/static/mujoco_wasm.js',
-  '/static/mujoco.wasm',
-  '/static/mujoco_wasm.wasm',
-  '/static/physics-engine.js'
-];
+// Precache list for local static runtime assets
+const PRECACHE_ASSETS = [];
 
 // ── Install: take control immediately & precache WASM assets ──
 self.addEventListener('install', (evt) => {

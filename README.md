@@ -127,7 +127,10 @@ The server layer (Flask / Vercel) is intentionally thin: it serves static assets
 | Matplotlib inline PNG | ✅ | `plt.show()` patched to emit base64 |
 | Seaborn | ✅ | Installed via micropip |
 | Plotly interactive charts | ✅ | `fig.show()` patched to emit JSON → rendered with Plotly.js |
-| Yahoo Finance (live data) | ✅ | `await yf_download(ticker)` via server proxy |
+| Data Explorer (FRED & Yahoo Finance) | ✅ | Macroeconomic time-series (930k+ FRED series) & live market metrics |
+| AI Parametric CAD Studio | ✅ | In-browser OpenSCAD WASM CSG 3D modeling, dynamic UI sliders, STL export |
+| Desmos Graphing Calculator | ✅ | Embedded 2D/3D graphing calculator, LaTeX math proofs, parametric sliders |
+| Dynamic Panel AI Assistant | ✅ | Panel-aware context switching (`cad`, `desmos`, `data`, `editor`) with surgical edits |
 | Streaming stdout | ✅ | Each `print()` renders immediately |
 | C++ / C# / Rust | ✅ | Via `/api/run` → Piston |
 | Dark / Light theme | ✅ | Persisted in `localStorage` |
@@ -168,24 +171,36 @@ SW caching       Service Worker (Cache API)  —             Browser
 
 ```
 run01/
+├── .agents/
+│   └── skills/
+│       ├── cad-studio/           # OpenSCAD WASM & CSG geometry AI skill
+│       ├── data-explorer/        # FRED & Yahoo Finance API ingestion AI skill
+│       ├── desmos/               # Desmos LaTeX math modeling AI skill
+│       └── python-data-science/  # Pyodide scientific computing AI skill
+│
 ├── api/
 │   └── index.py                  # Vercel WSGI entrypoint — imports pyrunner.app
 │
 ├── pyrunner/
 │   ├── __init__.py               # Package marker
-│   ├── app.py                    # Flask app: routes, yf proxy, Piston proxy
-│   ├── requirements.txt          # flask, yfinance
+│   ├── app.py                    # Flask app: routes, yf proxy, AI chat dispatch
+│   ├── skills.py                 # Dynamic panel skill loader with mtime caching
+│   ├── requirements.txt          # flask, yfinance, pymongo, pyjwt
 │   │
 │   ├── static/
-│   │   ├── app.js                # Monaco + Pyodide bootstrap, run loop, output renderer
+│   │   ├── app.js                # Monaco, Pyodide, CAD Studio, Desmos, Data Explorer
 │   │   ├── style.css             # Monochrome glassmorphic design system
 │   │   └── sw.js                 # Service Worker: cache-first CDN strategy
 │   │
 │   └── templates/
-│       └── index.html            # Shell HTML: nav, split panes, init overlay
+│       └── index.html            # Shell HTML: nav, split panes, CAD & Desmos modals
+│
+├── tests/
+│   ├── test_panel_skills.py      # Panel skill isolation and dynamic loading tests
+│   └── test_isolation_security.py # User data isolation and security tests
 │
 ├── vercel.json                   # Build + routing config for Vercel
-├── requirements.txt              # Root-level (mirrors pyrunner/requirements.txt)
+├── requirements.txt              # Root-level requirements
 ├── .gitignore
 └── README.md                     ← you are here
 ```
@@ -193,11 +208,12 @@ run01/
 ### Key file responsibilities
 
 #### `pyrunner/app.py`
-Three distinct responsibilities on a single Flask app object:
-
-1. **Static serving** — `GET /` renders `index.html`; `GET /sw.js` serves the Service Worker with correct `Service-Worker-Allowed: /` header (required for full-origin scope)
-2. **Yahoo Finance proxy** — `GET /api/yf/<ticker>` calls `yfinance.Ticker.history()` server-side and returns clean OHLCV JSON. Strips timezone info so `strftime` works across yfinance versions.
-3. **Piston proxy** — `POST /api/run` forwards `{language, code}` to `https://emkc.org/api/v2/piston/execute` and relays the result. Timeout: 30 s.
+Core server application:
+1. **Static serving & templates** — Serves `index.html` and Service Worker (`/sw.js` with `Service-Worker-Allowed: /`).
+2. **Yahoo Finance & FRED Proxies** — Bypasses browser CORS restrictions to deliver live ticks, option chains, financials, and FRED economic series directly into Pandas.
+3. **Dynamic AI Chat Dispatch** — `/api/ai/chat` inspects the active panel context (`cad`, `desmos`, `data`, `editor`) and dynamically injects only its respective domain skill prompt.
+4. **Skills Catalog API** — `GET /api/ai/skills` returns metadata for all registered panel skills.
+5. **Multi-language Compiler Proxy** — `POST /api/run` routes compiled language workloads (C++, C#, Rust) via Piston execution engine.
 
 #### `pyrunner/static/app.js`
 The heaviest file. Key sections:
