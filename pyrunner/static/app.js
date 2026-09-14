@@ -59,6 +59,15 @@ def show_desmos(*expressions, title="Desmos Math Graph"):
     desmos.plot(*expressions, title=title)
 
 
+# ── WebApp Data Files (/data/) ──────────────────────────────
+def list_data_files():
+    """List all dataset files currently stored in the WebApp /data/ directory."""
+    import os
+    if os.path.exists('/data'):
+        return sorted([f for f in os.listdir('/data') if not f.startswith('.')])
+    return []
+
+
 # ── yf_download: fetch OHLCV via Run01 server proxy ────────
 async def yf_download(ticker, period="1mo", interval="1d"):
     """Fetch stock OHLCV data via Run01 proxy (bypasses browser CORS).
@@ -622,6 +631,163 @@ const monacoReady = new Promise((resolve) => {
   tryInit();
 });
 
+// ── WebApp Virtual File System (/data/) ───────────────────────
+const VFS_DB_NAME = 'run01_webapp_vfs';
+const VFS_STORE_NAME = 'data_files';
+
+function openVfsDb() {
+  return new Promise((resolve) => {
+    if (!window.indexedDB) {
+      resolve(null);
+      return;
+    }
+    const req = indexedDB.open(VFS_DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(VFS_STORE_NAME)) {
+        db.createObjectStore(VFS_STORE_NAME, { keyPath: 'filename' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (err) => {
+      console.warn('[VFS] IndexedDB open error:', err);
+      resolve(null);
+    };
+  });
+}
+
+function ensurePyodideDataDir() {
+  if (!pyodide || !pyodide.FS) return;
+  try {
+    pyodide.FS.stat('/data');
+  } catch (e) {
+    try {
+      pyodide.FS.mkdir('/data');
+    } catch (err) {
+      // ignore
+    }
+  }
+}
+
+function removePyodideFile(path) {
+  if (!pyodide || !pyodide.FS) return;
+  try {
+    pyodide.FS.unlink(path);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function writePyodideFile(path, content) {
+  if (!pyodide || !pyodide.FS) return;
+  ensurePyodideDataDir();
+  removePyodideFile(path);
+  try {
+    pyodide.FS.writeFile(path, content);
+  } catch (err) {
+    console.warn('[VFS] writePyodideFile error:', err);
+  }
+}
+
+async function saveWebappFile(filename, content, meta = {}) {
+  const path = `/data/${filename}`;
+  writePyodideFile(path, content);
+
+  try {
+    const db = await openVfsDb();
+    if (db) {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(VFS_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(VFS_STORE_NAME);
+        store.put({
+          filename,
+          content,
+          updatedAt: new Date().toISOString(),
+          size: typeof content === 'string' ? content.length : (content.byteLength || 0),
+          category: meta.category || '',
+          desc: meta.desc || '',
+          sourceName: meta.sourceName || ''
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+  } catch (err) {
+    console.warn('[VFS] saveWebappFile IndexedDB error:', err);
+  }
+}
+
+async function getWebappFile(filename) {
+  try {
+    const db = await openVfsDb();
+    if (!db) return null;
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(VFS_STORE_NAME, 'readonly');
+      const store = tx.objectStore(VFS_STORE_NAME);
+      const req = store.get(filename);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[VFS] getWebappFile error:', err);
+    return null;
+  }
+}
+
+async function getAllWebappFiles() {
+  try {
+    const db = await openVfsDb();
+    if (!db) return [];
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(VFS_STORE_NAME, 'readonly');
+      const store = tx.objectStore(VFS_STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[VFS] getAllWebappFiles error:', err);
+    return [];
+  }
+}
+
+async function deleteWebappFile(filename) {
+  const path = `/data/${filename}`;
+  removePyodideFile(path);
+  try {
+    const db = await openVfsDb();
+    if (db) {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(VFS_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(VFS_STORE_NAME);
+        const req = store.delete(filename);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+  } catch (err) {
+    console.warn('[VFS] deleteWebappFile error:', err);
+  }
+}
+
+async function rehydratePyodideVfs() {
+  if (!pyodide || !pyodide.FS) return;
+  ensurePyodideDataDir();
+  try {
+    const records = await getAllWebappFiles();
+    for (const rec of records) {
+      const path = `/data/${rec.filename}`;
+      removePyodideFile(path);
+      pyodide.FS.writeFile(path, rec.content);
+    }
+    if (records.length > 0) {
+      console.log(`[VFS] Rehydrated ${records.length} datasets into Pyodide /data/`);
+    }
+  } catch (err) {
+    console.warn('[VFS] Rehydration error:', err);
+  }
+}
+
 // ── Pyodide initialisation ────────────────────────────────
 async function initPyodide() {
   setStatus('loading', 'Loading Python runtime…');
@@ -655,6 +821,13 @@ async function initPyodide() {
   // FIX: runPythonAsync correctly handles the triple-quoted docstrings
   // inside PYODIDE_SETUP - no more "unterminated string literal" error.
   await pyodide.runPythonAsync(PYODIDE_SETUP);
+
+  // Rehydrate WebApp files from IndexedDB into /data/ in Pyodide VFS
+  try {
+    await rehydratePyodideVfs();
+  } catch (vfsErr) {
+    console.warn('[VFS] Rehydration warning:', vfsErr);
+  }
 
   setProgress(100, 'Ready!');
 }
@@ -1649,29 +1822,43 @@ function switchTab(source) {
   activeSource = source;
   const tabYF = document.getElementById('dexTabYF');
   const tabFRED = document.getElementById('dexTabFRED');
+  const tabVFS = document.getElementById('dexTabVFS');
   const searchInput = document.getElementById('dexSearch');
 
+  if (tabYF) {
+    tabYF.classList.toggle('active', source === 'yf');
+    tabYF.setAttribute('aria-selected', source === 'yf' ? 'true' : 'false');
+  }
+  if (tabFRED) {
+    tabFRED.classList.toggle('active', source === 'fred');
+    tabFRED.setAttribute('aria-selected', source === 'fred' ? 'true' : 'false');
+  }
+  if (tabVFS) {
+    tabVFS.classList.toggle('active', source === 'vfs');
+    tabVFS.setAttribute('aria-selected', source === 'vfs' ? 'true' : 'false');
+  }
+
   if (source === 'yf') {
-    tabYF.classList.add('active');
-    tabFRED.classList.remove('active');
-    tabYF.setAttribute('aria-selected', 'true');
-    tabFRED.setAttribute('aria-selected', 'false');
-    renderTree(YF_TREE, searchInput.value);
-  } else {
-    tabFRED.classList.add('active');
-    tabYF.classList.remove('active');
-    tabFRED.setAttribute('aria-selected', 'true');
-    tabYF.setAttribute('aria-selected', 'false');
-    renderTree(FRED_TREE, searchInput.value);
+    renderTree(YF_TREE, searchInput ? searchInput.value : '');
+  } else if (source === 'fred') {
+    renderTree(FRED_TREE, searchInput ? searchInput.value : '');
+  } else if (source === 'vfs') {
+    renderVfsTree(searchInput ? searchInput.value : '');
   }
 }
 
 document.getElementById('dexTabYF').addEventListener('click', () => switchTab('yf'));
 document.getElementById('dexTabFRED').addEventListener('click', () => switchTab('fred'));
+const tabVFSEl = document.getElementById('dexTabVFS');
+if (tabVFSEl) tabVFSEl.addEventListener('click', () => switchTab('vfs'));
 
 document.getElementById('dexSearch').addEventListener('input', (e) => {
-  const currentTree = activeSource === 'yf' ? YF_TREE : FRED_TREE;
-  renderTree(currentTree, e.target.value);
+  if (activeSource === 'vfs') {
+    renderVfsTree(e.target.value);
+  } else {
+    const currentTree = activeSource === 'yf' ? YF_TREE : FRED_TREE;
+    renderTree(currentTree, e.target.value);
+  }
 });
 
 function countFiles(node) {
@@ -1892,21 +2079,80 @@ function extractRows(data) {
   return [];
 }
 
-function renderStaticDownloadStatus(staticInfo) {
-  const el = document.getElementById('dexStaticStatus');
-  if (!el) return;
-  const stored = localStorage.getItem(`run01-dl-${staticInfo.key}`);
-  el.textContent = stored ? `✓ Downloaded - last saved ${formatTimestamp(stored)}` : 'Not downloaded yet';
+function formatFileSize(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
-async function downloadStaticDataset(staticInfo, node) {
-  const btn = document.getElementById('dexStaticDownloadBtn');
-  const statusEl = document.getElementById('dexStaticStatus');
-  if (!btn) return;
+function generateAnalysisCode(filename, isCsv) {
+  if (isCsv) {
+    return `# ── Analyze WebApp Dataset: /data/${filename} ──────────────────
+import pandas as pd
 
-  btn.disabled = true;
-  const originalLabel = btn.textContent;
-  btn.textContent = 'Downloading…';
+file_path = "/data/${filename}"
+df = pd.read_csv(file_path)
+
+print(f"Loaded dataset: {file_path}")
+print(f"Shape: {df.shape[0]} rows x {df.shape[1]} columns\\n")
+print("Columns & Types:")
+print(df.dtypes)
+print("\\nFirst 10 rows:")
+print(df.head(10))`;
+  } else {
+    return `# ── Analyze WebApp Dataset: /data/${filename} ──────────────────
+import json
+
+file_path = "/data/${filename}"
+with open(file_path, "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+print(f"Loaded JSON dataset: {file_path}")
+if isinstance(data, list):
+    print(f"Total items: {len(data)}")
+    if len(data) > 0:
+        print("\\nSample item:")
+        print(data[0])
+elif isinstance(data, dict):
+    print(f"Keys ({len(data.keys())} total): {list(data.keys())[:10]}")
+    for k in list(data.keys())[:6]:
+        v = data[k]
+        preview = f"{len(v)} items" if isinstance(v, (list, dict)) else str(v)[:80]
+        print(f"  {k}: {preview}")`;
+  }
+}
+
+function openFileInEditor(filename, isCsv) {
+  const code = generateAnalysisCode(filename, isCsv);
+  if (monacoEditor) {
+    monacoEditor.setValue(code);
+    closeDataExplorer();
+    monacoEditor.focus();
+    triggerRun();
+  }
+}
+
+async function renderStaticDownloadStatus(staticInfo) {
+  const el = document.getElementById('dexStaticStatus');
+  if (!el) return;
+  const file = await getWebappFile(staticInfo.filename);
+  if (file) {
+    el.innerHTML = `<span style="color: #22c55e;">✓ Synced in WebApp (<code>/data/${staticInfo.filename}</code>)</span><br><span style="opacity:0.75; font-size:10px;">Latest: ${formatTimestamp(file.updatedAt)} • ${formatFileSize(file.size)}</span>`;
+  } else {
+    el.textContent = 'Not synced into WebApp yet — will be stored directly in /data/';
+  }
+}
+
+async function downloadStaticDataset(staticInfo, node, autoAnalyze = false) {
+  const analyzeBtn = document.getElementById('dexStaticAnalyzeBtn');
+  const syncBtn = document.getElementById('dexStaticSyncBtn');
+  const statusEl = document.getElementById('dexStaticStatus');
+
+  if (analyzeBtn) analyzeBtn.disabled = true;
+  if (syncBtn) syncBtn.disabled = true;
+  const originalAnalyzeText = analyzeBtn ? analyzeBtn.innerHTML : '';
+  if (analyzeBtn) analyzeBtn.textContent = 'Syncing into WebApp…';
 
   try {
     const resp = await fetch(staticInfo.url);
@@ -1915,27 +2161,41 @@ async function downloadStaticDataset(staticInfo, node) {
 
     const rows  = extractRows(data);
     const isCsv = node.name.toLowerCase().endsWith('.csv');
-    const blob  = isCsv
-      ? new Blob([toCSV(rows.length ? rows : (Array.isArray(data) ? data : [data]))], { type: 'text/csv;charset=utf-8' })
-      : new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const content = isCsv
+      ? toCSV(rows.length ? rows : (Array.isArray(data) ? data : [data]))
+      : JSON.stringify(data, null, 2);
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = staticInfo.filename; a.style.display = 'none';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Save directly to WebApp virtual file system (/data/<filename>)
+    // Any older version is automatically deleted and refreshed
+    await saveWebappFile(staticInfo.filename, content, {
+      category: node.category,
+      desc: node.desc,
+      sourceName: staticInfo.sourceName || (node.category === 'predefined_screens' ? 'yfinance' : 'FRED')
+    });
 
     localStorage.setItem(`run01-dl-${staticInfo.key}`, new Date().toISOString());
-    renderStaticDownloadStatus(staticInfo);
+    await renderStaticDownloadStatus(staticInfo);
+
+    if (autoAnalyze) {
+      openFileInEditor(staticInfo.filename, isCsv);
+    }
   } catch (err) {
-    statusEl.textContent = ` Download failed: ${err.message ?? err}`;
+    if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">❌ Sync failed: ${err.message ?? err}</span>`;
   } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
+    if (analyzeBtn) {
+      analyzeBtn.disabled = false;
+      analyzeBtn.innerHTML = originalAnalyzeText;
+    }
+    if (syncBtn) syncBtn.disabled = false;
   }
 }
 
-function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, sourceName, previewPane) {
+async function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, sourceName, previewPane) {
+  const isCsv = node.name.toLowerCase().endsWith('.csv');
+  const existingFile = await getWebappFile(node.name);
+  const samplePython = generateAnalysisCode(node.name, isCsv);
+  const highlightedCode = highlightSyntax(samplePython);
+
   const card = document.createElement('div');
   card.className = 'dex-preview-card';
   card.innerHTML = `
@@ -1945,22 +2205,149 @@ function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, sourceNa
     </div>
     <div class="dex-preview-desc">${node.desc}</div>
     <div class="dex-preview-meta">
-      <span class="dex-meta-tag live">STATIC</span>
+      <span class="dex-meta-tag vfs">WEBAPP /DATA/</span>
       <span class="dex-meta-tag api">${sourceName}</span>
-      <span class="dex-meta-tag">No input required</span>
+      <span class="dex-meta-tag">Auto-Refreshes Latest</span>
     </div>
-    <div class="dex-static-info" id="dexStaticStatus">Checking…</div>
-    <button class="dex-load-btn" id="dexStaticDownloadBtn">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Download Latest
+    <div class="dex-static-info" id="dexStaticStatus">Checking WebApp storage…</div>
+
+    <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON USAGE IN CODE PANEL</div>
+    <pre class="dex-code-preview"><code>${highlightedCode}</code></pre>
+
+    <button class="dex-load-btn" id="dexStaticAnalyzeBtn" style="margin-top: 14px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><polyline points="9 18 15 12 9 6"/></svg>
+      ${existingFile ? 'Refresh Latest & Analyze' : 'Load into WebApp & Analyze'}
+    </button>
+    <button class="dex-btn-secondary" id="dexStaticSyncBtn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Sync into WebApp Only
     </button>
   `;
   previewPane.appendChild(card);
-  renderStaticDownloadStatus(staticInfo);
-  document.getElementById('dexStaticDownloadBtn')
-    .addEventListener('click', () => downloadStaticDataset(staticInfo, node));
+  await renderStaticDownloadStatus(staticInfo);
+
+  const analyzeBtn = document.getElementById('dexStaticAnalyzeBtn');
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', () => downloadStaticDataset(staticInfo, node, true));
+  }
+
+  const syncBtn = document.getElementById('dexStaticSyncBtn');
+  if (syncBtn) {
+    syncBtn.addEventListener('click', () => downloadStaticDataset(staticInfo, node, false));
+  }
+}
+
+async function renderVfsTree(searchQuery = '') {
+  const treePane = document.getElementById('dexTreePane');
+  const previewPane = document.getElementById('dexPreviewPane');
+  treePane.innerHTML = '';
+
+  const files = await getAllWebappFiles();
+  const filtered = searchQuery
+    ? files.filter(f => f.filename.toLowerCase().includes(searchQuery.toLowerCase()))
+    : files;
+
+  if (filtered.length === 0) {
+    treePane.innerHTML = `
+      <div style="padding: 20px 16px; color: var(--text-dim); font-family: var(--font-mono); font-size: 11px; line-height: 1.6;">
+        ${files.length === 0
+          ? 'No files stored in WebApp <code>/data/</code> yet.<br><br>Browse <b>FRED</b> or <b>YF</b> screener datasets and click <b>Load into WebApp</b> to sync.'
+          : `No stored files match "${searchQuery}"`}
+      </div>`;
+    return;
+  }
+
+  const rootEl = document.createElement('div');
+  rootEl.className = 'dex-folder open';
+  rootEl.innerHTML = `
+    <div class="dex-folder-header">
+      <svg class="dex-folder-arrow open" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      <span class="dex-folder-icon">📁</span>
+      <span class="dex-folder-name">DATA (${filtered.length} files)</span>
+    </div>
+    <div class="dex-folder-children"></div>
+  `;
+  treePane.appendChild(rootEl);
+
+  const childrenEl = rootEl.querySelector('.dex-folder-children');
+
+  filtered.forEach(file => {
+    const fileEl = document.createElement('div');
+    fileEl.className = 'dex-file';
+    const isCsv = file.filename.toLowerCase().endsWith('.csv');
+    const badge = isCsv ? 'CSV' : 'JSON';
+    const sizeStr = formatFileSize(file.size);
+
+    fileEl.innerHTML = `
+      <span class="dex-file-icon">📄</span>
+      <span class="dex-file-name" title="${file.filename}">${file.filename}</span>
+      <span class="dex-file-badge">${badge}</span>
+      <span style="font-size: 9px; color: var(--text-dim); margin-left: auto;">${sizeStr}</span>
+    `;
+
+    fileEl.addEventListener('click', () => {
+      document.querySelectorAll('.dex-file.selected').forEach(el => el.classList.remove('selected'));
+      fileEl.classList.add('selected');
+      renderVfsPreviewCard(file);
+    });
+
+    childrenEl.appendChild(fileEl);
+  });
+}
+
+function renderVfsPreviewCard(file) {
+  const previewPane = document.getElementById('dexPreviewPane');
+  previewPane.innerHTML = '';
+
+  const isCsv = file.filename.toLowerCase().endsWith('.csv');
+  const code = generateAnalysisCode(file.filename, isCsv);
+  const highlightedCode = highlightSyntax(code);
+
+  const card = document.createElement('div');
+  card.className = 'dex-preview-card';
+  card.innerHTML = `
+    <div class="dex-preview-name">
+      <span class="dex-preview-icon vfs">FS</span>
+      <span>${file.filename}</span>
+    </div>
+    <div class="dex-preview-desc">${file.desc || 'Stored in WebApp virtual file system (/data/)'}</div>
+    <div class="dex-preview-meta">
+      <span class="dex-meta-tag vfs">/data/${file.filename}</span>
+      <span class="dex-meta-tag">${formatFileSize(file.size)}</span>
+      <span class="dex-meta-tag api">${file.sourceName || 'RUN01 VFS'}</span>
+    </div>
+    <div class="dex-static-info">
+      ✓ Ready in WebApp memory<br>
+      <span style="opacity:0.75; font-size:10px;">Last refreshed: ${formatTimestamp(file.updatedAt)}</span>
+    </div>
+    <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON ANALYSIS CODE</div>
+    <pre class="dex-code-preview"><code>${highlightedCode}</code></pre>
+    <div style="display:flex; gap:8px; margin-top:14px;">
+      <button class="dex-load-btn" id="vfsRunBtn" style="flex:1;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><polyline points="9 18 15 12 9 6"/></svg>
+        Analyze in Code Panel
+      </button>
+      <button class="dex-btn-delete" id="vfsDeleteBtn" title="Delete from WebApp">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete
+      </button>
+    </div>
+  `;
+  previewPane.appendChild(card);
+
+  document.getElementById('vfsRunBtn').addEventListener('click', () => {
+    openFileInEditor(file.filename, isCsv);
+  });
+
+  document.getElementById('vfsDeleteBtn').addEventListener('click', async () => {
+    await deleteWebappFile(file.filename);
+    const searchInput = document.getElementById('dexSearch');
+    await renderVfsTree(searchInput ? searchInput.value : '');
+    previewPane.innerHTML = `
+      <div class="dex-empty-state">
+        <span style="color: #ef4444; font-size: 13px;">Deleted /data/${file.filename}</span>
+      </div>`;
+  });
 }
 
 function selectFileNode(node, element) {

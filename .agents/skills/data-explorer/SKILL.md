@@ -94,7 +94,44 @@ fig.show()
 
 ---
 
-## 3. Best Practices
-1. Always use `await yf_download(...)` because network requests are asynchronous in Pyodide.
-2. Clean missing data with `df.dropna()` or `df.ffill()` before running regressions or statistical tests.
-3. Combine tabular summaries with visual charts for immediate verification.
+## 3. WebApp Virtual File System (`/data/`)
+
+RUN01 features an in-browser virtual file system (VFS) powered by Pyodide and backed by IndexedDB. Datasets downloaded from the Data Explorer (FRED macroeconomic series, FRED metadata, predefined screeners) are saved directly into the webapp's `/data/` directory instead of prompting an OS file download.
+
+### Automatic Freshness & Auto-Purge
+- Every time a dataset is synced or refreshed, the previous version of the file is automatically purged and deleted before saving the latest data.
+- Files persist across browser reloads via IndexedDB and are automatically rehydrated into `/data/` on startup.
+
+### Inspecting Stored Datasets in Python
+Use the built-in helper `list_data_files()` to see all files stored in the webapp runtime:
+```python
+files = list_data_files()
+print("Datasets stored in /data/:", files)
+```
+
+### Direct Analysis in the Code Panel
+Datasets in `/data/` can be read directly with standard Python libraries:
+```python
+import pandas as pd
+
+# Load any CSV stored in the webapp
+df = pd.read_csv('/data/fed_funds_rate.csv')
+print(df.head())
+```
+
+For JSON metadata:
+```python
+import json
+
+with open('/data/all_releases.json', 'r', encoding='utf-8') as f:
+    releases = json.load(f)
+print(f"Loaded {len(releases)} releases")
+```
+
+---
+
+## 4. Best Practices
+1. Always use `await yf_download(...)` when fetching dynamic live market data because network requests are asynchronous in Pyodide.
+2. For curated static datasets and macroeconomic series, load them via Data Explorer into `/data/<filename>` and analyze using standard `pd.read_csv('/data/<filename>')`.
+3. Clean missing data with `df.dropna()` or `df.ffill()` before running regressions or statistical tests.
+4. Combine tabular summaries with visual charts for immediate verification.
