@@ -94,16 +94,16 @@ fig.show()
 
 ---
 
-## 3. WebApp Virtual File System (`/data/`)
+## 3. RUN01 Virtual File System (`/data/`)
 
-RUN01 features an in-browser virtual file system (VFS) powered by Pyodide and backed by IndexedDB. Datasets downloaded from the Data Explorer (FRED macroeconomic series, FRED metadata, predefined screeners) are saved directly into the webapp's `/data/` directory instead of prompting an OS file download.
+RUN01 features an in-browser virtual file system (VFS) powered by Pyodide and backed by IndexedDB. Datasets downloaded from the Data Explorer (FRED macroeconomic series, FRED metadata, predefined screeners) are saved directly into RUN01's `/data/` directory instead of prompting an OS file download.
 
 ### Automatic Freshness & Auto-Purge
 - Every time a dataset is synced or refreshed, the previous version of the file is automatically purged and deleted before saving the latest data.
 - Files persist across browser reloads via IndexedDB and are automatically rehydrated into `/data/` on startup.
 
 ### Inspecting Stored Datasets in Python
-Use the built-in helper `list_data_files()` to see all files stored in the webapp runtime:
+Use the built-in helper `list_data_files()` to see all files stored in the RUN01 runtime:
 ```python
 files = list_data_files()
 print("Datasets stored in /data/:", files)
@@ -114,7 +114,7 @@ Datasets in `/data/` can be read directly with standard Python libraries:
 ```python
 import pandas as pd
 
-# Load any CSV stored in the webapp
+# Load any CSV stored in RUN01
 df = pd.read_csv('/data/fed_funds_rate.csv')
 print(df.head())
 ```

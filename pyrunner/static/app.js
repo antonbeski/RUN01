@@ -59,9 +59,9 @@ def show_desmos(*expressions, title="Desmos Math Graph"):
     desmos.plot(*expressions, title=title)
 
 
-# ── WebApp Data Files (/data/) ──────────────────────────────
+# ── RUN01 Data Files (/data/) ──────────────────────────────
 def list_data_files():
-    """List all dataset files currently stored in the WebApp /data/ directory."""
+    """List all dataset files currently stored in the RUN01 /data/ directory."""
     import os
     if os.path.exists('/data'):
         return sorted([f for f in os.listdir('/data') if not f.startswith('.')])
@@ -631,8 +631,8 @@ const monacoReady = new Promise((resolve) => {
   tryInit();
 });
 
-// ── WebApp Virtual File System (/data/) ───────────────────────
-const VFS_DB_NAME = 'run01_webapp_vfs';
+// ── RUN01 Virtual File System (/data/) ───────────────────────
+const VFS_DB_NAME = 'run01_vfs';
 const VFS_STORE_NAME = 'data_files';
 
 function openVfsDb() {
@@ -689,7 +689,7 @@ function writePyodideFile(path, content) {
   }
 }
 
-async function saveWebappFile(filename, content, meta = {}) {
+async function saveRun01File(filename, content, meta = {}) {
   const path = `/data/${filename}`;
   writePyodideFile(path, content);
 
@@ -713,11 +713,11 @@ async function saveWebappFile(filename, content, meta = {}) {
       });
     }
   } catch (err) {
-    console.warn('[VFS] saveWebappFile IndexedDB error:', err);
+    console.warn('[VFS] saveRun01File IndexedDB error:', err);
   }
 }
 
-async function getWebappFile(filename) {
+async function getRun01File(filename) {
   try {
     const db = await openVfsDb();
     if (!db) return null;
@@ -729,12 +729,12 @@ async function getWebappFile(filename) {
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
-    console.warn('[VFS] getWebappFile error:', err);
+    console.warn('[VFS] getRun01File error:', err);
     return null;
   }
 }
 
-async function getAllWebappFiles() {
+async function getAllRun01Files() {
   try {
     const db = await openVfsDb();
     if (!db) return [];
@@ -746,12 +746,12 @@ async function getAllWebappFiles() {
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
-    console.warn('[VFS] getAllWebappFiles error:', err);
+    console.warn('[VFS] getAllRun01Files error:', err);
     return [];
   }
 }
 
-async function deleteWebappFile(filename) {
+async function deleteRun01File(filename) {
   const path = `/data/${filename}`;
   removePyodideFile(path);
   try {
@@ -766,15 +766,21 @@ async function deleteWebappFile(filename) {
       });
     }
   } catch (err) {
-    console.warn('[VFS] deleteWebappFile error:', err);
+    console.warn('[VFS] deleteRun01File error:', err);
   }
 }
+
+// Aliases for compatibility
+const saveWebappFile = saveRun01File;
+const getWebappFile = getRun01File;
+const getAllWebappFiles = getAllRun01Files;
+const deleteWebappFile = deleteRun01File;
 
 async function rehydratePyodideVfs() {
   if (!pyodide || !pyodide.FS) return;
   ensurePyodideDataDir();
   try {
-    const records = await getAllWebappFiles();
+    const records = await getAllRun01Files();
     for (const rec of records) {
       const path = `/data/${rec.filename}`;
       removePyodideFile(path);
@@ -822,7 +828,7 @@ async function initPyodide() {
   // inside PYODIDE_SETUP - no more "unterminated string literal" error.
   await pyodide.runPythonAsync(PYODIDE_SETUP);
 
-  // Rehydrate WebApp files from IndexedDB into /data/ in Pyodide VFS
+  // Rehydrate RUN01 files from IndexedDB into /data/ in Pyodide VFS
   try {
     await rehydratePyodideVfs();
   } catch (vfsErr) {
@@ -2088,7 +2094,7 @@ function formatFileSize(bytes) {
 
 function generateAnalysisCode(filename, isCsv) {
   if (isCsv) {
-    return `# ── Analyze WebApp Dataset: /data/${filename} ──────────────────
+    return `# ── Analyze RUN01 Dataset: /data/${filename} ──────────────────
 import pandas as pd
 
 file_path = "/data/${filename}"
@@ -2101,7 +2107,7 @@ print(df.dtypes)
 print("\\nFirst 10 rows:")
 print(df.head(10))`;
   } else {
-    return `# ── Analyze WebApp Dataset: /data/${filename} ──────────────────
+    return `# ── Analyze RUN01 Dataset: /data/${filename} ──────────────────
 import json
 
 file_path = "/data/${filename}"
@@ -2138,9 +2144,9 @@ async function renderStaticDownloadStatus(staticInfo) {
   if (!el) return;
   const file = await getWebappFile(staticInfo.filename);
   if (file) {
-    el.innerHTML = `<span style="color: #22c55e;">✓ Synced in WebApp (<code>/data/${staticInfo.filename}</code>)</span><br><span style="opacity:0.75; font-size:10px;">Latest: ${formatTimestamp(file.updatedAt)} • ${formatFileSize(file.size)}</span>`;
+    el.innerHTML = `<span style="color: #22c55e;">✓ Synced in RUN01 (<code>/data/${staticInfo.filename}</code>)</span><br><span style="opacity:0.75; font-size:10px;">Latest: ${formatTimestamp(file.updatedAt)} • ${formatFileSize(file.size)}</span>`;
   } else {
-    el.textContent = 'Not synced into WebApp yet — will be stored directly in /data/';
+    el.textContent = 'Not synced into RUN01 yet — will be stored directly in /data/';
   }
 }
 
@@ -2152,7 +2158,7 @@ async function downloadStaticDataset(staticInfo, node, autoAnalyze = false) {
   if (analyzeBtn) analyzeBtn.disabled = true;
   if (syncBtn) syncBtn.disabled = true;
   const originalAnalyzeText = analyzeBtn ? analyzeBtn.innerHTML : '';
-  if (analyzeBtn) analyzeBtn.textContent = 'Syncing into WebApp…';
+  if (analyzeBtn) analyzeBtn.textContent = 'Syncing into RUN01…';
 
   try {
     const resp = await fetch(staticInfo.url);
@@ -2165,7 +2171,7 @@ async function downloadStaticDataset(staticInfo, node, autoAnalyze = false) {
       ? toCSV(rows.length ? rows : (Array.isArray(data) ? data : [data]))
       : JSON.stringify(data, null, 2);
 
-    // Save directly to WebApp virtual file system (/data/<filename>)
+    // Save directly to RUN01 virtual file system (/data/<filename>)
     // Any older version is automatically deleted and refreshed
     await saveWebappFile(staticInfo.filename, content, {
       category: node.category,
@@ -2205,22 +2211,22 @@ async function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, so
     </div>
     <div class="dex-preview-desc">${node.desc}</div>
     <div class="dex-preview-meta">
-      <span class="dex-meta-tag vfs">WEBAPP /DATA/</span>
+      <span class="dex-meta-tag vfs">RUN01 /DATA/</span>
       <span class="dex-meta-tag api">${sourceName}</span>
       <span class="dex-meta-tag">Auto-Refreshes Latest</span>
     </div>
-    <div class="dex-static-info" id="dexStaticStatus">Checking WebApp storage…</div>
+    <div class="dex-static-info" id="dexStaticStatus">Checking RUN01 storage…</div>
 
     <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON USAGE IN CODE PANEL</div>
     <pre class="dex-code-preview"><code>${highlightedCode}</code></pre>
 
     <button class="dex-load-btn" id="dexStaticAnalyzeBtn" style="margin-top: 14px;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><polyline points="9 18 15 12 9 6"/></svg>
-      ${existingFile ? 'Refresh Latest & Analyze' : 'Load into WebApp & Analyze'}
+      ${existingFile ? 'Refresh Latest & Analyze' : 'Load into RUN01 & Analyze'}
     </button>
     <button class="dex-btn-secondary" id="dexStaticSyncBtn">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      Sync into WebApp Only
+      Sync into RUN01 Only
     </button>
   `;
   previewPane.appendChild(card);
@@ -2251,7 +2257,7 @@ async function renderVfsTree(searchQuery = '') {
     treePane.innerHTML = `
       <div style="padding: 20px 16px; color: var(--text-dim); font-family: var(--font-mono); font-size: 11px; line-height: 1.6;">
         ${files.length === 0
-          ? 'No files stored in WebApp <code>/data/</code> yet.<br><br>Browse <b>FRED</b> or <b>YF</b> screener datasets and click <b>Load into WebApp</b> to sync.'
+          ? 'No files stored in RUN01 <code>/data/</code> yet.<br><br>Browse <b>FRED</b> or <b>YF</b> screener datasets and click <b>Load into RUN01</b> to sync.'
           : `No stored files match "${searchQuery}"`}
       </div>`;
     return;
@@ -2310,14 +2316,14 @@ function renderVfsPreviewCard(file) {
       <span class="dex-preview-icon vfs">FS</span>
       <span>${file.filename}</span>
     </div>
-    <div class="dex-preview-desc">${file.desc || 'Stored in WebApp virtual file system (/data/)'}</div>
+    <div class="dex-preview-desc">${file.desc || 'Stored in RUN01 virtual file system (/data/)'}</div>
     <div class="dex-preview-meta">
       <span class="dex-meta-tag vfs">/data/${file.filename}</span>
       <span class="dex-meta-tag">${formatFileSize(file.size)}</span>
       <span class="dex-meta-tag api">${file.sourceName || 'RUN01 VFS'}</span>
     </div>
     <div class="dex-static-info">
-      ✓ Ready in WebApp memory<br>
+      ✓ Ready in RUN01 memory<br>
       <span style="opacity:0.75; font-size:10px;">Last refreshed: ${formatTimestamp(file.updatedAt)}</span>
     </div>
     <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON ANALYSIS CODE</div>
@@ -2327,7 +2333,7 @@ function renderVfsPreviewCard(file) {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;"><polyline points="9 18 15 12 9 6"/></svg>
         Analyze in Code Panel
       </button>
-      <button class="dex-btn-delete" id="vfsDeleteBtn" title="Delete from WebApp">
+      <button class="dex-btn-delete" id="vfsDeleteBtn" title="Delete from RUN01">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         Delete
       </button>
