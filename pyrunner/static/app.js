@@ -4486,7 +4486,7 @@ window.ViewManager = (function() {
     window.addEventListener('mousemove', e => {
       if (!isDragging) return;
       const dx = e.clientX - lastX, dy = e.clientY - lastY;
-      theta -= dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
+      theta += dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
       lastX = e.clientX; lastY = e.clientY;
       updateCamera();
     });
@@ -4504,7 +4504,7 @@ window.ViewManager = (function() {
     domEl.addEventListener('touchmove', e => {
       if (e.touches.length === 1 && isDragging) {
         const dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
-        theta -= dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
+        theta += dx * 0.005; phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi - dy * 0.005));
         lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
         updateCamera();
       }
