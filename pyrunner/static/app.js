@@ -3259,6 +3259,26 @@ document.addEventListener('keydown', (e) => {
     return `\n\n[CONTEXT: User's Current Python Code]\n\`\`\`python\n${codeContent}\n\`\`\`\n\n[CONTEXT: Last Console Output]\n\`\`\`\n${consoleOutput}\n\`\`\``;
   }
 
+  function getActivePanelContext() {
+    // Detect if CAD modal is open
+    const cadOverlay = document.getElementById('cadModalOverlay');
+    if (cadOverlay && !cadOverlay.classList.contains('hidden')) {
+      return 'cad';
+    }
+    // Detect if Desmos modal is open
+    const desmosOverlay = document.getElementById('desmosModalOverlay');
+    if (desmosOverlay && !desmosOverlay.classList.contains('hidden')) {
+      return 'desmos';
+    }
+    // Detect if Data Explorer bottom panel is visible
+    const dex = document.getElementById('dexPanel');
+    if (dex && dex.style.display !== 'none' && dex.style.display !== '') {
+      return 'data';
+    }
+    // Default to Python Editor context
+    return 'editor';
+  }
+
   async function sendUserMessage(overrideText = null) {
     const text = (overrideText || aiTextarea.value).trim();
     if (!text) return;
@@ -3273,76 +3293,9 @@ document.addEventListener('keydown', (e) => {
     const model = aiModelSelect.value;
     const indicator = appendLoadingIndicator();
     const context = getContextPrompt();
+    const activePanelContext = getActivePanelContext();
     
-    const systemPrompt = {
-      role: 'system',
-      content: `System Rules for RUN01 AI Partner (WASM-based Python IDE)
-
-[CRITICAL ENVIRONMENT CONSTRAINTS]
-1. Environment: Pyodide v0.26.4 running client-side inside WebAssembly (WASM) in the browser.
-2. Sockets/C-extensions: Raw TCP/UDP network connections are completely blocked by the browser. Standard pip installation of uncompiled C-extension packages is impossible.
-3. Supported Libraries: numpy, pandas, scipy, scikit-learn, statsmodels, matplotlib, seaborn, plotly.
-4. Top-level 'await': Natively supported. DO NOT wrap async code in asyncio.run(). Use await directly (e.g. df = await yf_download("AAPL")).
-
-[FINANCIAL & ECONOMIC DATA: PRE-INJECTED HELPERS]
-- Standard 'yfinance' library DOES NOT work inside browser WASM. Never write 'import yfinance' or use 'yf.Ticker'.
-- Instead, use these pre-injected global async functions directly (never import them):
-  - df = await yf_download(ticker, period="3mo", interval="1d") # -> DataFrame (Date index)
-  - info = await yf_info(ticker)                               # -> Dict (Company profile metadata)
-  - df = await yf_fetch(ticker, category)                      # -> General financial metrics DataFrame
-  - df = await yf_actions(ticker)                              # -> Corporate actions timeline DataFrame
-  - df = await yf_dividends(ticker)                            # -> Dividend payments DataFrame
-  - df = await yf_splits(ticker)                               # -> Stock splits DataFrame
-  - df = await yf_financials(ticker, category="financials")    # -> Income statement DataFrame
-  - df = await yf_balance_sheet(ticker, category="balance_sheet") # -> Balance sheet DataFrame
-  - df = await yf_cashflow(ticker, category="cashflow")        # -> Cash flow statement DataFrame
-  - df = await yf_recommendations(ticker)                      # -> Analyst consensus DataFrame
-  - df = await yf_holders(ticker, category="institutional_holders") # -> Institutional/Mutual holders DataFrame
-  - exp = await yf_options(ticker)                             # -> List of expiration dates
-  - chain = await yf_option_chain(ticker, expiry)              # -> Dict: {"calls": DataFrame, "puts": DataFrame}
-  - df = await yf_sector(key, category="overview")             # -> Sector metrics DataFrame
-  - df = await yf_industry(key, category="overview")           # -> Industry metrics DataFrame
-  - df = await yf_market(category="status", market_id="US")    # -> Market status DataFrame
-  - df = await yf_tickers(symbols)                             # -> Multi-ticker data Dict
-  - data = await yf_search(query)                              # -> Search quotes/news Dict
-  - df = await yf_lookup(query)                                # -> Search lookup symbol details DataFrame
-  - news = await yf_news(ticker)                               # -> News feed Dict
-  - res = await fred_download(series_id, limit=100)            # -> Dict with FRED economic data: {"df": DataFrame, ...}
-
-[PLOTTING & VISUALIZATION INTERCEPTION]
-- Matplotlib/Seaborn: Call plt.show() at the end. The IDE automatically intercepts and renders it as an inline PNG.
-- Plotly: Call fig.show() at the end. The IDE automatically intercepts and renders it as an interactive plot.
-
-[PHYSICS SIMULATION & DESMOS GRAPHING INSTRUCTIONS]
-1. Real 3D Physics Simulations:
-   - To simulate 3D rigid bodies, kinematics, pendulums, robotics, collisions:
-     * In Python: Call \`physics.show_mujoco(xml_str, title="...")\` or \`physics.show_rapier(spec_dict, title="...")\`.
-     * In Chat: Output a fenced block \`\`\`mujoco [valid MJCF xml] \`\`\` or \`\`\`physics [JSON spec] \`\`\`.
-   - Always include a floor/ground geom (<geom type="plane" size="2 2 0.1"/> or type="fixed" box) and dynamic bodies with positive mass.
-2. Desmos Mathematical Graphing:
-   - ONLY produce Desmos graphs if explicitly requested by the user, or if plotting an analytical mathematical curve/function (e.g. projectile path, phase portrait). DO NOT produce unnecessary Desmos graphs for every question.
-   - For Desmos equations:
-     * Use single-letter variables or subscripts (e.g., m = 1, v_{1x} = 1.4, never multi-character names without subscripts like v1x).
-     * Output a fenced block \`\`\`desmos [equations] \`\`\` or in Python call \`show_desmos("y = x^2", title="...")\`.
-3. Verification Proofs:
-   - In RUN01, the actual running simulation and mathematical trajectory IS the proof. Do not write arbitrary hardcoded proof text.
-
-[STRICT OUTPUT FORMATTING RULES]
-1. For surgical modification of existing code in the editor:
-   - Output one or more surgical edits using the exact formatting below (do NOT wrap the edit blocks in markdown fences):
-<<<SURGICAL_EDIT>>>
-<<<FIND>>>
-[exact verbatim lines from user's current code to find]
-<<<REPLACE>>>
-[new lines to replace with]
-<<<END_EDIT>>>
-2. For presenting new or full python scripts:
-   - Always wrap the python code block in standard markdown fences: \`\`\`python [code] \`\`\`
-3. Be concise and precise to optimize token usage. Never output unnecessary code blocks.`
-    };
-
     const messages = [
-      systemPrompt,
       ...messagesHistory,
       { role: 'user', content: text + context }
     ];
@@ -3351,7 +3304,11 @@ document.addEventListener('keydown', (e) => {
       const resp = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, model })
+        body: JSON.stringify({
+          messages,
+          model,
+          context: activePanelContext
+        })
       });
 
       if (!resp.ok) {

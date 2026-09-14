@@ -27,4 +27,7 @@ Thumbs.db
 .agents/skills/*
 !.agents/skills/physics-simulation/
 !.agents/skills/desmos/
+!.agents/skills/cad-studio/
+!.agents/skills/data-explorer/
+!.agents/skills/python-data-science/
 temp_skill/
