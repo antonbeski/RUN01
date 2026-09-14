@@ -78,7 +78,7 @@ function Index() {
           <a href="#engine">ENGINE</a>
           <a href="#stack">STACK</a>
           <a href="#why">WHY RUN01</a>
-          <a href="#founder">WHY I BUILT RUN01</a>
+          <a href="#founder">FOUNDER</a>
         </nav>
         <a className="pixel-button pixel-button-dark" href="#engine">RUN IDE <Play size={13} fill="currentColor" /></a>
       </header>
@@ -184,23 +184,37 @@ function Index() {
       <section id="founder" className="founder-section" aria-labelledby="founder-title">
         <div className="founder-container">
           <div className="founder-visual-col">
-            <div className="founder-portrait-frame">
-              <div className="founder-tag">[ 01 // FOUNDER ]</div>
-              <img
-                src="/anton.png"
-                alt="Anton, Founder of RUN01"
-                className="founder-portrait-img"
-                loading="lazy"
-              />
+            <div className="founder-card-frame">
+              <div className="founder-tag">
+                <span className="status-dot-sm"></span> [ 01 // ARCHITECT &amp; FOUNDER ]
+              </div>
+              <div className="founder-portrait-wrap">
+                <picture>
+                  <source srcSet="/anton.webp" type="image/webp" />
+                  <img
+                    src="/anton.png"
+                    alt="Anton, Founder of RUN01"
+                    className="founder-portrait-img"
+                    width={784}
+                    height={784}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </picture>
+                <div className="founder-portrait-overlay"></div>
+              </div>
               <div className="founder-caption">
-                <span className="founder-caption-name">ANTON</span>
-                <span className="founder-caption-role">FOUNDER // RUN01</span>
+                <div className="founder-caption-main">
+                  <span className="founder-caption-name">ANTON</span>
+                  <span className="founder-status-badge">ONLINE</span>
+                </div>
+                <span className="founder-caption-role">FOUNDER &amp; SYSTEMS ARCHITECT // RUN01</span>
               </div>
             </div>
           </div>
 
           <div className="founder-story-col">
-            <p className="kicker">FOUNDER NOTE</p>
+            <div className="kicker"><span className="status-dot"></span> FOUNDER NOTE // MISSION</div>
             <h2 id="founder-title">WHY I BUILT RUN01</h2>
 
             <div className="founder-letter">
@@ -212,11 +226,11 @@ function Index() {
 
               <p>RUN01 runs real Python code, right in your browser. No install, no setup. You write the code, you hit run, and you see the real result — the actual numbers, the actual chart — right there, instantly.</p>
 
-              <p>Perplexity's big idea was: don't just answer, show your sources. That was a great step. But a source only shows that someone else said something. It doesn't prove it's true. I do admire Perplexity but</p>
+              <p>I admire what Perplexity did with sources. Giving users citations was a great step forward. But a source only shows that someone else wrote something down. It doesn't prove it's true.</p>
 
-              <p className="founder-highlight">RUN01 goes one level deeper. Instead of a source, you get proof. You don't have to believe the math is right — you run it and watch it happen. You don't have to trust the chart — you build it yourself, live, in seconds.</p>
+              <p className="founder-highlight">RUN01 goes one level deeper. Instead of a citation, you get proof. You don't have to believe the math is right — you run it and watch it compute live. You don't have to trust the chart — you build it yourself, live, in seconds.</p>
 
-              <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to check them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves — fast, simple, no blind trust needed.</p>
+              <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to verify them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves — fast, simple, no blind trust needed.</p>
 
               <p>That's the bet behind RUN01. Not another coding tool. A way to see if something is actually true, in seconds, with your own eyes.</p>
 
@@ -225,7 +239,11 @@ function Index() {
               </blockquote>
 
               <div className="founder-signoff">
-                — Anton, Founder of RUN01
+                <div className="founder-signoff-line"></div>
+                <div className="founder-signoff-text">
+                  <span className="founder-sig-name">Anton</span>
+                  <span className="founder-sig-title">Founder, RUN01</span>
+                </div>
               </div>
             </div>
 

@@ -61,7 +61,7 @@
         <a href="#landingStack">STACK</a>
         <a href="#landingFeatures">FEATURES</a>
         <a href="#landingWhy">ADVANTAGE</a>
-        <a href="#whyIBuilt">FOUNDER'S NOTE</a>
+        <a href="#founder">FOUNDER</a>
       </nav>
       <div class="landing-header-actions">
         <button class="pixel-button pixel-button-ghost btn-landing-auth" id="btnLandingAuth" title="Sign In or Sign Up">SIGN IN</button>
@@ -227,62 +227,84 @@
       </div>
     </section>
 
-    <!-- ════════════════════════════════════════════════════════════════
-         FOUNDER'S NOTE: WHY I BUILT RUN01
-         ════════════════════════════════════════════════════════════════ -->
-    <section id="whyIBuilt" class="founder-section" aria-labelledby="founder-title">
+    <!-- FOUNDER NOTE SECTION -->
+    <section id="founder" class="founder-section" aria-labelledby="founder-title">
       <div class="founder-container">
-        <!-- Founder Portrait (strict full image, zero crop, zero resize) -->
         <div class="founder-visual-col">
-          <div class="founder-portrait-frame">
-            <div class="founder-tag">[ 01 // FOUNDER ]</div>
-            <img src="{{ url_for('static', filename='anton.png') }}"
-                 alt="Anton, Founder of RUN01"
-                 class="founder-portrait-img"
-                 loading="lazy" />
+          <div class="founder-card-frame">
+            <div class="founder-tag">
+              <span class="status-dot-sm"></span> [ 01 // ARCHITECT &amp; FOUNDER ]
+            </div>
+            <div class="founder-portrait-wrap">
+              <picture>
+                <source srcset="{{ url_for('static', filename='anton.webp') }}" type="image/webp">
+                <img
+                  src="{{ url_for('static', filename='anton.png') }}"
+                  alt="Anton, Founder of RUN01"
+                  class="founder-portrait-img"
+                  width="784"
+                  height="784"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
+              <div class="founder-portrait-overlay"></div>
+            </div>
             <div class="founder-caption">
-              <span class="founder-caption-name">ANTON</span>
-              <span class="founder-caption-role">FOUNDER // RUN01</span>
+              <div class="founder-caption-main">
+                <span class="founder-caption-name">ANTON</span>
+                <span class="founder-status-badge">ONLINE</span>
+              </div>
+              <span class="founder-caption-role">FOUNDER &amp; SYSTEMS ARCHITECT // RUN01</span>
             </div>
           </div>
         </div>
 
-        <!-- Founder Note Story -->
         <div class="founder-story-col">
-          <p class="kicker">FOUNDER NOTE</p>
+          <div class="kicker"><span class="status-dot"></span> FOUNDER NOTE // MISSION</div>
           <h2 id="founder-title">WHY I BUILT RUN01</h2>
 
           <div class="founder-letter">
             <p class="founder-statement">Most AI can only talk. It cannot show you.</p>
 
-            <p>Ask it to explain some math, a chart, a piece of logic &mdash; it gives you a nice paragraph. It sounds smart. But you have no way to check if it's actually right. You just have to trust it.</p>
+            <p>Ask it to explain some math, a chart, a piece of logic — it gives you a nice paragraph. It sounds smart. But you have no way to check if it's actually right. You just have to trust it.</p>
 
             <p class="founder-highlight">I didn't want to trust it. I wanted to see it. So I built RUN01.</p>
 
-            <p>RUN01 runs real Python code, right in your browser. No install, no setup. You write the code, you hit run, and you see the real result &mdash; the actual numbers, the actual chart &mdash; right there, instantly.</p>
+            <p>RUN01 runs real Python code, right in your browser. No install, no setup. You write the code, you hit run, and you see the real result — the actual numbers, the actual chart — right there, instantly.</p>
 
-            <p>Perplexity's big idea was: don't just answer, show your sources. That was a great step. But a source only shows that someone else said something. It doesn't prove it's true. I do admire Perplexity but</p>
+            <p>I admire what Perplexity did with sources. Giving users citations was a great step forward. But a source only shows that someone else wrote something down. It doesn't prove it's true.</p>
 
-            <p class="founder-highlight">RUN01 goes one level deeper. Instead of a source, you get proof. You don't have to believe the math is right &mdash; you run it and watch it happen. You don't have to trust the chart &mdash; you build it yourself, live, in seconds.</p>
+            <p class="founder-highlight">RUN01 goes one level deeper. Instead of a citation, you get proof. You don't have to believe the math is right — you run it and watch it compute live. You don't have to trust the chart — you build it yourself, live, in seconds.</p>
 
-            <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to check them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves &mdash; fast, simple, no blind trust needed.</p>
+            <p>This is where I think AI is heading next. Right now, AI gives smooth, confident answers with no way to verify them. That won't be enough for much longer. The tools that win will be the ones that let people verify things themselves — fast, simple, no blind trust needed.</p>
 
             <p>That's the bet behind RUN01. Not another coding tool. A way to see if something is actually true, in seconds, with your own eyes.</p>
 
             <blockquote class="founder-quote">
-              &ldquo;Don't just read the answer. Run it.&rdquo;
+              <span class="founder-quote-mark">&ldquo;</span>
+              Don't just read the answer. Run it.
+              <span class="founder-quote-mark">&rdquo;</span>
             </blockquote>
 
             <div class="founder-signoff">
-              &mdash; Anton, Founder of RUN01
+              <div class="founder-signoff-line"></div>
+              <div class="founder-signoff-text">
+                <span class="founder-sig-name">Anton</span>
+                <span class="founder-sig-title">Founder, RUN01</span>
+              </div>
             </div>
           </div>
 
           <div class="founder-action">
             <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnFounderLaunchIDE">
               RUN IT NOW
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
             </button>
+            <a class="text-link" href="#top">
+              BACK TO TOP
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -861,16 +883,17 @@
             <!-- Viewport toolbar -->
             <div class="cad-viewport-toolbar">
               <button class="cad-vp-btn" id="btnCadWireframe" title="Toggle wireframe">Wire</button>
-              <button class="cad-vp-btn" id="btnCadResetView" title="Reset camera">⟳</button>
+              <button class="cad-vp-btn" id="btnCadResetView" title="Reset camera">Reset</button>
+              <button class="cad-vp-btn" id="btnCadToggleSource" title="Show or hide OpenSCAD source">Source</button>
               <div class="cad-vp-sep"></div>
-              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadScad" title="Download .scad source">↓ .scad</button>
-              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadStl" title="Download .stl mesh">↓ .stl</button>
-              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadJson" title="Download design spec JSON">↓ .json</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadScad" title="Download .scad source">.scad</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadStl" title="Download .stl mesh">.stl</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadJson" title="Download design spec JSON">.json</button>
             </div>
           </div>
 
-          <!-- Source code pane (bottom of center) -->
-          <div class="cad-source-pane">
+          <!-- Source code pane (collapsed by default so preview stays large) -->
+          <div class="cad-source-pane collapsed" id="cadSourcePane">
             <div class="cad-source-header">
               <span class="cad-source-title">OpenSCAD Source</span>
               <div class="cad-source-actions">

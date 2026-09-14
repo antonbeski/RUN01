@@ -127,6 +127,10 @@
 }
 
 /* -- BASE ------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
+}
+
 html, body {
   min-height: 100%;
   background: #000000;
@@ -138,6 +142,7 @@ html, body {
   position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body.in-ide {
@@ -178,7 +183,8 @@ body::after {
   border-radius: var(--radius);
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
+  min-width: 0;
   position: relative;
   z-index: 20;
   box-shadow: 0 4px 32px rgba(0,0,0,0.45);
@@ -204,6 +210,7 @@ body::after {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  min-width: 0;
   background: rgba(255,255,255,0.02);
   border: 1px solid var(--glass-border);
   padding: 4px 10px;
@@ -3482,6 +3489,8 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
   border-bottom: 2px solid rgba(255,255,255,0.18);
   background: #000000;
   position: sticky;
@@ -3554,13 +3563,20 @@ body::after {
   letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 4px 4px 0 rgba(255,255,255,0.4);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s;
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, color 0.15s ease;
   text-decoration: none;
+  user-select: none;
+  will-change: transform, box-shadow;
 }
 
 .pixel-button:hover {
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 rgba(255,255,255,0.4);
+}
+
+.pixel-button:active {
+  transform: translate(4px, 4px) !important;
+  box-shadow: 0 0 0 rgba(255,255,255,0) !important;
 }
 
 .pixel-button-dark {
@@ -4111,197 +4127,245 @@ body::after {
   font-size: 14px;
 }
 
-/* ── Founder's Note Section (Why I Built RUN01) ─────────── */
+/* ── Founder Note Section ───────────────────────────────── */
 .founder-section {
-  padding: clamp(64px, 8vw, 120px) clamp(24px, 6vw, 90px);
+  width: 100%;
+  padding: clamp(70px, 8vw, 130px) clamp(24px, 6vw, 90px);
   background: #020202;
   border-bottom: 2px solid rgba(255, 255, 255, 0.18);
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
 }
 
 .founder-container {
-  max-width: 1200px;
+  max-width: 1180px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(320px, 440px) 1fr;
-  gap: clamp(40px, 6vw, 84px);
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: clamp(40px, 6vw, 80px);
   align-items: start;
 }
 
 .founder-visual-col {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  position: sticky;
+  top: 96px;
 }
 
-.founder-portrait-frame {
-  position: relative;
-  width: 100%;
-  max-width: 440px;
-  background: #000000;
+.founder-card-frame {
+  background: #070707;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 8px 8px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: 8px 8px 0 rgba(255, 255, 255, 0.15), 0 24px 60px rgba(0, 0, 0, 0.9);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  will-change: transform, box-shadow;
+}
+
+.founder-card-frame:hover {
+  transform: translate3d(-3px, -3px, 0);
+  border-color: #ffffff;
+  box-shadow: 12px 12px 0 rgba(255, 255, 255, 0.25), 0 30px 70px rgba(0, 0, 0, 0.95);
 }
 
 .founder-tag {
-  position: absolute;
-  top: -12px;
-  left: 14px;
-  background: #ffffff;
-  color: #000000;
+  padding: 10px 14px;
+  background: #0e0e0e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: 'Pixelify Sans', monospace;
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
   letter-spacing: 0.08em;
-  z-index: 2;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  color: #ffffff;
 }
 
-/* Crucial: absolutely no resizing or cropping of the user image */
+.status-dot-sm {
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+  display: inline-block;
+  animation: pixel-blink 1.4s steps(2) infinite;
+}
+
+.founder-portrait-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000000;
+  overflow: hidden;
+}
+
 .founder-portrait-img {
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
   display: block;
-  object-fit: contain;
+  filter: contrast(1.05) brightness(1.02);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.founder-card-frame:hover .founder-portrait-img {
+  transform: scale(1.02);
+}
+
+.founder-portrait-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 65%, rgba(7, 7, 7, 0.6) 100%);
 }
 
 .founder-caption {
-  padding: 12px 16px;
-  background: #080808;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 14px 16px;
+  background: #090909;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.founder-caption-main {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  justify-content: space-between;
+  margin-bottom: 4px;
 }
 
 .founder-caption-name {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   color: #ffffff;
-  font-weight: 600;
+  line-height: 1;
+}
+
+.founder-status-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 500;
   letter-spacing: 0.08em;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-radius: 2px;
 }
 
 .founder-caption-role {
-  color: rgba(255, 255, 255, 0.5);
+  display: block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
   letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
 }
 
+/* ── Founder Story / Letter ─────────────────────────────── */
 .founder-story-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.founder-story-col .kicker {
-  margin-bottom: 12px;
+  min-width: 0;
 }
 
 #founder-title {
   font-family: 'Pixelify Sans', monospace;
-  font-size: clamp(30px, 4.2vw, 48px);
+  font-size: clamp(34px, 4.5vw, 64px);
+  font-weight: 800;
+  line-height: 0.95;
   color: #ffffff;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
-  margin-bottom: 28px;
+  letter-spacing: -0.01em;
+  margin: 10px 0 28px 0;
 }
 
-.founder-letter {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.founder-statement {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 600;
+  line-height: 1.45;
+  color: #ffffff;
+  margin-bottom: 22px;
+  border-left: 3px solid #ffffff;
+  padding-left: 18px;
+  letter-spacing: -0.01em;
 }
 
 .founder-letter p {
   font-family: 'DM Mono', monospace;
-  font-size: clamp(13px, 1.1vw, 14.5px);
-  color: rgba(255, 255, 255, 0.76);
-  line-height: 1.85;
-}
-
-.founder-statement {
-  font-size: clamp(16px, 1.35vw, 19px) !important;
-  color: #ffffff !important;
-  font-weight: 500;
-  border-left: 3px solid #ffffff;
-  padding-left: 14px;
-  line-height: 1.6 !important;
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 20px;
 }
 
 .founder-highlight {
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #ffffff;
   color: #ffffff !important;
   font-weight: 500;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.08);
 }
 
 .founder-quote {
-  margin: 8px 0;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border-left: 3px solid #ffffff;
+  margin: 32px 0;
+  padding: 24px 28px;
+  background: #070707;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.18);
   font-family: 'Pixelify Sans', monospace;
-  font-size: clamp(18px, 1.8vw, 24px);
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 700;
   color: #ffffff;
+  line-height: 1.3;
   letter-spacing: 0.02em;
-  line-height: 1.4;
+  position: relative;
+}
+
+.founder-quote-mark {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .founder-signoff {
-  font-family: 'DM Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.95);
-  margin-top: 4px;
+  margin-top: 28px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.founder-signoff-line {
+  width: 36px;
+  height: 2px;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.founder-signoff-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.founder-sig-name {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
   letter-spacing: 0.04em;
 }
 
-.founder-action {
-  margin-top: 32px;
+.founder-sig-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
 }
 
-/* Light theme support */
-[data-theme="light"] .founder-section {
-  background: #EAEAEF;
-  border-bottom-color: rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] .founder-portrait-frame {
-  background: #FFFFFF;
-  border-color: rgba(0, 0, 0, 0.3);
-  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.1);
-}
-[data-theme="light"] .founder-tag {
-  background: #000000;
-  color: #FFFFFF;
-}
-[data-theme="light"] .founder-caption {
-  background: #F5F5F7;
-  border-top-color: rgba(0, 0, 0, 0.1);
-}
-[data-theme="light"] .founder-caption-name {
-  color: #000000;
-}
-[data-theme="light"] .founder-caption-role {
-  color: rgba(0, 0, 0, 0.6);
-}
-[data-theme="light"] #founder-title {
-  color: #000000;
-}
-[data-theme="light"] .founder-statement {
-  color: #000000 !important;
-  border-left-color: #000000;
-}
-[data-theme="light"] .founder-letter p {
-  color: rgba(0, 0, 0, 0.75);
-}
-[data-theme="light"] .founder-highlight {
-  color: #000000 !important;
-}
-[data-theme="light"] .founder-quote {
-  background: rgba(0, 0, 0, 0.04);
-  border-left-color: #000000;
-  color: #000000;
-}
-[data-theme="light"] .founder-signoff {
-  color: #000000;
+.founder-action {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 8px;
 }
 
 /* ── Landing Footer ─────────────────────────────────────── */
@@ -4331,6 +4395,8 @@ body::after {
 /* ── Responsive rules ───────────────────────────────────── */
 @media (max-width: 900px) {
   .hero-grid, .proof-section { grid-template-columns: 1fr; }
+  .founder-container { grid-template-columns: 1fr; gap: 40px; }
+  .founder-visual-col { position: static; max-width: 380px; margin: 0 auto; }
   .hero-copy { border-right: 0; border-bottom: 2px solid rgba(255,255,255,0.18); min-height: auto; }
   .hero-visual { min-height: 420px; }
   .manifesto-band { grid-template-columns: 1fr; }
@@ -4340,16 +4406,12 @@ body::after {
   .pipeline-section { grid-template-columns: 1fr; min-height: auto; }
   .pipeline-visual { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.15); }
   .proof-copy { padding: 50px 24px; }
-  .founder-container { grid-template-columns: 1fr; gap: 40px; }
-  .founder-portrait-frame { max-width: 360px; margin: 0 auto; }
   .hidden-mobile { display: none !important; }
 }
 
 @media (max-width: 600px) {
   .site-header { height: 64px; padding: 0 16px; }
   .hero-copy h1 { font-size: 44px; }
-  .founder-section { padding: 48px 16px; }
-  .founder-portrait-frame { max-width: 100%; }
   .terminal-row { grid-template-columns: 22px 1fr; }
   .terminal-row span { grid-column: 2; }
   .landing-footer { flex-direction: column; gap: 16px; align-items: flex-start; }
@@ -4525,9 +4587,10 @@ body::after {
 /* ── Hardware Acceleration & Smoothness Optimizations ────── */
 #landingView, #landingView * {
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.floating-pixels i, .status-dot, .glass-stat, .pixel-cube, .compute-core, .data-orbit {
+.floating-pixels i, .status-dot, .status-dot-sm, .glass-stat, .pixel-cube, .compute-core, .data-orbit, .founder-card-frame {
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   will-change: transform;
@@ -4535,6 +4598,17 @@ body::after {
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 76px;
+}
+
+#landingStack, #landingFeatures, #landingWhy, #founder {
+  content-visibility: auto;
+  contain-intrinsic-size: 650px;
+}
+
+/* Instant tactile response for links & interactive cards */
+.landing-nav a, .text-link, .pixel-button, .capability-card, .feature-detail-card {
+  -webkit-tap-highlight-color: transparent;
 }
 
 
@@ -4592,99 +4666,110 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .btn-cad svg{color:#a78bfa}
 
 /* modal overlay */
-.cad-modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}
+.cad-modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);display:flex;align-items:stretch;justify-content:center;padding:8px}
 .cad-modal-overlay.hidden{display:none!important}
 
-/* modal card */
-.cad-modal-card{background:#0d0d0d;border:1px solid #1e1e1e;border-radius:14px;width:100%;max-width:1300px;height:90vh;max-height:900px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.8)}
+/* modal card — near-fullscreen so the 3D preview can dominate */
+.cad-modal-card{background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;width:100%;max-width:none;height:calc(100vh - 16px);max-height:none;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.8)}
 
 /* header */
-.cad-modal-header{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #1a1a1a;background:#0a0a0a;flex-shrink:0}
-.cad-modal-header-left{display:flex;align-items:center;gap:10px}
-.cad-modal-header-right{display:flex;align-items:center;gap:6px}
-.cad-model-select{background:#111;border:1px solid #2a2a2a;border-radius:6px;color:var(--text-primary);font-size:11px;padding:4px 8px;max-width:220px;cursor:pointer}
+.cad-modal-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid #1a1a1a;background:#0a0a0a;flex-shrink:0;min-width:0}
+.cad-modal-header-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.cad-modal-header-right{display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:0}
+.cad-model-select{background:#111;border:1px solid #2a2a2a;border-radius:6px;color:var(--text-primary);font-size:11px;padding:4px 8px;max-width:min(220px,28vw);cursor:pointer;overflow:hidden;text-overflow:ellipsis}
 .cad-model-select:hover{border-color:#444}
 .cad-model-select:focus{outline:none;border-color:#a78bfa66}
 .cad-model-select option,.cad-model-select optgroup{background:#111;color:var(--text-primary)}
-.cad-badge{background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px}
-.cad-modal-title{font-size:13px;font-weight:600;color:var(--text-primary)}
-.cad-engine-badge{font-size:9px;color:var(--text-muted);background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 6px;border-radius:4px}
+.cad-badge{background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px;flex-shrink:0}
+.cad-modal-title{font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cad-engine-badge{font-size:9px;color:var(--text-muted);background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
 .cad-hdr-btn{font-size:11px;padding:4px 10px;border-radius:5px;color:var(--text-secondary)}
 .cad-hdr-btn:hover{background:#1e1e1e;color:var(--text-primary)}
-.cad-modal-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:4px;line-height:1}
+.cad-modal-close{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:4px;line-height:1;flex-shrink:0}
 .cad-modal-close:hover{color:var(--text-primary);background:#1e1e1e}
 
-/* body layout */
-.cad-modal-body{display:grid;grid-template-columns:310px 1fr;flex:1;min-height:0;overflow:hidden}
+/* body layout — narrower chat, huge preview */
+.cad-modal-body{display:grid;grid-template-columns:minmax(240px,280px) minmax(0,1fr);flex:1;min-height:0;overflow:hidden}
 
 /* LEFT PANE */
-.cad-left-pane{display:flex;flex-direction:column;border-right:1px solid #1a1a1a;background:#080808;overflow:hidden}
+.cad-left-pane{display:flex;flex-direction:column;border-right:1px solid #1a1a1a;background:#080808;overflow:hidden;min-width:0}
 
 /* chat */
 .cad-chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:9px;min-height:0}
-.cad-chat-msg{display:flex}
+.cad-chat-msg{display:flex;min-width:0}
 .cad-chat-system .cad-chat-bubble,
-.cad-chat-assistant .cad-chat-bubble{background:#111;border:1px solid #1e1e1e;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:11.5px;color:var(--text-secondary);max-width:100%;line-height:1.6}
+.cad-chat-assistant .cad-chat-bubble{background:#111;border:1px solid #1e1e1e;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:11.5px;color:var(--text-secondary);max-width:100%;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}
 .cad-chat-user{justify-content:flex-end}
-.cad-chat-user .cad-chat-bubble{background:#1a1030;border:1px solid #a78bfa33;border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:11.5px;color:#c4b5fd;max-width:90%}
+.cad-chat-user .cad-chat-bubble{background:#1a1030;border:1px solid #a78bfa33;border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:11.5px;color:#c4b5fd;max-width:90%;overflow-wrap:anywhere;word-break:break-word}
 .cad-chat-error .cad-chat-bubble{border-color:#f8717133;background:#1a0808;color:#fca5a5}
 .cad-chat-bubble strong{color:#a78bfa;font-weight:700}
-.cad-chat-bubble code{background:#1e1e1e;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#e2e8f0}
+.cad-chat-bubble code{background:#1e1e1e;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
 
 /* params */
 .cad-params-panel{border-top:1px solid #1a1a1a;padding:10px 12px;background:#0a0a0a;flex-shrink:0}
 .cad-params-panel.hidden{display:none}
-.cad-params-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cad-params-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;min-width:0}
 .cad-params-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase}
-.cad-params-regen-btn{background:#a78bfa22;border:1px solid #a78bfa44;color:#a78bfa;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer}
+.cad-params-regen-btn{background:#a78bfa22;border:1px solid #a78bfa44;color:#a78bfa;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
 .cad-params-regen-btn:hover{background:#a78bfa33}
 .cad-params-grid{display:flex;flex-direction:column;gap:5px;max-height:155px;overflow-y:auto}
-.cad-param-row{display:grid;grid-template-columns:1fr 72px 28px;align-items:center;gap:6px}
+.cad-param-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 28px;align-items:center;gap:6px}
 .cad-param-label{font-size:10.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize}
 .cad-param-input{background:#111;border:1px solid #2a2a2a;border-radius:4px;color:var(--text-primary);font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 6px;width:100%;text-align:right}
 .cad-param-input:focus{outline:none;border-color:#a78bfa66}
-.cad-param-unit{font-size:9.5px;color:var(--text-muted)}
+.cad-param-unit{font-size:9.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis}
 
 /* prompt area */
 .cad-prompt-wrap{border-top:1px solid #1a1a1a;padding:10px 12px;background:#080808;flex-shrink:0}
 .cad-quick-prompts{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.cad-quick-btn{font-size:10px;padding:3px 9px;border-radius:4px;background:#141414;border:1px solid #252525;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.cad-quick-btn{font-size:10px;padding:3px 9px;border-radius:4px;background:#141414;border:1px solid #252525;color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease,border-color .12s ease}
 .cad-quick-btn:hover{background:#1e1e1e;color:var(--text-secondary);border-color:#333}
 .cad-textarea-row{display:flex;gap:6px;align-items:flex-end}
 .cad-textarea{flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:var(--text-primary);font-size:12px;font-family:inherit;padding:8px 10px;resize:none;min-height:52px;max-height:120px;line-height:1.5;overflow-y:auto}
 .cad-textarea:focus{outline:none;border-color:#a78bfa66}
 .cad-textarea::placeholder{color:var(--text-muted);font-size:11px}
-.cad-send-btn{background:#a78bfa;border:none;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;transition:background .15s}
-.cad-send-btn:hover{background:#9061f9}
-.cad-send-btn:disabled{background:#333;cursor:not-allowed}
+.cad-send-btn{background:#a78bfa;border:none;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;transition:background .15s,transform .12s}
+.cad-send-btn:hover{background:#9061f9;transform:translateY(-1px)}
+.cad-send-btn:disabled{background:#333;cursor:not-allowed;transform:none}
 .cad-status-bar{margin-top:6px;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* CENTER PANE */
-.cad-center-pane{display:flex;flex-direction:column;overflow:hidden;background:#0a0a0a}
+.cad-center-pane{display:flex;flex-direction:column;overflow:hidden;background:#050505;min-width:0;min-height:0}
 
-/* viewport */
-.cad-viewport-wrap{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
-.cad-canvas-container{flex:1;position:relative;background:#0d0d0d;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
-.cad-canvas-container canvas{display:block}
-.cad-viewport-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-muted);font-size:12px;pointer-events:none}
-.cad-viewport-toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-top:1px solid #1a1a1a;background:#080808;flex-shrink:0}
-.cad-vp-btn{background:#111;border:1px solid #222;color:var(--text-secondary);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer}
+/* viewport fills remaining space */
+.cad-viewport-wrap{flex:1 1 auto;position:relative;display:flex;flex-direction:column;min-height:0}
+.cad-canvas-container{flex:1;position:relative;background:#070707;display:block;overflow:hidden;min-height:0;width:100%;height:100%;cursor:grab}
+.cad-canvas-container:active{cursor:grabbing}
+.cad-canvas-container canvas{display:block;width:100%!important;height:100%!important;touch-action:none}
+.cad-viewport-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-muted);font-size:12px;pointer-events:none;text-align:center;padding:16px}
+.cad-viewport-toolbar{position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:4px;padding:6px 8px;background:rgba(8,8,8,.78);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:8px;z-index:5;pointer-events:auto;min-width:0;flex-wrap:wrap}
+.cad-vp-btn{background:#111;border:1px solid #222;color:var(--text-secondary);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s}
 .cad-vp-btn:hover{background:#1e1e1e;color:var(--text-primary)}
-.cad-vp-sep{flex:1}
+.cad-vp-btn.active{background:#a78bfa22;border-color:#a78bfa55;color:#c4b5fd}
+.cad-vp-sep{flex:1;min-width:8px}
 .cad-vp-download{color:#a78bfa;border-color:#a78bfa33;background:#a78bfa11}
 .cad-vp-download:hover{background:#a78bfa22}
 
-/* source editor pane */
-.cad-source-pane{height:210px;display:flex;flex-direction:column;border-top:1px solid #1a1a1a;flex-shrink:0}
-.cad-source-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #141414;background:#080808;flex-shrink:0}
-.cad-source-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase}
-.cad-source-actions{display:flex;gap:6px}
-.cad-src-btn{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;background:#111;border:1px solid #222;color:var(--text-secondary);cursor:pointer}
+/* source editor pane — collapsed by default */
+.cad-source-pane{height:168px;display:flex;flex-direction:column;border-top:1px solid #1a1a1a;flex-shrink:0;transition:height .18s ease}
+.cad-source-pane.collapsed{height:0;border-top:none;overflow:hidden}
+.cad-source-header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;border-bottom:1px solid #141414;background:#080808;flex-shrink:0;gap:8px;min-width:0}
+.cad-source-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.cad-source-actions{display:flex;gap:6px;flex-shrink:0}
+.cad-src-btn{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;background:#111;border:1px solid #222;color:var(--text-secondary);cursor:pointer;white-space:nowrap}
 .cad-src-btn:hover{background:#1e1e1e;color:var(--text-primary)}
 .cad-src-run{background:#a78bfa22;border-color:#a78bfa44;color:#a78bfa}
 .cad-src-run:hover{background:#a78bfa33}
-.cad-source-editor{flex:1;background:#080808;border:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;padding:10px 14px;resize:none;outline:none;overflow-y:auto}
+.cad-source-editor{flex:1;background:#080808;border:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;padding:10px 14px;resize:none;outline:none;overflow-y:auto;min-height:0}
 .cad-source-editor::placeholder{color:var(--text-muted)}
+
+@media (max-width: 900px) {
+  .cad-modal-overlay{padding:0}
+  .cad-modal-card{border-radius:0;height:100vh}
+  .cad-modal-body{grid-template-columns:1fr;grid-template-rows:minmax(180px,32%) minmax(0,1fr)}
+  .cad-left-pane{border-right:none;border-bottom:1px solid #1a1a1a}
+  .cad-engine-badge,.cad-hdr-btn{display:none}
+}
 
 /* scrollbars */
 .cad-chat-messages::-webkit-scrollbar,

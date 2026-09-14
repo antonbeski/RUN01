@@ -43,62 +43,23 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True         # Prevent JS access
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'       # Allow cross-site requests
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 
-# ── MongoDB Database Connection (persistent, module-level client) ──────────────
-# Cache the MongoClient at module scope so warm Lambda invocations reuse the
-# existing TCP connection instead of opening a new one every request.
-_mongo_client = None
-_mongo_db = None
-
-def get_db():
-    global _mongo_client, _mongo_db
-    if _mongo_db is not None:
-        try:
-            _mongo_client.admin.command("ping")
-            return _mongo_db
-        except Exception:
-            _mongo_client = None
-            _mongo_db = None
-
-    mongodb_uri = os.environ.get("MONGODB_URI")
-    if not mongodb_uri:
-        app.logger.warning("MONGODB_URI environment variable is not set.")
-        return None
-
-    try:
-        from pymongo import MongoClient
-        client_kwargs = {
-            "serverSelectionTimeoutMS": 5000,
-            "connectTimeoutMS": 5000,
-            "socketTimeoutMS": 10000,
-        }
-        try:
-            import certifi
-            client_kwargs["tlsCAFile"] = certifi.where()
-        except Exception:
-            pass
-
-        _mongo_client = MongoClient(mongodb_uri, **client_kwargs)
-        # URI should include /run01 database name (e.g. .../run01).
-        # get_default_database() returns it; fall back to "run01" if not specified.
-        _mongo_db = _mongo_client.get_default_database()
-        if _mongo_db is None or _mongo_db.name in ("admin", "test"):
-            _mongo_db = _mongo_client["run01"]
-        return _mongo_db
-    except Exception as e:
-        app.logger.warning(f"Standard SSL connection failed: {e}. Trying SSL fallback...")
-        try:
-            from pymongo import MongoClient
-            _mongo_client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000,
-                                        tlsAllowInvalidCertificates=True)
-            _mongo_db = _mongo_client.get_default_database()
-            if _mongo_db is None or _mongo_db.name in ("admin", "test"):
-                _mongo_db = _mongo_client["run01"]
-            return _mongo_db
-        except Exception as err2:
-            app.logger.error(f"MongoDB connection error: {err2}")
-            _mongo_client = None
-            _mongo_db = None
-            return None
+# ── MongoDB & Authentication Modules (pyrunner.db & pyrunner.auth) ─────────────
+from pyrunner.db import (
+    get_db,
+    ensure_indexes,
+    prepare_user_owned_doc,
+    check_db_health
+)
+from pyrunner.auth import (
+    normalize_email,
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user_from_request,
+    token_required,
+    require_role,
+    log_audit_event
+)
 
 # ── Auth Endpoints ────────────────────────────────────────────────────────────
 
@@ -128,13 +89,13 @@ def desmos_config():
 
 @app.route("/api/auth/me", methods=["GET"])
 def auth_me():
-    user_id = session.get("user_id")
-    cached_user = session.get("user")
-
-    if not user_id and not cached_user:
+    # Supports both Bearer JWT and secure session cookie
+    current = get_current_user_from_request()
+    if not current:
         return jsonify({"authenticated": False, "user": None})
 
     db = get_db()
+    user_id = current.get("id")
     if db is not None and user_id:
         try:
             from bson import ObjectId
@@ -145,58 +106,66 @@ def auth_me():
                     "email": user.get("email"),
                     "name": user.get("name", ""),
                     "picture": user.get("picture", ""),
+                    "role": user.get("role", "user"),
                     "auth_provider": user.get("auth_provider", "password")
                 }
-                session["user"] = user_info  # Refresh cached user in session
+                session["user"] = user_info
                 return jsonify({"authenticated": True, "user": user_info})
         except Exception as exc:
             app.logger.error(f"Error fetching user in auth_me: {exc}")
 
-    # Fallback: return the cached user from the session cookie
-    if cached_user:
-        return jsonify({"authenticated": True, "user": cached_user})
+    cached_user = session.get("user") or current
+    return jsonify({"authenticated": True, "user": cached_user})
 
-    return jsonify({"authenticated": False, "user": None})
 
 @app.route("/api/auth/signup", methods=["POST"])
 def auth_signup():
     data = request.get_json() or {}
-    email = (data.get("email") or "").strip().lower()
+    raw_email = data.get("email") or ""
     password = data.get("password") or ""
     name = (data.get("name") or "").strip()
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required."}), 400
+    try:
+        email = normalize_email(raw_email)
+    except ValueError as val_err:
+        return jsonify({"error": str(val_err)}), 400
 
-    if len(password) < 6:
+    if not password or len(password) < 6:
         return jsonify({"error": "Password must be at least 6 characters."}), 400
 
     db = get_db()
     if db is None:
-        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI environment variable is set."}), 503
+        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI is set."}), 503
 
     try:
         existing = db.users.find_one({"email": email})
         if existing:
             return jsonify({"error": "An account with this email already exists."}), 409
 
-        pwd_hash = generate_password_hash(password)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        pwd_hash = hash_password(password)
         user_doc = {
             "email": email,
             "password_hash": pwd_hash,
             "name": name or email.split("@")[0],
+            "role": "user",
             "auth_provider": "password",
-            "created_at": datetime.datetime.now(datetime.timezone.utc)
+            "created_at": now,
+            "updated_at": now,
+            "last_login": now
         }
 
         result = db.users.insert_one(user_doc)
         user_id = str(result.inserted_id)
+
+        token = create_access_token(user_id=user_id, email=email, role="user")
 
         user_info = {
             "id": user_id,
             "email": email,
             "name": user_doc["name"],
             "picture": "",
+            "role": "user",
             "auth_provider": "password"
         }
 
@@ -204,41 +173,59 @@ def auth_signup():
         session["user_id"] = user_id
         session["user"] = user_info
 
-        return jsonify({"success": True, "user": user_info})
+        log_audit_event(db, "SIGNUP_SUCCESS", user_id=user_id, status="SUCCESS", metadata={"email": email})
+        return jsonify({"success": True, "token": token, "user": user_info}), 201
+
     except Exception as exc:
         app.logger.error(f"Signup exception: {exc}")
+        log_audit_event(db, "SIGNUP_FAILED", status="FAILURE", metadata={"email": email, "error": str(exc)})
         return jsonify({"error": f"Failed to create account: {str(exc)}"}), 500
+
 
 @app.route("/api/auth/login", methods=["POST"])
 def auth_login():
     data = request.get_json() or {}
-    email = (data.get("email") or "").strip().lower()
+    raw_email = data.get("email") or ""
     password = data.get("password") or ""
 
-    if not email or not password:
+    try:
+        email = normalize_email(raw_email)
+    except ValueError as val_err:
+        return jsonify({"error": str(val_err)}), 400
+
+    if not password:
         return jsonify({"error": "Email and password are required."}), 400
 
     db = get_db()
     if db is None:
-        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI environment variable is set."}), 503
+        return jsonify({"error": "Database connection not configured. Please ensure MONGODB_URI is set."}), 503
 
     try:
         user = db.users.find_one({"email": email})
         if not user:
+            log_audit_event(db, "LOGIN_FAILED", status="FAILURE", metadata={"email": email, "reason": "user_not_found"})
             return jsonify({"error": "Invalid email or password."}), 401
 
         if not user.get("password_hash"):
             return jsonify({"error": "This account was registered using Google Sign-In. Please sign in with Google."}), 400
 
-        if not check_password_hash(user["password_hash"], password):
+        if not verify_password(user["password_hash"], password):
+            log_audit_event(db, "LOGIN_FAILED", user_id=str(user["_id"]), status="FAILURE", metadata={"email": email, "reason": "invalid_password"})
             return jsonify({"error": "Invalid email or password."}), 401
 
         user_id = str(user["_id"])
+        role = user.get("role", "user")
+        token = create_access_token(user_id=user_id, email=email, role=role)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        db.users.update_one({"_id": user["_id"]}, {"$set": {"last_login": now}})
+
         user_info = {
             "id": user_id,
             "email": user["email"],
             "name": user.get("name") or user["email"].split("@")[0],
             "picture": user.get("picture", ""),
+            "role": role,
             "auth_provider": user.get("auth_provider", "password")
         }
 
@@ -246,17 +233,20 @@ def auth_login():
         session["user_id"] = user_id
         session["user"] = user_info
 
-        return jsonify({"success": True, "user": user_info})
+        log_audit_event(db, "LOGIN_SUCCESS", user_id=user_id, status="SUCCESS", metadata={"email": email})
+        return jsonify({"success": True, "token": token, "user": user_info})
+
     except Exception as exc:
         app.logger.error(f"Login exception: {exc}")
         return jsonify({"error": f"Login failed: {str(exc)}"}), 500
+
 
 @app.route("/api/auth/google", methods=["POST"])
 def auth_google():
     data = request.get_json() or {}
     token = data.get("credential") or data.get("token")
 
-    email = (data.get("email") or "").strip().lower()
+    raw_email = data.get("email") or ""
     name = (data.get("name") or "").strip()
     picture = data.get("picture") or ""
     google_id = data.get("sub") or data.get("google_id") or ""
@@ -273,39 +263,48 @@ def auth_google():
                 google_client_id if google_client_id else None
             )
 
-            email = idinfo.get("email", "").lower()
+            raw_email = idinfo.get("email", "")
             name = idinfo.get("name", "")
             picture = idinfo.get("picture", "")
             google_id = idinfo.get("sub", "")
         except Exception as e:
             app.logger.warning(f"Google ID token verification warning: {e}")
             try:
-                import jwt
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                email = unverified.get("email", "").lower()
+                import jwt as py_jwt
+                unverified = py_jwt.decode(token, options={"verify_signature": False})
+                raw_email = unverified.get("email", "")
                 name = unverified.get("name", "")
                 picture = unverified.get("picture", "")
                 google_id = unverified.get("sub", "")
             except Exception as jwt_err:
                 app.logger.error(f"JWT decode fallback error: {jwt_err}")
 
+    try:
+        email = normalize_email(raw_email)
+    except ValueError:
+        return jsonify({"error": "Google authentication failed: Invalid email."}), 400
+
     if not email:
         return jsonify({"error": "Google authentication failed: Email not found."}), 400
 
     db = get_db()
-    user_info = None
+    user_id = None
+    role = "user"
 
+    now = datetime.datetime.now(datetime.timezone.utc)
     if db is not None:
         try:
             user = db.users.find_one({"email": email})
             if user:
+                role = user.get("role", "user")
                 db.users.update_one(
                     {"_id": user["_id"]},
                     {"$set": {
                         "name": name or user.get("name"),
                         "picture": picture or user.get("picture"),
                         "google_id": google_id or user.get("google_id"),
-                        "last_login": datetime.datetime.now(datetime.timezone.utc)
+                        "last_login": now,
+                        "updated_at": now
                     }}
                 )
                 user_id = str(user["_id"])
@@ -315,48 +314,241 @@ def auth_google():
                     "name": name or email.split("@")[0],
                     "picture": picture,
                     "google_id": google_id,
+                    "role": "user",
                     "auth_provider": "google",
-                    "created_at": datetime.datetime.now(datetime.timezone.utc),
-                    "last_login": datetime.datetime.now(datetime.timezone.utc)
+                    "created_at": now,
+                    "updated_at": now,
+                    "last_login": now
                 }
                 res = db.users.insert_one(new_user)
                 user_id = str(res.inserted_id)
 
-            user_info = {
-                "id": user_id,
-                "email": email,
-                "name": name or email.split("@")[0],
-                "picture": picture,
-                "auth_provider": "google"
-            }
-            session.permanent = True
-            session["user_id"] = user_id
+            log_audit_event(db, "GOOGLE_AUTH_SUCCESS", user_id=user_id, status="SUCCESS", metadata={"email": email})
         except Exception as exc:
             app.logger.error(f"Google auth DB error: {exc}")
-            user_info = {
-                "id": google_id or email,
-                "email": email,
-                "name": name or email.split("@")[0],
-                "picture": picture,
-                "auth_provider": "google"
-            }
+            user_id = google_id or email
     else:
-        user_info = {
-            "id": google_id or email,
-            "email": email,
-            "name": name or email.split("@")[0],
-            "picture": picture,
-            "auth_provider": "google"
-        }
+        user_id = google_id or email
+
+    jwt_token = create_access_token(user_id=user_id, email=email, role=role)
+
+    user_info = {
+        "id": user_id,
+        "email": email,
+        "name": name or email.split("@")[0],
+        "picture": picture,
+        "role": role,
+        "auth_provider": "google"
+    }
 
     session.permanent = True
+    session["user_id"] = user_id
     session["user"] = user_info
-    return jsonify({"success": True, "user": user_info})
+    return jsonify({"success": True, "token": jwt_token, "user": user_info})
+
 
 @app.route("/api/auth/logout", methods=["POST"])
 def auth_logout():
+    uid = session.get("user_id")
+    db = get_db()
+    if uid:
+        log_audit_event(db, "LOGOUT", user_id=str(uid), status="SUCCESS")
     session.clear()
     return jsonify({"success": True})
+
+
+# ── Strict User Data Isolation & CRUD (User-Owned Snippets Collection) ────────
+@app.route("/api/snippets", methods=["GET"])
+@token_required
+def list_snippets():
+    """
+    CRITICAL QUERY SAFETY (Rules 11-13):
+    Never queries db.snippets.find({}). Always strictly filters by authenticated g.user['id'].
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database not available."}), 503
+
+    from flask import g
+    snippets_cursor = db.snippets.find({"userId": str(g.user["id"])}).sort("updatedAt", -1)
+
+    items = []
+    for doc in snippets_cursor:
+        items.append({
+            "id": str(doc["_id"]),
+            "userId": doc["userId"],
+            "title": doc.get("title", "Untitled"),
+            "code": doc.get("code", ""),
+            "language": doc.get("language", "python"),
+            "tags": doc.get("tags", []),
+            "isPublic": doc.get("isPublic", False),
+            "createdAt": doc.get("createdAt").isoformat() if doc.get("createdAt") else None,
+            "updatedAt": doc.get("updatedAt").isoformat() if doc.get("updatedAt") else None,
+        })
+    return jsonify({"success": True, "snippets": items})
+
+
+@app.route("/api/snippets", methods=["POST"])
+@token_required
+def create_snippet():
+    """
+    CRITICAL DATA ISOLATION (Rules 1-5, 13):
+    1. Document always has 'userId' set to authenticated g.user['id'].
+    2. Client-provided userId is strictly stripped and ignored.
+    3. Timestamps createdAt & updatedAt are automatically injected.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database not available."}), 503
+
+    from flask import g
+    data = request.get_json() or {}
+    title = (data.get("title") or "Untitled").strip()
+    code = data.get("code", "")
+    language = (data.get("language") or "python").strip()
+
+    doc = prepare_user_owned_doc({
+        "title": title,
+        "code": code,
+        "language": language,
+        "tags": data.get("tags", []),
+        "isPublic": bool(data.get("isPublic", False))
+    }, auth_user_id=g.user["id"])
+
+    res = db.snippets.insert_one(doc)
+    snippet_id = str(res.inserted_id)
+
+    log_audit_event(db, "CREATE_SNIPPET", user_id=g.user["id"], metadata={"snippetId": snippet_id})
+    return jsonify({
+        "success": True,
+        "id": snippet_id,
+        "snippet": {
+            "id": snippet_id,
+            "userId": g.user["id"],
+            "title": title,
+            "language": language,
+            "updatedAt": doc["updatedAt"].isoformat()
+        }
+    }), 201
+
+
+@app.route("/api/snippets/<snippet_id>", methods=["GET"])
+@token_required
+def get_snippet(snippet_id):
+    """
+    CRITICAL QUERY SAFETY (Rules 12-14):
+    Always filters by BOTH _id AND userId: { '_id': ObjectId(snippet_id), 'userId': g.user['id'] }
+    Prevents cross-user data exposure.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database not available."}), 503
+
+    from flask import g
+    from bson import ObjectId
+    try:
+        obj_id = ObjectId(snippet_id)
+    except Exception:
+        return jsonify({"error": "Invalid snippet ID format."}), 400
+
+    doc = db.snippets.find_one({"_id": obj_id, "userId": str(g.user["id"])})
+    if not doc:
+        return jsonify({"error": "Snippet not found or access denied."}), 404
+
+    return jsonify({
+        "success": True,
+        "snippet": {
+            "id": str(doc["_id"]),
+            "userId": doc["userId"],
+            "title": doc.get("title"),
+            "code": doc.get("code"),
+            "language": doc.get("language"),
+            "tags": doc.get("tags", []),
+            "createdAt": doc.get("createdAt").isoformat() if doc.get("createdAt") else None,
+            "updatedAt": doc.get("updatedAt").isoformat() if doc.get("updatedAt") else None,
+        }
+    })
+
+
+@app.route("/api/snippets/<snippet_id>", methods=["PUT"])
+@token_required
+def update_snippet(snippet_id):
+    """
+    CRITICAL QUERY SAFETY (Rule 14):
+    Updates ONLY where _id matches AND userId matches authenticated user.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database not available."}), 503
+
+    from flask import g
+    from bson import ObjectId
+    try:
+        obj_id = ObjectId(snippet_id)
+    except Exception:
+        return jsonify({"error": "Invalid snippet ID format."}), 400
+
+    data = request.get_json() or {}
+    update_doc = prepare_user_owned_doc(data, auth_user_id=g.user["id"], is_update=True)
+
+    res = db.snippets.update_one(
+        {"_id": obj_id, "userId": str(g.user["id"])},
+        {"$set": update_doc}
+    )
+
+    if res.matched_count == 0:
+        return jsonify({"error": "Snippet not found or access denied."}), 404
+
+    log_audit_event(db, "UPDATE_SNIPPET", user_id=g.user["id"], metadata={"snippetId": snippet_id})
+    return jsonify({"success": True, "updated": True})
+
+
+@app.route("/api/snippets/<snippet_id>", methods=["DELETE"])
+@token_required
+def delete_snippet(snippet_id):
+    """
+    CRITICAL QUERY SAFETY (Rule 14):
+    Deletes ONLY where _id matches AND userId matches authenticated user.
+    """
+    db = get_db()
+    if db is None:
+        return jsonify({"error": "Database not available."}), 503
+
+    from flask import g
+    from bson import ObjectId
+    try:
+        obj_id = ObjectId(snippet_id)
+    except Exception:
+        return jsonify({"error": "Invalid snippet ID format."}), 400
+
+    res = db.snippets.delete_one({"_id": obj_id, "userId": str(g.user["id"])})
+    if res.deleted_count == 0:
+        return jsonify({"error": "Snippet not found or access denied."}), 404
+
+    log_audit_event(db, "DELETE_SNIPPET", user_id=g.user["id"], metadata={"snippetId": snippet_id})
+    return jsonify({"success": True, "deleted": True})
+
+
+# ── Role-Based Authorization Route (Rule 16-18) ───────────────────────────────
+@app.route("/api/admin/metrics", methods=["GET"])
+@require_role("admin")
+def admin_metrics():
+    """Admin-only metrics endpoint protected by centralized @require_role('admin')."""
+    from flask import g
+    db = get_db()
+    health = check_db_health(db)
+    return jsonify({
+        "success": True,
+        "adminUser": g.user["id"],
+        "db": health
+    })
+
+
+# ── MongoDB Health Check Route (Rule 31) ──────────────────────────────────────
+@app.route("/api/health/db", methods=["GET"])
+def db_health_check():
+    """Monitoring endpoint for DB connection status and metrics."""
+    return jsonify(check_db_health())
 
 @app.route("/")
 def index():
