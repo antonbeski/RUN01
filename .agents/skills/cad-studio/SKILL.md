@@ -151,3 +151,27 @@ gear();
 1. Explain the mechanical structure and key design decisions concisely (1-2 sentences).
 2. Emit the complete, self-contained ` ```openscad ` code block.
 3. List the customizable parameters with their design impact so the user knows what to adjust.
+
+---
+
+## 5. Autonomous AI Self-Healing Execution Loop (OpenSCAD WASM Strong Loop)
+
+When operating inside RUN01's autonomous CAD self-healing loop or fixing an existing 3D model:
+1. **Targeted Surgical Edits**:
+   - For compile fixes, syntax corrections, undefined variables, or feature modifications in existing OpenSCAD code, output a precise surgical edit block:
+     ```text
+     <<<SURGICAL_EDIT>>>
+     <<<FIND>>>
+     exact lines currently in user's OpenSCAD editor
+     <<<REPLACE>>>
+     corrected, working replacement lines
+     <<<END_EDIT>>>
+     ```
+   - The `<<<FIND>>>` block must match exact characters and indentation from the existing code.
+2. **Immutable Context & Dimension Preservation**:
+   - Never delete unrelated modules, decorative geometry, mounting holes, or custom parameters.
+   - Fix the root compile or geometry defect directly (e.g. declare undefined variables, add missing semi-colons, replace invalid module calls, eliminate minkowski recursion depth limits, or extend boolean cuts by `0.1` mm for clean manifolds).
+3. **Zero-Error Execution Guarantee**:
+   - Every generated or repaired OpenSCAD script must compile in OpenSCAD WASM and generate a valid 3D STL mesh with **0 errors**.
+   - If extensive structural changes are necessary, provide a complete, immediately compilable ` ```openscad ` code block guaranteed to render cleanly.
+

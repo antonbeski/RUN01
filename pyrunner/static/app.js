@@ -3111,6 +3111,7 @@ document.addEventListener('keydown', (e) => {
     }
     return edits;
   }
+  window.parseSurgicalEdits = parseSurgicalEdits;
 
   // ── Programmatically apply surgical edit to Monaco Editor ───
   function applySurgicalEditToMonaco(findText, replaceText) {
@@ -4236,17 +4237,24 @@ If extensive structural changes are required, output the complete corrected \`\`
         codeActionBar.classList.add('visible');
       }
 
-      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP - PRIMARY) ───────────
+      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP - PRIMARY ACROSS ALL PANELS) ───
+      const hasCadCode = /```(?:openscad|scad)[\s\S]*?```/.test(fullAssistantText);
+      const hasDesmosCode = /```desmos[\s\S]*?```/.test(fullAssistantText);
+
       if ((hasCode || hasSurgicalEdit) && activePanelContext === 'editor') {
         if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
           window.activeAutonomousLoop.abort();
         }
         window.activeAutonomousLoop = new AutonomousRepairLoop({
-          maxIterations: 3,
+          maxIterations: 4,
           model: model,
           chatContainer: aiMessages
         });
         window.activeAutonomousLoop.start(text, fullAssistantText);
+      } else if ((hasCadCode || hasSurgicalEdit) && activePanelContext === 'cad' && window.startCADAutonomousLoop) {
+        window.startCADAutonomousLoop(text, fullAssistantText, aiMessages);
+      } else if ((hasDesmosCode || hasSurgicalEdit) && activePanelContext === 'desmos' && window.startDesmosAutonomousLoop) {
+        window.startDesmosAutonomousLoop(text, fullAssistantText, aiMessages);
       } else {
         setAIWorking(false);
       }
@@ -4376,6 +4384,77 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   const btnDesmos = document.getElementById('btnDesmos');
   const desmosModalOverlay = document.getElementById('desmosModalOverlay');
   const btnCloseDesmosModal = document.getElementById('btnCloseDesmosModal');
+  const desmosPromptInput = document.getElementById('desmosPromptInput');
+  const btnDesmosGenerate = document.getElementById('btnDesmosGenerate');
+  const desmosModelSelect = document.getElementById('desmosModelSelect');
+  const btnDesmosClear = document.getElementById('btnDesmosClear');
+  const desmosLoopContainer = document.getElementById('desmosLoopContainer');
+  const desmosActiveControlBadge = document.getElementById('desmosActiveControlBadge');
+
+  let activeDesmosLoop = null;
+  let desmosAbortController = null;
+
+  const DESMOS_MODEL_CATALOG = [
+    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
+    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
+    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
+    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
+    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
+    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+  ];
+  const DESMOS_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+
+  function seedDesmosModelSelect(models) {
+    if (!desmosModelSelect) return;
+    desmosModelSelect.innerHTML = '';
+    const groups = {};
+    const order = [];
+    models.forEach(m => {
+      const groupName = m.provider || 'Other';
+      if (!groups[groupName]) {
+        groups[groupName] = document.createElement('optgroup');
+        groups[groupName].label = groupName;
+        order.push(groupName);
+      }
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      groups[groupName].appendChild(opt);
+    });
+    order.forEach(g => desmosModelSelect.appendChild(groups[g]));
+    const hasDefault = models.some(m => m.id === DESMOS_DEFAULT_MODEL);
+    desmosModelSelect.value = hasDefault ? DESMOS_DEFAULT_MODEL : (models[0] ? models[0].id : '');
+  }
+  seedDesmosModelSelect(DESMOS_MODEL_CATALOG);
+
+  function getDesmosModel() {
+    return (desmosModelSelect && desmosModelSelect.value) || DESMOS_DEFAULT_MODEL;
+  }
+
+  function setDesmosWorking(isWorking) {
+    if (!btnDesmosGenerate) return;
+    if (isWorking) {
+      btnDesmosGenerate.classList.add('is-working');
+      btnDesmosGenerate.title = 'AI is working… Click to stop';
+      btnDesmosGenerate.setAttribute('aria-label', 'Stop AI');
+    } else {
+      btnDesmosGenerate.classList.remove('is-working');
+      btnDesmosGenerate.title = 'Generate simulation (Enter)';
+      btnDesmosGenerate.setAttribute('aria-label', 'Generate or Heal Simulation');
+    }
+  }
+
+  function stopDesmosAI() {
+    if (desmosAbortController) {
+      try { desmosAbortController.abort(); } catch (_) {}
+      desmosAbortController = null;
+    }
+    if (activeDesmosLoop && activeDesmosLoop.isActive) {
+      activeDesmosLoop.abort();
+    }
+    setDesmosWorking(false);
+  }
 
   // Fetch Desmos API key from /api/desmos/config and load Desmos JS API
   async function loadDesmosScript() {
@@ -4453,9 +4532,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     line = line.replace(/\*/g, ' \\cdot ');
 
     // Convert multi-character variable names with numbers like v1x, v1y, v2x to subscript format v_{1x}, v_{1y}, v_{2x}
-    // Desmos only allows single-letter variables or subscripted variables like v_{1} or a_{x}
     line = line.replace(/\b([a-zA-Z])([0-9]+[a-zA-Z]*|[a-zA-Z]+[0-9]+)\b/g, (match, p1, p2) => {
-      // Don't modify standard math functions like sin, cos, tan, log, exp, sqrt, arcsin, etc.
       const mathFuncs = ['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh', 'log', 'ln', 'exp', 'sqrt', 'cdot', 'frac', 'theta', 'alpha', 'beta', 'gamma', 'omega', 'pi', 'lambda'];
       if (mathFuncs.includes(match.toLowerCase())) return match;
       return `${p1}_{${p2}}`;
@@ -4463,49 +4540,588 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
 
     // Normalize whitespace
     line = line.replace(/\s+/g, ' ').trim();
-
     return line;
   }
+  window.cleanDesmosLatex = cleanDesmosLatex;
+
+  /** Inspect all expressions in the Desmos calculator and classify any syntax or evaluation errors */
+  async function verifyDesmosExpressions(calc) {
+    if (!calc) return { success: false, totalCount: 0, errorCount: 1, errors: [{ id: 'none', index: 1, latex: '', errorMessage: 'Desmos calculator not ready', errorType: 'InitializationError' }] };
+
+    // Allow Desmos worker to parse AST and calculate expressionAnalysis
+    await new Promise(r => setTimeout(r, 120));
+
+    const expressions = (calc.getExpressions && calc.getExpressions()) || [];
+    const errors = [];
+    const analysis = calc.expressionAnalysis || {};
+
+    if (expressions.length === 0) {
+      return {
+        success: false,
+        totalCount: 0,
+        errorCount: 1,
+        errors: [{ id: 'empty', index: 1, latex: '', errorMessage: 'No mathematical expressions found in calculator', errorType: 'EmptyExpressionSet' }]
+      };
+    }
+
+    expressions.forEach((expr, idx) => {
+      if (!expr.latex || !expr.latex.trim()) return;
+      const info = analysis[expr.id];
+      if (info && info.isError) {
+        const rawMsg = info.errorMessage || 'Invalid mathematical expression';
+        let errType = 'SyntaxError';
+        if (/not defined|unknown|undefined/i.test(rawMsg)) errType = 'UndefinedIdentifier';
+        else if (/too many variables|slider/i.test(rawMsg)) errType = 'TooManyVariables';
+        else if (/dimension|unit/i.test(rawMsg)) errType = 'DimensionMismatch';
+        else if (/domain|divide by zero/i.test(rawMsg)) errType = 'DomainError';
+
+        errors.push({
+          id: expr.id,
+          index: idx + 1,
+          latex: expr.latex,
+          errorMessage: rawMsg,
+          errorType: errType
+        });
+      }
+    });
+
+    return {
+      success: errors.length === 0,
+      totalCount: expressions.length,
+      errorCount: errors.length,
+      errors
+    };
+  }
+  window.verifyDesmosExpressions = verifyDesmosExpressions;
+
+  // ── Desmos Autonomous Repair Loop Class ───────────────────────
+  class DesmosAutonomousRepairLoop {
+    constructor(options = {}) {
+      this.maxIterations = options.maxIterations || 4;
+      this.model = options.model || getDesmosModel();
+      this.chatContainer = options.chatContainer || desmosLoopContainer || document.getElementById('aiMessages');
+      this.calculator = options.calculator || desmosMainCalculator;
+      this.isActive = false;
+      this.isAborted = false;
+      this.immutableUserGoal = '';
+      this.currentIteration = 1;
+      this.currentAbortController = null;
+      this.cardEl = null;
+      this.stepsEl = null;
+      this.badgeEl = null;
+      this.statusTextEl = null;
+      this.stopBtn = null;
+    }
+
+    createCard() {
+      if (this.chatContainer === desmosLoopContainer && desmosLoopContainer) {
+        desmosLoopContainer.classList.remove('hidden');
+        desmosLoopContainer.innerHTML = '';
+      }
+
+      const card = document.createElement('div');
+      card.className = 'ai-loop-card';
+
+      const header = document.createElement('div');
+      header.className = 'ai-loop-header';
+
+      const left = document.createElement('div');
+      left.className = 'ai-loop-header-left';
+
+      this.badgeEl = document.createElement('span');
+      this.badgeEl.className = 'ai-loop-badge running';
+      this.badgeEl.textContent = 'AUTO-HEAL';
+
+      this.statusTextEl = document.createElement('span');
+      this.statusTextEl.className = 'ai-loop-status-text';
+      this.statusTextEl.textContent = 'Active Control: Verifying equations in Desmos…';
+
+      left.appendChild(this.badgeEl);
+      left.appendChild(this.statusTextEl);
+
+      this.stopBtn = document.createElement('button');
+      this.stopBtn.className = 'ai-loop-stop-btn';
+      this.stopBtn.textContent = 'Stop Loop';
+      this.stopBtn.addEventListener('click', () => this.abort());
+
+      header.appendChild(left);
+      header.appendChild(this.stopBtn);
+
+      this.stepsEl = document.createElement('div');
+      this.stepsEl.className = 'ai-loop-body';
+
+      card.appendChild(header);
+      card.appendChild(this.stepsEl);
+
+      this.cardEl = card;
+      if (this.chatContainer) {
+        this.chatContainer.appendChild(card);
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    addStep(icon, text, type = 'normal', snippet = null) {
+      if (!this.stepsEl) return;
+      const step = document.createElement('div');
+      step.className = `ai-loop-step ${type}`;
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'ai-loop-step-icon';
+      iconEl.textContent = icon;
+
+      const textEl = document.createElement('span');
+      textEl.innerHTML = text;
+
+      step.appendChild(iconEl);
+      step.appendChild(textEl);
+      this.stepsEl.appendChild(step);
+
+      if (snippet) {
+        const snippetEl = document.createElement('div');
+        snippetEl.className = 'ai-loop-error-snippet';
+        snippetEl.textContent = snippet;
+        this.stepsEl.appendChild(snippetEl);
+      }
+
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    addSummary(text) {
+      if (!this.stepsEl) return;
+      const sum = document.createElement('div');
+      sum.className = 'ai-loop-summary';
+      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      this.stepsEl.appendChild(sum);
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    setEditorActive(active) {
+      const badge = document.getElementById('desmosActiveControlBadge');
+      if (badge) {
+        if (active) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+    }
+
+    applyCodeOrEdit(text) {
+      if (!text || !this.calculator) return { applied: false, type: 'none' };
+
+      // 1. Surgical edit targeting specific expression LaTeX
+      const surgicalEdits = (window.parseSurgicalEdits ? window.parseSurgicalEdits(text) : []);
+      if (surgicalEdits && surgicalEdits.length > 0) {
+        const expressions = (this.calculator.getExpressions && this.calculator.getExpressions()) || [];
+        let appliedCount = 0;
+        for (const edit of surgicalEdits) {
+          const findNorm = cleanDesmosLatex(edit.findText);
+          const replaceNorm = cleanDesmosLatex(edit.replaceText);
+          const match = expressions.find(e => e.latex === edit.findText || (findNorm && cleanDesmosLatex(e.latex) === findNorm));
+          if (match) {
+            this.calculator.setExpression({ id: match.id, latex: replaceNorm || edit.replaceText });
+            appliedCount++;
+          }
+        }
+        if (appliedCount > 0) {
+          return { applied: true, type: 'surgical', count: appliedCount };
+        }
+      }
+
+      // 2. Full Desmos code block
+      const match = text.match(/```desmos([\s\S]*?)```/);
+      let lines = null;
+      if (match && match[1]) {
+        lines = match[1].split('\n').map(l => cleanDesmosLatex(l)).filter(Boolean);
+      } else if (text.includes('=') && !text.includes('```')) {
+        lines = text.split('\n').map(l => cleanDesmosLatex(l)).filter(Boolean);
+      }
+
+      if (lines && lines.length > 0) {
+        this.calculator.setBlank();
+        lines.forEach((l, idx) => {
+          this.calculator.setExpression({ id: 'panel_expr_' + idx, latex: l });
+        });
+        return { applied: true, type: 'full', count: lines.length };
+      }
+
+      return { applied: false, type: 'none' };
+    }
+
+    async requestRepair(errors) {
+      const expressions = this.calculator ? (this.calculator.getExpressions() || []) : [];
+      const currentLines = expressions.map((e, idx) => `${idx + 1}. [${e.id}]: ${e.latex}`).join('\n');
+      const errorReport = errors.map(e => `• Expression #${e.index} [${e.id}]: \`${e.latex}\`\n  Error Type: ${e.errorType}\n  Details: ${e.errorMessage}`).join('\n');
+
+      const prompt = `[IMMUTABLE USER GOAL]
+${this.immutableUserGoal}
+
+[CURRENT DESMOS EQUATIONS]
+${currentLines}
+
+[DESMOS MATHEMATICAL / LATEX ERRORS DETECTED - RUN #${this.currentIteration}]
+${errorReport}
+
+[INSTRUCTION]
+Perform an exact surgical fix to eliminate all Desmos syntax or mathematical errors while strictly preserving the user's simulation intent, constants, and valid formulas.
+Respond with the surgical replacement using this exact format:
+<<<SURGICAL_EDIT>>>
+<<<FIND>>>
+<exact failing LaTeX string>
+<<<REPLACE>>>
+<corrected, valid Desmos LaTeX string>
+<<<END_EDIT>>>
+
+If extensive structural changes are required, output the complete corrected \`\`\`desmos ... \`\`\` block instead.`;
+
+      this.currentAbortController = new AbortController();
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: this.currentAbortController.signal,
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are an authoritative Desmos mathematical self-healing repair engineer in RUN01. Eliminate LaTeX syntax errors, undefined identifiers, and dimension errors. Output minimal surgical edits targeting only broken equations to guarantee clean evaluation with 0 errors.' },
+            { role: 'user', content: prompt }
+          ],
+          model: this.model,
+          context: 'desmos'
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Desmos AI repair request failed with code ${resp.status}`);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let repairResponse = '';
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const rawJson = trimmed.substring(6);
+              const parsed = JSON.parse(rawJson);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              repairResponse += token;
+            } catch (_) {}
+          }
+        }
+      }
+
+      return repairResponse;
+    }
+
+    async start(userGoal, initialAssistantResponse) {
+      this.isActive = true;
+      this.isAborted = false;
+      this.immutableUserGoal = userGoal;
+      this.currentIteration = 1;
+
+      this.createCard();
+      this.setEditorActive(true);
+      setDesmosWorking(true);
+
+      if (initialAssistantResponse) {
+        if (Array.isArray(initialAssistantResponse)) {
+          if (this.calculator) {
+            this.calculator.setBlank();
+            initialAssistantResponse.forEach((item, idx) => {
+              const l = typeof item === 'string' ? cleanDesmosLatex(item) : (item && item.latex ? cleanDesmosLatex(item.latex) : '');
+              if (l) this.calculator.setExpression({ id: 'panel_expr_' + idx, latex: l });
+            });
+          }
+          this.addStep('📝', `Injected ${initialAssistantResponse.length} initial mathematical equation(s) into Desmos.`, 'active');
+        } else if (typeof initialAssistantResponse === 'string') {
+          const initialApply = this.applyCodeOrEdit(initialAssistantResponse);
+          if (initialApply.applied) {
+            if (initialApply.type === 'surgical') {
+              this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to Desmos expressions.`, 'active');
+            } else {
+              this.addStep('📝', `Loaded ${initialApply.count} Desmos equation(s) into calculator.`, 'active');
+            }
+          } else {
+            this.addStep('ℹ️', 'Reading active Desmos expressions for verification…', 'active');
+          }
+        }
+      }
+
+      while (this.isActive && !this.isAborted) {
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Verifying in Desmos Graphing API…`;
+        }
+        this.addStep('⚡', `Evaluating equations in Desmos (Attempt #${this.currentIteration})…`, 'active');
+
+        const check = await verifyDesmosExpressions(this.calculator);
+
+        if (this.isAborted) {
+          this.cleanup();
+          return;
+        }
+
+        if (check.success) {
+          this.badgeEl.className = 'ai-loop-badge';
+          this.badgeEl.textContent = '✓ 0 ERRORS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Clean Evaluation (0 Errors across ${check.totalCount} equations)`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+
+          this.addStep('✓', `Run #${this.currentIteration} completed cleanly with 0 errors across all ${check.totalCount} equations.`, 'success');
+          this.addSummary(`Autonomous Desmos Self-Healing verified complete. Zero errors. Context fully preserved.`);
+          this.cleanup();
+          return;
+        }
+
+        const firstErr = check.errors[0];
+        this.addStep('⚠️', `Error in Run #${this.currentIteration}: <strong>${firstErr.errorType}</strong> on Expr #${firstErr.index}: ${firstErr.errorMessage}`, 'warning', `Equation: ${firstErr.latex || '(empty)'}\nIssue: ${firstErr.errorMessage}`);
+
+        if (this.currentIteration >= this.maxIterations) {
+          this.badgeEl.className = 'ai-loop-badge error';
+          this.badgeEl.textContent = 'MAX ATTEMPTS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Halted after ${this.maxIterations} attempts`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+          this.addStep('🛑', `Maximum repair attempts reached. Desmos panel contains latest state.`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        this.badgeEl.className = 'ai-loop-badge healing';
+        this.badgeEl.textContent = 'HEALING';
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+        }
+        this.addStep('🔧', `AI analyzing error and synthesizing surgical LaTeX fix…`, 'active');
+
+        let repairResponse = '';
+        try {
+          repairResponse = await this.requestRepair(check.errors);
+        } catch (repairErr) {
+          if (this.isAborted) { this.cleanup(); return; }
+          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        if (this.isAborted) { this.cleanup(); return; }
+
+        const repairApply = this.applyCodeOrEdit(repairResponse);
+        if (repairApply.applied) {
+          if (repairApply.type === 'surgical') {
+            this.addStep('✓', `Applied surgical LaTeX patch to expression.`, 'active');
+          } else {
+            this.addStep('✓', `Updated Desmos calculator with restructured equations.`, 'active');
+          }
+        } else {
+          this.addStep('⚠️', `Retrying evaluation with current expressions…`, 'warning');
+        }
+
+        this.currentIteration++;
+      }
+
+      this.cleanup();
+    }
+
+    abort() {
+      this.isAborted = true;
+      if (this.currentAbortController) {
+        try { this.currentAbortController.abort(); } catch (_) {}
+        this.currentAbortController = null;
+      }
+      if (this.badgeEl) {
+        this.badgeEl.className = 'ai-loop-badge error';
+        this.badgeEl.textContent = 'STOPPED';
+      }
+      if (this.statusTextEl) {
+        this.statusTextEl.textContent = 'Desmos Auto-Heal Stopped by User';
+      }
+      if (this.stopBtn) this.stopBtn.style.display = 'none';
+      this.addStep('🛑', 'Desmos healing loop aborted by user.', 'warning');
+      this.cleanup();
+    }
+
+    cleanup() {
+      this.isActive = false;
+      this.setEditorActive(false);
+      setDesmosWorking(false);
+    }
+  }
+  window.DesmosAutonomousRepairLoop = DesmosAutonomousRepairLoop;
+
+  // Stream AI helper for Desmos prompt
+  async function streamDesmosAI(messages) {
+    desmosAbortController = new AbortController();
+    const resp = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: desmosAbortController.signal,
+      body: JSON.stringify({
+        model: getDesmosModel(),
+        context: 'desmos',
+        messages
+      })
+    });
+
+    const ct = (resp.headers.get('content-type') || '').toLowerCase();
+    if (!resp.ok || ct.includes('application/json')) {
+      let errMsg = 'AI provider unavailable';
+      try {
+        const errBody = await resp.json();
+        if (errBody && errBody.error) errMsg = errBody.error;
+      } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    let text = '';
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            text += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '';
+          } catch (_) {}
+        }
+      }
+    }
+    return text;
+  }
+
+  // Generate Desmos simulation from prompt bar
+  async function generateDesmos(userPrompt) {
+    const prompt = (typeof userPrompt === 'string' && userPrompt.trim())
+      ? userPrompt.trim()
+      : (desmosPromptInput ? desmosPromptInput.value.trim() : '');
+    if (!prompt) {
+      if (desmosPromptInput) desmosPromptInput.focus();
+      return;
+    }
+
+    openDesmosModal();
+
+    if (activeDesmosLoop && activeDesmosLoop.isActive) {
+      activeDesmosLoop.abort();
+    }
+
+    const loop = new DesmosAutonomousRepairLoop({
+      maxIterations: 4,
+      model: getDesmosModel(),
+      chatContainer: desmosLoopContainer,
+      calculator: desmosMainCalculator
+    });
+    activeDesmosLoop = loop;
+    setDesmosWorking(true);
+
+    try {
+      const systemPrompt = `You are a Desmos mathematical graphing expert in RUN01.
+Generate clean, interactive Desmos mathematical equations, dynamic sliders, and simulations.
+Output ONLY valid Desmos LaTeX lines inside a \`\`\`desmos ... \`\`\` code block.
+One equation per line. No markdown outside the block. No comments starting with #.`;
+
+      const rawResponse = await streamDesmosAI([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ]);
+
+      await loop.start(prompt, rawResponse);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        loop.addStep('🛑', 'Generation stopped by user.', 'warning');
+      } else {
+        loop.addStep('❌', `Generation failed: ${err.message}`, 'warning');
+      }
+      loop.cleanup();
+    }
+  }
+
+  // Hook Desmos input controls
+  if (btnDesmosGenerate) {
+    btnDesmosGenerate.addEventListener('click', () => {
+      if (btnDesmosGenerate.classList.contains('is-working')) {
+        stopDesmosAI();
+      } else {
+        generateDesmos();
+      }
+    });
+  }
+
+  if (desmosPromptInput) {
+    desmosPromptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (btnDesmosGenerate && btnDesmosGenerate.classList.contains('is-working')) {
+          stopDesmosAI();
+        } else {
+          generateDesmos();
+        }
+      }
+    });
+  }
+
+  if (btnDesmosClear) {
+    btnDesmosClear.addEventListener('click', () => {
+      stopDesmosAI();
+      if (desmosMainCalculator) {
+        desmosMainCalculator.setBlank();
+      }
+      if (desmosLoopContainer) {
+        desmosLoopContainer.innerHTML = '';
+        desmosLoopContainer.classList.add('hidden');
+      }
+    });
+  }
+
+  // Global entry point to launch the Desmos autonomous self-healing loop
+  window.startDesmosAutonomousLoop = function(userGoal, initialExpressions, chatContainer) {
+    openDesmosModal();
+    if (activeDesmosLoop && activeDesmosLoop.isActive) {
+      activeDesmosLoop.abort();
+    }
+    activeDesmosLoop = new DesmosAutonomousRepairLoop({
+      maxIterations: 4,
+      model: getDesmosModel(),
+      chatContainer: chatContainer || desmosLoopContainer,
+      calculator: desmosMainCalculator
+    });
+    activeDesmosLoop.start(userGoal, initialExpressions);
+    return activeDesmosLoop;
+  };
 
   // Open and load expressions directly into the main Desmos panel
   window.loadIntoDesmosPanel = function(linesOrExpressions, title = 'Math Simulation') {
     if (!desmosModalOverlay) return;
-    desmosModalOverlay.classList.remove('hidden');
+    openDesmosModal();
 
     const titleEl = document.getElementById('desmosModalTitle');
     if (titleEl) {
       titleEl.innerHTML = `<span class="desmos-badge">DESMOS</span> ${title}`;
     }
 
-    const target = document.getElementById('desmosMainCalculator');
-    if (!target) return;
-
-    if (!desmosMainCalculator && window.Desmos) {
-      desmosMainCalculator = Desmos.GraphingCalculator(target, {
-        keypad: true,
-        expressions: true,
-        settingsMenu: true,
-        zoomButtons: true,
-      });
-    }
-
-    if (desmosMainCalculator) {
-      desmosMainCalculator.setBlank();
-      if (Array.isArray(linesOrExpressions)) {
-        linesOrExpressions.forEach((item, idx) => {
-          if (typeof item === 'string') {
-            const clean = cleanDesmosLatex(item);
-            if (clean) {
-              desmosMainCalculator.setExpression({ id: 'panel_expr_' + idx, latex: clean });
-            }
-          } else if (typeof item === 'object' && item !== null) {
-            if (item.latex) item.latex = cleanDesmosLatex(item.latex);
-            desmosMainCalculator.setExpression(item);
-          }
-        });
-      }
+    if (window.startDesmosAutonomousLoop) {
+      window.startDesmosAutonomousLoop(title, linesOrExpressions, desmosLoopContainer);
     }
   };
+
 
   // Output Console callback for Python desmos.plot() / show_desmos()
   window._renderDesmosGraphInOutput = function(exprJson, title = 'Desmos Math Graph') {
@@ -5082,11 +5698,95 @@ window.ViewManager = (function() {
     return (cadModelSelect && cadModelSelect.value) || CAD_DEFAULT_MODEL;
   }
 
+  let activeCADLoop = null;
+  let cadAbortController = null;
+
+  function setCadWorking(isWorking) {
+    if (!btnCadGenerate) return;
+    if (isWorking) {
+      btnCadGenerate.classList.add('is-working');
+      btnCadGenerate.title = 'AI is working… Click to stop';
+      btnCadGenerate.setAttribute('aria-label', 'Stop CAD');
+    } else {
+      btnCadGenerate.classList.remove('is-working');
+      btnCadGenerate.title = 'Generate CAD (Enter)';
+      btnCadGenerate.setAttribute('aria-label', 'Generate CAD');
+    }
+  }
+
+  function stopCadAI() {
+    if (cadAbortController) {
+      try { cadAbortController.abort(); } catch (_) {}
+      cadAbortController = null;
+    }
+    if (activeCADLoop && activeCADLoop.isActive) {
+      activeCADLoop.abort();
+    }
+    setCadWorking(false);
+  }
+
+  /** Authoritative parser for OpenSCAD WASM compiler error messages */
+  function parseOpenSCADError(errorMsg, scadCode) {
+    if (!errorMsg) errorMsg = '';
+    let errType = 'OpenSCADCompileError';
+    let errLine = null;
+    let cleanMsg = errorMsg;
+
+    const lineMatch = errorMsg.match(/line\s+(\d+)/i) || errorMsg.match(/input\.scad:(\d+)/i);
+    if (lineMatch) {
+      errLine = parseInt(lineMatch[1], 10);
+    }
+
+    if (/syntax\s+error|parser\s+error/i.test(errorMsg)) {
+      errType = 'SyntaxError';
+    } else if (/undef\s+variable/i.test(errorMsg)) {
+      errType = 'UndefinedVariable';
+    } else if (/ignoring unknown module|not defined|unknown module/i.test(errorMsg)) {
+      errType = 'UndefinedModule';
+    } else if (/recursion\s+depth/i.test(errorMsg)) {
+      errType = 'RecursionDepthError';
+    } else if (/manifold|cgal|polygon\s+not\s+closed|empty\s+or\s+invalid/i.test(errorMsg)) {
+      errType = 'ManifoldCSGError';
+    }
+
+    const lines = errorMsg.split('\n');
+    for (const l of lines) {
+      const trimmed = l.trim();
+      if (/^(ERROR|WARNING|CGAL error|OpenSCAD compile failed)/i.test(trimmed)) {
+        cleanMsg = trimmed;
+        break;
+      }
+    }
+
+    let snippet = '';
+    if (errLine && scadCode) {
+      const codeLines = scadCode.split('\n');
+      const start = Math.max(0, errLine - 3);
+      const end = Math.min(codeLines.length, errLine + 2);
+      snippet = codeLines.slice(start, end).map((l, i) => {
+        const lineNo = start + i + 1;
+        const marker = lineNo === errLine ? ' >> ' : '    ';
+        return `${marker}${lineNo}: ${l}`;
+      }).join('\n');
+    }
+
+    return {
+      errorType,
+      errorLine,
+      cleanMessage: cleanMsg,
+      snippet,
+      fullStderr: errorMsg
+    };
+  }
+  window.parseOpenSCADError = parseOpenSCADError;
+
   /** Stream /api/ai/chat (same NVIDIA/Groq backend as the code editor). */
   async function streamCadAI(messages) {
+    cadAbortController = new AbortController();
     const resp = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: cadAbortController.signal,
       body: JSON.stringify({
         model: getCadModel(),
         context: 'cad',
@@ -5124,6 +5824,7 @@ window.ViewManager = (function() {
     }
     return text;
   }
+
 
   // ── Studio State ──────────────────────────────────────────────
   let currentSpec    = null;   // structured design spec JSON
@@ -5263,7 +5964,26 @@ window.ViewManager = (function() {
     });
   });
 
-  btnCadGenerate.addEventListener('click', generateCAD);
+  btnCadGenerate.addEventListener('click', () => {
+    if (btnCadGenerate.classList.contains('is-working')) {
+      stopCadAI();
+    } else {
+      generateCAD();
+    }
+  });
+
+  if (cadPromptInput) {
+    cadPromptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (btnCadGenerate.classList.contains('is-working')) {
+          stopCadAI();
+        } else {
+          generateCAD();
+        }
+      }
+    });
+  }
 
   // ── Three.js Viewport ─────────────────────────────────────────
   function initThreeViewport() {
@@ -5568,58 +6288,399 @@ Rules (strictly enforced):
     );
 
     renderParamControls(specJson.parameters || {}, specJson.units || 'mm');
-    await compileAndRenderWithRetry(scadCode, specJson, prompt, 0);
 
-    btnCadGenerate.disabled = false;
+    if (activeCADLoop && activeCADLoop.isActive) {
+      activeCADLoop.abort();
+    }
+    activeCADLoop = new CADAutonomousRepairLoop({
+      maxIterations: 4,
+      model: getCadModel(),
+      chatContainer: cadChatMessages
+    });
+    await activeCADLoop.start(prompt, scadCode);
+
     cadPromptInput.value = '';
   }
 
-  // ── Auto-repair loop (up to 3 attempts) ──────────────────────
-  async function compileAndRenderWithRetry(scadCode, specJson, originalPrompt, attempt) {
-    setStatus(`⏳ Compiling with OpenSCAD WASM… (attempt ${attempt + 1}/3)`);
-    try {
-      const stlData = await compileScadToSTL(scadCode);
-      loadSTLIntoViewport(stlData);
-      setStatus(`✅ ${specJson.title || 'Model'} — rendered ${(stlData.length / 1024).toFixed(0)} KB STL`);
-      appendChatMsg('assistant', `✅ 3D model compiled and rendered. Use the viewport to inspect, download buttons for files, and edit parameters above to regenerate.`);
-    } catch (err) {
-      if (attempt < 2) {
-        setStatus(`⚠️ Compile error — asking AI to repair… (attempt ${attempt + 1}/3)`);
-        appendChatMsg('assistant', `⚠️ Compile error on attempt ${attempt + 1}:\n\`\`\`\n${err.message}\n\`\`\`\nAsking AI to repair…`);
+  // ── Autonomous CAD Self-Healing Loop Class ────────────────────
+  class CADAutonomousRepairLoop {
+    constructor(options = {}) {
+      this.maxIterations = options.maxIterations || 4;
+      this.model = options.model || getCadModel();
+      this.chatContainer = options.chatContainer || cadChatMessages || document.getElementById('aiMessages');
+      this.isActive = false;
+      this.isAborted = false;
+      this.immutableUserGoal = '';
+      this.currentIteration = 1;
+      this.currentAbortController = null;
+      this.cardEl = null;
+      this.stepsEl = null;
+      this.badgeEl = null;
+      this.statusTextEl = null;
+      this.stopBtn = null;
+    }
 
-        const repairedCode = await repairScadCode(scadCode, err.message, attempt);
-        if (repairedCode) {
-          currentScad = repairedCode;
-          cadSourceEditor.value = repairedCode;
-          await compileAndRenderWithRetry(repairedCode, specJson, originalPrompt, attempt + 1);
-        } else {
-          setStatus('❌ Could not repair — showing source for manual editing');
-          showCompileError(err.message);
-        }
-      } else {
-        setStatus('❌ Compile failed after 3 attempts — edit source manually');
-        showCompileError(err.message);
-        appendChatMsg('assistant',
-          `❌ Could not compile after 3 attempts. The source is shown in the editor below.\n\n` +
-          `**Error:** ${err.message}\n\n` +
-          `Try reducing fillet radii or simplifying the geometry, then click ▶ Preview.`, true);
+    createCard() {
+      const card = document.createElement('div');
+      card.className = 'ai-loop-card';
+
+      const header = document.createElement('div');
+      header.className = 'ai-loop-header';
+
+      const left = document.createElement('div');
+      left.className = 'ai-loop-header-left';
+
+      this.badgeEl = document.createElement('span');
+      this.badgeEl.className = 'ai-loop-badge running';
+      this.badgeEl.textContent = 'AUTO-HEAL';
+
+      this.statusTextEl = document.createElement('span');
+      this.statusTextEl.className = 'ai-loop-status-text';
+      this.statusTextEl.textContent = 'Active Control: Compiling OpenSCAD WASM…';
+
+      left.appendChild(this.badgeEl);
+      left.appendChild(this.statusTextEl);
+
+      this.stopBtn = document.createElement('button');
+      this.stopBtn.className = 'ai-loop-stop-btn';
+      this.stopBtn.textContent = 'Stop Loop';
+      this.stopBtn.addEventListener('click', () => this.abort());
+
+      header.appendChild(left);
+      header.appendChild(this.stopBtn);
+
+      this.stepsEl = document.createElement('div');
+      this.stepsEl.className = 'ai-loop-body';
+
+      card.appendChild(header);
+      card.appendChild(this.stepsEl);
+
+      this.cardEl = card;
+      if (this.chatContainer) {
+        this.chatContainer.appendChild(card);
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
       }
     }
-  }
 
-  async function repairScadCode(brokenCode, errorMsg, attempt) {
-    const repairPrompt = `This OpenSCAD code has a compile error. Fix it and return ONLY the corrected OpenSCAD code, no explanation, no fences.
-Error: ${errorMsg}
-Code:
-${brokenCode}`;
-    try {
-      let code = await streamCadAI([
-        { role: 'system', content: 'You are an OpenSCAD expert. Fix compile errors. Output ONLY corrected OpenSCAD code. No markdown, no explanation. Prefer simple geometry; avoid minkowski if it caused the error.' },
-        { role: 'user', content: repairPrompt }
-      ]);
-      return code.replace(/^```[\w]*\n?/m, '').replace(/\n?```\s*$/m, '').trim() || null;
-    } catch { return null; }
+    addStep(icon, text, type = 'normal', snippet = null) {
+      if (!this.stepsEl) return;
+      const step = document.createElement('div');
+      step.className = `ai-loop-step ${type}`;
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'ai-loop-step-icon';
+      iconEl.textContent = icon;
+
+      const textEl = document.createElement('span');
+      textEl.innerHTML = text;
+
+      step.appendChild(iconEl);
+      step.appendChild(textEl);
+      this.stepsEl.appendChild(step);
+
+      if (snippet) {
+        const snippetEl = document.createElement('div');
+        snippetEl.className = 'ai-loop-error-snippet';
+        snippetEl.textContent = snippet;
+        this.stepsEl.appendChild(snippetEl);
+      }
+
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    addSummary(text) {
+      if (!this.stepsEl) return;
+      const sum = document.createElement('div');
+      sum.className = 'ai-loop-summary';
+      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      this.stepsEl.appendChild(sum);
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    setEditorActive(active) {
+      const badge = document.getElementById('cadActiveControlBadge');
+      if (badge) {
+        if (active) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+      const pane = document.getElementById('cadSourcePane');
+      if (pane) {
+        if (active) {
+          pane.classList.remove('collapsed');
+          pane.classList.add('ai-active-editor');
+        } else {
+          pane.classList.remove('ai-active-editor');
+        }
+      }
+    }
+
+    applyCodeOrEdit(text) {
+      if (!text) return { applied: false, type: 'none' };
+      const currentCode = cadSourceEditor.value || currentScad || '';
+
+      // 1. Surgical edits
+      const surgicalEdits = (window.parseSurgicalEdits ? window.parseSurgicalEdits(text) : []);
+      if (surgicalEdits && surgicalEdits.length > 0) {
+        let updated = currentCode;
+        let appliedCount = 0;
+        for (const edit of surgicalEdits) {
+          if (updated.includes(edit.findText)) {
+            updated = updated.replace(edit.findText, edit.replaceText);
+            appliedCount++;
+          }
+        }
+        if (appliedCount > 0) {
+          currentScad = updated;
+          cadSourceEditor.value = updated;
+          return { applied: true, type: 'surgical', count: appliedCount };
+        }
+      }
+
+      // 2. Full OpenSCAD code block
+      const scadMatch = text.match(/```(?:openscad|scad)?([\s\S]*?)```/);
+      let codeToUse = null;
+      if (scadMatch && scadMatch[1] && scadMatch[1].trim()) {
+        codeToUse = scadMatch[1].trim();
+      } else if (text.includes('module') || text.includes('difference()') || text.includes('union()') || text.includes('cube(')) {
+        codeToUse = text.replace(/^```(?:openscad|scad)?\n?/m, '').replace(/\n?```\s*$/m, '').trim();
+      }
+
+      if (codeToUse) {
+        currentScad = codeToUse;
+        cadSourceEditor.value = codeToUse;
+        return { applied: true, type: 'full', code: codeToUse };
+      }
+
+      return { applied: false, type: 'none' };
+    }
+
+    async requestRepair(parsedErr) {
+      const currentCode = cadSourceEditor.value || currentScad || '';
+      const prompt = `[IMMUTABLE USER GOAL]
+${this.immutableUserGoal}
+
+[CURRENT OPENSCAD SOURCE CODE]
+\`\`\`openscad
+${currentCode}
+\`\`\`
+
+[OPENSCAD WASM COMPILE ERROR - RUN #${this.currentIteration}]
+Error Type: ${parsedErr.errorType}${parsedErr.errorLine ? ` (Line ${parsedErr.errorLine})` : ''}
+Error Summary: ${parsedErr.cleanMessage}
+${parsedErr.snippet ? `Failing Code Snippet around Line ${parsedErr.errorLine}:\n${parsedErr.snippet}\n` : ''}
+Full Compiler Stderr:
+${parsedErr.fullStderr}
+
+[INSTRUCTION]
+Perform an exact surgical fix to eliminate this OpenSCAD compile/geometry error while strictly preserving user parameters, dimensions, and other modules.
+Output the surgical replacement using this exact format:
+<<<SURGICAL_EDIT>>>
+<<<FIND>>>
+<exact lines currently in code to replace>
+<<<REPLACE>>>
+<corrected lines>
+<<<END_EDIT>>>
+
+If extensive structural rewriting is required, output the complete corrected \`\`\`openscad ... \`\`\` code block instead.`;
+
+      this.currentAbortController = new AbortController();
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: this.currentAbortController.signal,
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are an authoritative OpenSCAD WASM self-healing repair engineer in RUN01. Fix compile, syntax, undefined variable, or manifold errors with surgical precision to guarantee clean WASM rendering with 0 errors.' },
+            { role: 'user', content: prompt }
+          ],
+          model: this.model,
+          context: 'cad'
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `CAD AI repair request failed with code ${resp.status}`);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let repairResponse = '';
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const rawJson = trimmed.substring(6);
+              const parsed = JSON.parse(rawJson);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              repairResponse += token;
+            } catch (_) {}
+          }
+        }
+      }
+
+      return repairResponse;
+    }
+
+    async start(userGoal, initialCode) {
+      this.isActive = true;
+      this.isAborted = false;
+      this.immutableUserGoal = userGoal;
+      this.currentIteration = 1;
+
+      this.createCard();
+      this.setEditorActive(true);
+      setCadWorking(true);
+
+      if (initialCode) {
+        const initialApply = this.applyCodeOrEdit(initialCode);
+        if (initialApply.applied) {
+          if (initialApply.type === 'surgical') {
+            this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to OpenSCAD source.`, 'active');
+          } else {
+            this.addStep('📝', 'Injected OpenSCAD 3D model source code into editor.', 'active');
+          }
+        } else {
+          this.addStep('ℹ️', 'Reading active OpenSCAD editor source for verification…', 'active');
+        }
+      }
+
+      while (this.isActive && !this.isAborted) {
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Compiling with OpenSCAD WASM…`;
+        }
+        setStatus(`⏳ Compiling with OpenSCAD WASM… (Attempt #${this.currentIteration})`);
+        this.addStep('⚡', `Compiling in OpenSCAD WASM (Attempt #${this.currentIteration})…`, 'active');
+
+        let stlData = null;
+        let compileError = null;
+        const codeToCompile = cadSourceEditor.value || currentScad || '';
+
+        try {
+          stlData = await compileScadToSTL(codeToCompile);
+        } catch (err) {
+          compileError = err;
+        }
+
+        if (this.isAborted) {
+          this.cleanup();
+          return;
+        }
+
+        // Clean compilation with 0 errors!
+        if (stlData && !compileError) {
+          loadSTLIntoViewport(stlData);
+          const sizeKb = (stlData.length / 1024).toFixed(0);
+          setStatus(`✅ Rendered ${sizeKb} KB STL (0 Errors)`);
+          this.badgeEl.className = 'ai-loop-badge';
+          this.badgeEl.textContent = '✓ 0 ERRORS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Clean OpenSCAD WASM Compile (0 Errors in ${sizeKb} KB STL)`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+
+          this.addStep('✓', `WASM compilation successful with 0 errors. ${sizeKb} KB STL generated.`, 'success');
+          this.addSummary(`CAD Studio autonomous self-healing complete. 0 errors.`);
+          this.cleanup();
+          return;
+        }
+
+        // Compile error detected!
+        const parsedErr = parseOpenSCADError(compileError ? compileError.message : 'Unknown compile error', codeToCompile);
+        const lineText = parsedErr.errorLine ? ` (Line ${parsedErr.errorLine})` : '';
+
+        this.addStep('⚠️', `Compile error in Run #${this.currentIteration}: <strong>${parsedErr.errorType}</strong>${lineText}`, 'warning', parsedErr.snippet || parsedErr.cleanMessage);
+        showCompileError(parsedErr.cleanMessage || compileError.message);
+
+        if (this.currentIteration >= this.maxIterations) {
+          this.badgeEl.className = 'ai-loop-badge error';
+          this.badgeEl.textContent = 'MAX ATTEMPTS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Halted after ${this.maxIterations} attempts`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+          this.addStep('🛑', `Maximum repair attempts reached. Editor contains latest code for manual adjustment.`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        // Synthesize surgical fix
+        this.badgeEl.className = 'ai-loop-badge healing';
+        this.badgeEl.textContent = 'HEALING';
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+        }
+        this.addStep('🔧', `AI analyzing OpenSCAD error and synthesizing surgical fix…`, 'active');
+
+        let repairResponse = '';
+        try {
+          repairResponse = await this.requestRepair(parsedErr);
+        } catch (repairErr) {
+          if (this.isAborted) { this.cleanup(); return; }
+          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        if (this.isAborted) { this.cleanup(); return; }
+
+        const repairApply = this.applyCodeOrEdit(repairResponse);
+        if (repairApply.applied) {
+          if (repairApply.type === 'surgical') {
+            this.addStep('✓', `Applied surgical patch to OpenSCAD source editor.`, 'active');
+          } else {
+            this.addStep('✓', `Updated OpenSCAD editor with restructured model geometry.`, 'active');
+          }
+        } else {
+          this.addStep('⚠️', `Retrying compilation with current source…`, 'warning');
+        }
+
+        this.currentIteration++;
+      }
+
+      this.cleanup();
+    }
+
+    abort() {
+      this.isAborted = true;
+      if (this.currentAbortController) {
+        try { this.currentAbortController.abort(); } catch (_) {}
+        this.currentAbortController = null;
+      }
+      if (this.badgeEl) {
+        this.badgeEl.className = 'ai-loop-badge error';
+        this.badgeEl.textContent = 'STOPPED';
+      }
+      if (this.statusTextEl) {
+        this.statusTextEl.textContent = 'CAD Auto-Heal Stopped by User';
+      }
+      if (this.stopBtn) this.stopBtn.style.display = 'none';
+      this.addStep('🛑', 'CAD healing loop aborted by user.', 'warning');
+      this.cleanup();
+    }
+
+    cleanup() {
+      this.isActive = false;
+      this.setEditorActive(false);
+      setCadWorking(false);
+    }
   }
+  window.CADAutonomousRepairLoop = CADAutonomousRepairLoop;
+
 
   function showCompileError(msg) {
     if (!cadViewportPlaceholder) return;
@@ -5685,7 +6746,16 @@ ${brokenCode}`;
       }
       currentScad = newScad;
       cadSourceEditor.value = newScad;
-      await compileAndRenderWithRetry(newScad, currentSpec, '', 0);
+
+      if (activeCADLoop && activeCADLoop.isActive) {
+        activeCADLoop.abort();
+      }
+      activeCADLoop = new CADAutonomousRepairLoop({
+        maxIterations: 4,
+        model: getCadModel(),
+        chatContainer: cadChatMessages
+      });
+      await activeCADLoop.start(`Regenerate with parameters: ${JSON.stringify(currentSpec.parameters)}`, newScad);
     });
   }
 
@@ -5695,17 +6765,41 @@ ${brokenCode}`;
       const code = cadSourceEditor.value.trim();
       if (!code) return;
       currentScad = code;
-      setStatus('⏳ Compiling…');
+      setStatus('⏳ Compiling with OpenSCAD WASM…');
       try {
         const stlData = await compileScadToSTL(code);
         loadSTLIntoViewport(stlData);
-        setStatus(`✅ Compiled — ${(stlData.length / 1024).toFixed(0)} KB`);
+        setStatus(`✅ Compiled cleanly — ${(stlData.length / 1024).toFixed(0)} KB STL (0 Errors)`);
       } catch (err) {
-        setStatus('❌ Compile error — see error in viewport');
-        showCompileError(err.message);
+        setStatus('⚠️ Compile error — engaging AI auto-healing loop…');
+        if (activeCADLoop && activeCADLoop.isActive) {
+          activeCADLoop.abort();
+        }
+        activeCADLoop = new CADAutonomousRepairLoop({
+          maxIterations: 4,
+          model: getCadModel(),
+          chatContainer: cadChatMessages
+        });
+        activeCADLoop.start('Compile and verify OpenSCAD source', code);
       }
     });
   }
+
+  // Global entry point to launch CAD autonomous self-healing loop
+  window.startCADAutonomousLoop = function(userGoal, initialCode, chatContainer) {
+    openCADModal();
+    if (activeCADLoop && activeCADLoop.isActive) {
+      activeCADLoop.abort();
+    }
+    activeCADLoop = new CADAutonomousRepairLoop({
+      maxIterations: 4,
+      model: getCadModel(),
+      chatContainer: chatContainer || cadChatMessages
+    });
+    activeCADLoop.start(userGoal, initialCode);
+    return activeCADLoop;
+  };
+
 
   // ── Viewport controls ─────────────────────────────────────────
   if (btnCadWireframe) {

@@ -1,4 +1,4 @@
-﻿---
+---
 name: desmos
 description: Authoritative guide for generating interactive Desmos mathematical graphs, analytical proofs, parametric curves, and dynamic sliders in RUN01 without errors.
 argument-hint: "[equations] [simulation-type]"
@@ -101,3 +101,27 @@ y_2(x) = \tan(\theta_r) x \{x > 0\}
 - Never emit non-LaTeX variable operators like Python `**` (use `^`).
 - Never emit raw text comments starting with `#` inside Desmos code blocks (only clean math equations per line).
 - Ensure every equation is on its own line.
+
+---
+
+## 5. Autonomous AI Self-Healing Execution Loop (Desmos Math Strong Loop)
+
+When operating inside RUN01's autonomous Desmos self-healing loop or fixing an existing mathematical model:
+1. **Targeted Surgical Edits**:
+   - For LaTeX syntax corrections, slider parameter bounds, or equation repairs in existing Desmos simulations, output a precise surgical edit block:
+     ```text
+     <<<SURGICAL_EDIT>>>
+     <<<FIND>>>
+     exact LaTeX line currently failing in Desmos
+     <<<REPLACE>>>
+     corrected, valid Desmos LaTeX line
+     <<<END_EDIT>>>
+     ```
+   - The `<<<FIND>>>` block must match the exact failing LaTeX string.
+2. **Immutable Mathematical Context Preservation**:
+   - Never remove unrelated coordinate definitions, slider constants, bounds, or physics parameters.
+   - Fix the root mathematical error directly (e.g. format subscripts as `v_{1}`, enclose fractions in `\frac{}{}`, wrap exponents in curly braces `x^{2}`, convert multi-character variables to subscripted form, or fix unbalanced brackets).
+3. **Zero-Error Execution Guarantee**:
+   - Every equation in the Desmos calculator must parse and evaluate cleanly (`isError === false`) with **0 errors**.
+   - If extensive rewrites are necessary, provide a clean ` ```desmos ` block with one valid LaTeX expression per line.
+

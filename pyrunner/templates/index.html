@@ -797,17 +797,42 @@
 
 
   <!-- ══ DESMOS GRAPHING CALCULATOR MODAL ═════════════════════════════════════ -->
+  <!-- ══ DESMOS GRAPHING CALCULATOR MODAL ═════════════════════════════════════ -->
   <div class="desmos-modal-overlay hidden" id="desmosModalOverlay" role="dialog"
        aria-modal="true" aria-labelledby="desmosModalTitle">
     <div class="desmos-modal-card">
       <div class="desmos-modal-header">
-        <span class="desmos-modal-title" id="desmosModalTitle">
-          <span class="desmos-badge">DESMOS</span> Graphing Calculator
-        </span>
-        <button class="desmos-modal-close" id="btnCloseDesmosModal"
-                aria-label="Close Desmos Calculator">&times;</button>
+        <div class="desmos-modal-header-left">
+          <span class="desmos-badge">DESMOS</span>
+          <span class="desmos-modal-title" id="desmosModalTitle">Graphing Calculator &amp; Simulations</span>
+          <span class="ai-editor-control-badge hidden" id="desmosActiveControlBadge">
+            <span class="control-dot"></span>DESMOS ACTIVE CONTROL
+          </span>
+        </div>
+        <div class="desmos-modal-header-center">
+          <div class="desmos-prompt-row">
+            <input type="text" class="desmos-prompt-input" id="desmosPromptInput"
+                   placeholder="Describe math simulation, parametric curve, or equations… (Enter to generate)" />
+            <button class="desmos-send-btn" id="btnDesmosGenerate" aria-label="Generate or Heal Simulation" title="Generate simulation (Enter)">
+              <span class="desmos-btn-icon-send">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </span>
+              <span class="desmos-btn-icon-working">
+                <span class="ai-working-spinner"></span>
+                <span class="ai-working-stop-sq"></span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="desmos-modal-header-right">
+          <select class="cad-model-select" id="desmosModelSelect" aria-label="Select AI model" title="AI Model"></select>
+          <button class="btn btn-ghost cad-hdr-btn" id="btnDesmosClear" title="Clear expressions">Clear</button>
+          <button class="desmos-modal-close" id="btnCloseDesmosModal"
+                  aria-label="Close Desmos Calculator">&times;</button>
+        </div>
       </div>
-            <div class="desmos-modal-body">
+      <div class="desmos-modal-body">
+        <div class="desmos-loop-container hidden" id="desmosLoopContainer"></div>
         <div id="desmosMainCalculator" style="flex:1;width:100%;height:100%;min-height:0;"></div>
       </div>
     </div>
@@ -868,8 +893,14 @@
             <div class="cad-textarea-row">
               <textarea class="cad-textarea" id="cadPromptInput"
                 placeholder="Describe the 3D object… e.g. 'Create a wall-mounted phone stand for a 6.7-inch phone, 5mm thick base, 12-degree viewing angle, two cable slots, rounded edges, and four mounting holes.'"></textarea>
-              <button class="cad-send-btn" id="btnCadGenerate" aria-label="Generate CAD">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <button class="cad-send-btn" id="btnCadGenerate" aria-label="Generate CAD" title="Generate CAD (Enter)">
+                <span class="cad-btn-icon-send">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </span>
+                <span class="cad-btn-icon-working">
+                  <span class="ai-working-spinner"></span>
+                  <span class="ai-working-stop-sq"></span>
+                </span>
               </button>
             </div>
             <div class="cad-status-bar" id="cadStatusBar">Ready — enter a description and click Generate</div>
@@ -905,7 +936,12 @@
           <!-- Source code pane (collapsed by default so preview stays large) -->
           <div class="cad-source-pane collapsed" id="cadSourcePane">
             <div class="cad-source-header">
-              <span class="cad-source-title">OpenSCAD Source</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="cad-source-title">OpenSCAD Source</span>
+                <span class="ai-editor-control-badge hidden" id="cadActiveControlBadge">
+                  <span class="control-dot"></span>CAD ACTIVE CONTROL
+                </span>
+              </div>
               <div class="cad-source-actions">
                 <button class="cad-src-btn" id="btnCadCopySource" title="Copy source">Copy</button>
                 <button class="cad-src-btn cad-src-run" id="btnCadRunSource" title="Compile and preview">▶ Preview</button>

@@ -2793,7 +2793,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 10px 18px;
   background: #000000;
   border-bottom: 1px solid rgba(255,255,255,0.15);
   flex-shrink: 0;
@@ -2802,6 +2802,98 @@ body::after {
 [data-theme="light"] .desmos-modal-header {
   background: #ffffff;
   border-bottom-color: rgba(0,0,0,0.12);
+}
+
+.desmos-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.desmos-modal-header-center {
+  flex: 1;
+  max-width: 650px;
+  margin: 0 12px;
+}
+.desmos-prompt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #111111;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 8px;
+  padding: 3px 4px 3px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.desmos-prompt-row:focus-within {
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.18);
+}
+[data-theme="light"] .desmos-prompt-row {
+  background: #f1f5f9;
+  border-color: rgba(0,0,0,0.16);
+}
+.desmos-prompt-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #fff);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+}
+[data-theme="light"] .desmos-prompt-input {
+  color: #0f172a;
+}
+.desmos-prompt-input::placeholder {
+  color: var(--text-muted, #71717a);
+  font-size: 11.5px;
+}
+.desmos-send-btn {
+  background: #38bdf8;
+  border: none;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.desmos-send-btn:hover {
+  background: #7dd3fc;
+  transform: translateY(-1px);
+}
+.desmos-send-btn:disabled {
+  background: #333;
+  cursor: not-allowed;
+  transform: none;
+}
+.desmos-modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.desmos-loop-container {
+  padding: 10px 16px;
+  background: #080808;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  max-height: 240px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.desmos-loop-container.hidden {
+  display: none !important;
+}
+[data-theme="light"] .desmos-loop-container {
+  background: #f8fafc;
+  border-bottom-color: rgba(0,0,0,0.1);
 }
 
 .desmos-modal-title {
@@ -4921,12 +5013,16 @@ body:has(#ideView.hidden) .physics-modal-overlay {
    STRONG LOOP: AUTONOMOUS SELF-HEALING & ACTIVE EDITOR CONTROL
    ══════════════════════════════════════════════════════════════════ */
 
-/* Send button working / stop state */
-.ai-send-btn .ai-btn-icon-send {
+/* Send button working / stop state across all panels */
+.ai-send-btn .ai-btn-icon-send,
+.cad-send-btn .cad-btn-icon-send,
+.desmos-send-btn .desmos-btn-icon-send {
   display: block;
   transition: transform 0.15s ease;
 }
-.ai-send-btn .ai-btn-icon-working {
+.ai-send-btn .ai-btn-icon-working,
+.cad-send-btn .cad-btn-icon-working,
+.desmos-send-btn .desmos-btn-icon-working {
   display: none;
   position: relative;
   width: 18px;
@@ -4936,18 +5032,24 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 }
 
 /* When AI is working (streaming or running auto-heal loop) */
-.ai-send-btn.is-working {
+.ai-send-btn.is-working,
+.cad-send-btn.is-working,
+.desmos-send-btn.is-working {
   background: rgba(239, 68, 68, 0.16) !important;
   border-color: rgba(239, 68, 68, 0.5) !important;
   color: #f87171 !important;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
   cursor: pointer;
 }
-.ai-send-btn.is-working .ai-btn-icon-send {
-  display: none;
+.ai-send-btn.is-working .ai-btn-icon-send,
+.cad-send-btn.is-working .cad-btn-icon-send,
+.desmos-send-btn.is-working .desmos-btn-icon-send {
+  display: none !important;
 }
-.ai-send-btn.is-working .ai-btn-icon-working {
-  display: flex;
+.ai-send-btn.is-working .ai-btn-icon-working,
+.cad-send-btn.is-working .cad-btn-icon-working,
+.desmos-send-btn.is-working .desmos-btn-icon-working {
+  display: flex !important;
 }
 .ai-working-spinner {
   position: absolute;
@@ -4965,15 +5067,21 @@ body:has(#ideView.hidden) .physics-modal-overlay {
   border-radius: 2px;
   transition: transform 0.15s ease;
 }
-.ai-send-btn.is-working:hover .ai-working-stop-sq {
+.ai-send-btn.is-working:hover .ai-working-stop-sq,
+.cad-send-btn.is-working:hover .ai-working-stop-sq,
+.desmos-send-btn.is-working:hover .ai-working-stop-sq {
   transform: scale(1.2);
 }
-.ai-send-btn.is-working:hover {
+.ai-send-btn.is-working:hover,
+.cad-send-btn.is-working:hover,
+.desmos-send-btn.is-working:hover {
   background: rgba(239, 68, 68, 0.28) !important;
   border-color: rgba(239, 68, 68, 0.8) !important;
 }
 
-[data-theme="light"] .ai-send-btn.is-working {
+[data-theme="light"] .ai-send-btn.is-working,
+[data-theme="light"] .cad-send-btn.is-working,
+[data-theme="light"] .desmos-send-btn.is-working {
   background: rgba(239, 68, 68, 0.1) !important;
   border-color: rgba(239, 68, 68, 0.4) !important;
 }
@@ -4982,7 +5090,7 @@ body:has(#ideView.hidden) .physics-modal-overlay {
   100% { transform: rotate(360deg); }
 }
 
-/* Monaco AI Active Control Badge */
+/* Monaco / CAD / Desmos AI Active Control Badge */
 .ai-editor-control-badge {
   display: inline-flex;
   align-items: center;
@@ -5020,7 +5128,8 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 }
 
 /* Active editor subtle glowing border */
-.pane-editor.ai-active-editor {
+.pane-editor.ai-active-editor,
+.cad-source-pane.ai-active-editor {
   box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 12px rgba(168, 85, 247, 0.15);
   transition: box-shadow 0.3s ease;
 }
