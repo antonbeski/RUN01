@@ -591,11 +591,6 @@
             <span class="pill pill-ai" style="background: linear-gradient(135deg, #ffffff, #e5e5e5); color: #000; font-weight: bold; border: none;">AI</span>
           </span>
           <div class="pane-right-meta">
-            <!-- Loop Mode Auto-Heal Toggle -->
-            <button class="btn-loop-mode active" id="btnAILoopToggle" title="Auto-Heal: Automatically execute and surgically fix errors until 0 errors (Strong Loop)">
-              <span class="loop-icon">⟳</span>
-              <span class="loop-label">Auto-Heal</span>
-            </button>
             <!-- Model selector -->
             <select class="ai-model-select" id="aiModelSelect" aria-label="Select AI model">
               <!-- Dynamically populated -->
@@ -631,8 +626,12 @@
             <!-- Textarea row -->
             <div class="ai-textarea-row">
               <textarea class="ai-textarea" id="aiTextarea" placeholder="Ask AI..."></textarea>
-              <button class="ai-send-btn" id="aiSendBtn" aria-label="Send">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <button class="ai-send-btn" id="aiSendBtn" aria-label="Send" title="Send (Enter)">
+                <svg class="ai-btn-icon-send" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <div class="ai-btn-icon-working" aria-hidden="true">
+                  <span class="ai-working-spinner"></span>
+                  <span class="ai-working-stop-sq"></span>
+                </div>
               </button>
             </div>
           </div>

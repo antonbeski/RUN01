@@ -4921,63 +4921,65 @@ body:has(#ideView.hidden) .physics-modal-overlay {
    STRONG LOOP: AUTONOMOUS SELF-HEALING & ACTIVE EDITOR CONTROL
    ══════════════════════════════════════════════════════════════════ */
 
-/* Header Auto-Heal toggle button */
-.btn-loop-mode {
-  display: inline-flex;
+/* Send button working / stop state */
+.ai-send-btn .ai-btn-icon-send {
+  display: block;
+  transition: transform 0.15s ease;
+}
+.ai-send-btn .ai-btn-icon-working {
+  display: none;
+  position: relative;
+  width: 18px;
+  height: 18px;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.18s ease;
-  user-select: none;
-}
-.btn-loop-mode:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-.btn-loop-mode .loop-icon {
-  font-size: 12px;
-  line-height: 1;
-  display: inline-block;
-  transition: transform 0.3s ease;
-}
-.btn-loop-mode.active {
-  background: rgba(52, 211, 153, 0.12);
-  border-color: rgba(52, 211, 153, 0.4);
-  color: #34d399;
-}
-.btn-loop-mode.active:hover {
-  background: rgba(52, 211, 153, 0.2);
-  border-color: rgba(52, 211, 153, 0.6);
-}
-.btn-loop-mode.spinning .loop-icon {
-  animation: spinLoop 1s linear infinite;
-}
-@keyframes spinLoop {
-  100% { transform: rotate(360deg); }
+  justify-content: center;
 }
 
-/* Light mode */
-[data-theme="light"] .btn-loop-mode {
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  background: rgba(0, 0, 0, 0.03);
-  color: #666666;
+/* When AI is working (streaming or running auto-heal loop) */
+.ai-send-btn.is-working {
+  background: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #f87171 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  cursor: pointer;
 }
-[data-theme="light"] .btn-loop-mode:hover {
-  background: rgba(0, 0, 0, 0.06);
-  color: #000000;
+.ai-send-btn.is-working .ai-btn-icon-send {
+  display: none;
 }
-[data-theme="light"] .btn-loop-mode.active {
-  background: rgba(5, 150, 105, 0.12);
-  border-color: rgba(5, 150, 105, 0.5);
-  color: #059669;
+.ai-send-btn.is-working .ai-btn-icon-working {
+  display: flex;
+}
+.ai-working-spinner {
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #ef4444;
+  border-right-color: #ef4444;
+  animation: aiSpinWorking 0.8s linear infinite;
+}
+.ai-working-stop-sq {
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 2px;
+  transition: transform 0.15s ease;
+}
+.ai-send-btn.is-working:hover .ai-working-stop-sq {
+  transform: scale(1.2);
+}
+.ai-send-btn.is-working:hover {
+  background: rgba(239, 68, 68, 0.28) !important;
+  border-color: rgba(239, 68, 68, 0.8) !important;
+}
+
+[data-theme="light"] .ai-send-btn.is-working {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+@keyframes aiSpinWorking {
+  100% { transform: rotate(360deg); }
 }
 
 /* Monaco AI Active Control Badge */

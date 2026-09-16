@@ -3069,32 +3069,31 @@ document.addEventListener('keydown', (e) => {
   const aiMessages = document.getElementById('aiMessages');
   const aiTextarea = document.getElementById('aiTextarea');
   const aiSendBtn = document.getElementById('aiSendBtn');
-  const btnAILoopToggle = document.getElementById('btnAILoopToggle');
+  // ── AI Working State & Abort Controller ────────────────────
+  let activeAbortController = null;
 
-  // ── Auto-Heal Loop Mode Toggle (Strong Loop) ────────────────
-  let loopModeEnabled = localStorage.getItem('run01_auto_heal') !== 'false'; // Default: ON
-
-  function updateLoopToggleUI() {
-    if (!btnAILoopToggle) return;
-    if (loopModeEnabled) {
-      btnAILoopToggle.classList.add('active');
-      btnAILoopToggle.title = 'Auto-Heal: ON (Strong Loop: Auto-executes and surgically repairs code until 0 errors)';
+  function setAIWorking(isWorking) {
+    if (!aiSendBtn) return;
+    if (isWorking) {
+      aiSendBtn.classList.add('is-working');
+      aiSendBtn.title = 'AI is working… Click to stop';
+      aiSendBtn.setAttribute('aria-label', 'Stop AI');
     } else {
-      btnAILoopToggle.classList.remove('active');
-      btnAILoopToggle.title = 'Auto-Heal: OFF (Click to enable autonomous self-healing loop)';
+      aiSendBtn.classList.remove('is-working');
+      aiSendBtn.title = 'Send (Enter)';
+      aiSendBtn.setAttribute('aria-label', 'Send');
     }
   }
-  updateLoopToggleUI();
 
-  if (btnAILoopToggle) {
-    btnAILoopToggle.addEventListener('click', () => {
-      loopModeEnabled = !loopModeEnabled;
-      localStorage.setItem('run01_auto_heal', loopModeEnabled ? 'true' : 'false');
-      updateLoopToggleUI();
-      if (!loopModeEnabled && window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-        window.activeAutonomousLoop.abort();
-      }
-    });
+  function stopAIAndLoop() {
+    if (activeAbortController) {
+      try { activeAbortController.abort(); } catch (_) {}
+      activeAbortController = null;
+    }
+    if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+      window.activeAutonomousLoop.abort();
+    }
+    setAIWorking(false);
   }
 
   // ── Parse surgical edit blocks from markdown or raw text ────
@@ -3276,11 +3275,6 @@ document.addEventListener('keydown', (e) => {
         if (active) editorPane.classList.add('ai-active-editor');
         else editorPane.classList.remove('ai-active-editor');
       }
-      const toggle = document.getElementById('btnAILoopToggle');
-      if (toggle) {
-        if (active) toggle.classList.add('spinning');
-        else toggle.classList.remove('spinning');
-      }
     }
 
     applyCodeOrEdit(text) {
@@ -3343,9 +3337,11 @@ Respond with the surgical replacement using this exact format:
 
 If extensive structural changes are required, output the complete corrected \`\`\`python ... \`\`\` script instead.`;
 
+      this.currentAbortController = new AbortController();
       const resp = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: this.currentAbortController.signal,
         body: JSON.stringify({
           messages: [
             { role: 'system', content: 'You are an authoritative Python self-healing repair engineer in RUN01. Synthesize minimal surgical edits targeting only broken lines to guarantee clean execution with 0 errors.' },
@@ -3398,6 +3394,7 @@ If extensive structural changes are required, output the complete corrected \`\`
 
       this.createCard();
       this.setEditorActive(true);
+      setAIWorking(true);
 
       // Apply initial response to Monaco editor
       const initialApply = this.applyCodeOrEdit(initialAssistantResponse);
@@ -3479,6 +3476,10 @@ If extensive structural changes are required, output the complete corrected \`\`
         try {
           repairResponse = await this.requestRepair(result.error, errType, errLine, result.stdout, result.stderr);
         } catch (repairErr) {
+          if (this.isAborted) {
+            this.cleanup();
+            return;
+          }
           this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
           this.cleanup();
           return;
@@ -3509,6 +3510,10 @@ If extensive structural changes are required, output the complete corrected \`\`
 
     abort() {
       this.isAborted = true;
+      if (this.currentAbortController) {
+        try { this.currentAbortController.abort(); } catch (_) {}
+        this.currentAbortController = null;
+      }
       if (this.badgeEl) {
         this.badgeEl.className = 'ai-loop-badge error';
         this.badgeEl.textContent = 'STOPPED';
@@ -3524,6 +3529,7 @@ If extensive structural changes are required, output the complete corrected \`\`
     cleanup() {
       this.isActive = false;
       this.setEditorActive(false);
+      setAIWorking(false);
     }
   }
   window.AutonomousRepairLoop = AutonomousRepairLoop;
@@ -3632,7 +3638,13 @@ If extensive structural changes are required, output the complete corrected \`\`
     }
   });
 
-  aiSendBtn.addEventListener('click', () => sendUserMessage());
+  aiSendBtn.addEventListener('click', () => {
+    if (aiSendBtn.classList.contains('is-working')) {
+      stopAIAndLoop();
+    } else {
+      sendUserMessage();
+    }
+  });
 
   function appendMessage(role, text, isError = false) {
     const msgDiv = document.createElement('div');
@@ -3755,19 +3767,15 @@ If extensive structural changes are required, output the complete corrected \`\`
           acceptBtn.disabled = true;
           rejectBtn.disabled = true;
 
-          if (loopModeEnabled) {
-            if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-              window.activeAutonomousLoop.abort();
-            }
-            window.activeAutonomousLoop = new AutonomousRepairLoop({
-              maxIterations: 3,
-              model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
-              chatContainer: aiMessages
-            });
-            window.activeAutonomousLoop.start('Verify clean execution after surgical edit', part);
-          } else {
-            setTimeout(() => triggerRun(), 300);
+          if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+            window.activeAutonomousLoop.abort();
           }
+          window.activeAutonomousLoop = new AutonomousRepairLoop({
+            maxIterations: 3,
+            model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+            chatContainer: aiMessages
+          });
+          window.activeAutonomousLoop.start('Verify clean execution after surgical edit', part);
         });
 
         // Reject: clear decorations
@@ -3922,19 +3930,15 @@ If extensive structural changes are required, output the complete corrected \`\`
             if (monacoEditor) {
               monacoEditor.setValue(codeLines);
               runBtn.textContent = 'Running...';
-              if (loopModeEnabled) {
-                if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-                  window.activeAutonomousLoop.abort();
-                }
-                window.activeAutonomousLoop = new AutonomousRepairLoop({
-                  maxIterations: 3,
-                  model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
-                  chatContainer: aiMessages
-                });
-                window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + codeLines + '\n```');
-              } else {
-                triggerRun();
+              if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+                window.activeAutonomousLoop.abort();
               }
+              window.activeAutonomousLoop = new AutonomousRepairLoop({
+                maxIterations: 3,
+                model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+                chatContainer: aiMessages
+              });
+              window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + codeLines + '\n```');
               setTimeout(() => runBtn.textContent = ' Run', 2000);
             }
           });
@@ -4137,6 +4141,11 @@ If extensive structural changes are required, output the complete corrected \`\`
   }
 
   async function sendUserMessage(overrideText = null) {
+    if (aiSendBtn && aiSendBtn.classList.contains('is-working')) {
+      stopAIAndLoop();
+      return;
+    }
+
     const text = (overrideText || aiTextarea.value).trim();
     if (!text) return;
 
@@ -4157,10 +4166,14 @@ If extensive structural changes are required, output the complete corrected \`\`
       { role: 'user', content: text + context }
     ];
 
+    setAIWorking(true);
+    activeAbortController = new AbortController();
+
     try {
       const resp = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: activeAbortController.signal,
         body: JSON.stringify({
           messages,
           model,
@@ -4223,8 +4236,8 @@ If extensive structural changes are required, output the complete corrected \`\`
         codeActionBar.classList.add('visible');
       }
 
-      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP) ────────────────────
-      if (loopModeEnabled && (hasCode || hasSurgicalEdit) && activePanelContext === 'editor') {
+      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP - PRIMARY) ───────────
+      if ((hasCode || hasSurgicalEdit) && activePanelContext === 'editor') {
         if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
           window.activeAutonomousLoop.abort();
         }
@@ -4234,11 +4247,18 @@ If extensive structural changes are required, output the complete corrected \`\`
           chatContainer: aiMessages
         });
         window.activeAutonomousLoop.start(text, fullAssistantText);
+      } else {
+        setAIWorking(false);
       }
 
     } catch (err) {
       if (indicator) indicator.remove();
-      appendMessage('assistant', `Failed to get response: ${err.message}`, true);
+      if (err.name === 'AbortError') {
+        appendMessage('assistant', '⚠️ Generation stopped by user.', true);
+      } else {
+        appendMessage('assistant', `Failed to get response: ${err.message}`, true);
+      }
+      setAIWorking(false);
     }
   }
 
@@ -4279,19 +4299,15 @@ If extensive structural changes are required, output the complete corrected \`\`
       if (code) {
         if (monacoEditor) monacoEditor.setValue(code);
         aiActionRunBar.textContent = 'Running...';
-        if (loopModeEnabled) {
-          if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-            window.activeAutonomousLoop.abort();
-          }
-          window.activeAutonomousLoop = new AutonomousRepairLoop({
-            maxIterations: 3,
-            model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
-            chatContainer: aiMessages
-          });
-          window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + code + '\n```');
-        } else {
-          triggerRun();
+        if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+          window.activeAutonomousLoop.abort();
         }
+        window.activeAutonomousLoop = new AutonomousRepairLoop({
+          maxIterations: 3,
+          model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+          chatContainer: aiMessages
+        });
+        window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + code + '\n```');
         const bar = document.getElementById('aiCodeActionBar');
         setTimeout(() => {
           aiActionRunBar.textContent = ' Run';
