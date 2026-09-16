@@ -31,6 +31,8 @@
   --font-ui:   'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-logo: 'Pixelify Sans', sans-serif;
+  --font-landing-display: 'Bitcount Prop Single', monospace, sans-serif;
+  --font-landing-body:    'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* -- Layout ----------------------- */
   --nav-h:    56px;
@@ -3562,7 +3564,7 @@ body::after {
   min-height: 100vh;
   background: #000000;
   color: #ffffff;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Roboto', sans-serif;
   position: relative;
   overflow-x: hidden;
   transition: opacity 0.25s ease;
@@ -3611,7 +3613,8 @@ body::after {
 }
 
 .landing-nav a {
-  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
   color: rgba(255,255,255,0.72);
@@ -3646,9 +3649,9 @@ body::after {
 }
 
 .logo-pixel-text {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 18px;
-  font-weight: 800;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 19px;
+  font-weight: 400;
   letter-spacing: 0.05em;
   line-height: 1;
   color: #000000;
@@ -3663,9 +3666,9 @@ body::after {
   justify-content: center;
   gap: 9px;
   border: 2px solid #ffffff;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 13px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 13.5px;
+  font-weight: 400;
   letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 4px 4px 0 rgba(255,255,255,0.4);
@@ -3726,8 +3729,9 @@ body::after {
   border-bottom: 2px solid rgba(255,255,255,0.15);
   background: #080808;
   color: rgba(255,255,255,0.9);
-  font-size: 10px;
-  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
   letter-spacing: 0.05em;
   word-spacing: 12px;
   text-align: center;
@@ -3760,11 +3764,11 @@ body::after {
 
 .hero-content h1 {
   margin: 0;
-  font-family: 'Pixelify Sans', monospace;
-  font-weight: 800;
-  font-size: clamp(48px, 6.5vw, 92px);
-  line-height: 0.95;
-  letter-spacing: -0.02em;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: clamp(44px, 6vw, 84px);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
   color: #ffffff;
 }
 
@@ -3778,7 +3782,8 @@ body::after {
   font-size: clamp(15px, 1.2vw, 18px);
   line-height: 1.65;
   color: rgba(255, 255, 255, 0.75);
-  font-family: 'DM Mono', monospace;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 .hero-content .flex-actions {
@@ -3791,9 +3796,9 @@ body::after {
 }
 
 .eyebrow {
-  font-family: 'Pixelify Sans', monospace;
-  font-weight: 700;
-  font-size: 13px;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: 13.5px;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
@@ -3824,11 +3829,11 @@ body::after {
   gap: 8px;
   padding: 8px 4px;
   border-bottom: 2px solid #ffffff;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 400;
   color: #ffffff;
   text-decoration: none;
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   letter-spacing: 0.05em;
   transition: opacity 0.15s ease;
 }
@@ -3842,9 +3847,10 @@ body::after {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  color: rgba(255,255,255,0.45);
-  font-size: 9.5px;
-  font-family: 'DM Mono', monospace;
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
 }
 
 .boot-line span::before {
@@ -3900,9 +3906,9 @@ body::after {
   padding: 8px 12px;
   background: #ffffff;
   color: #000000;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 10px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 11px;
+  font-weight: 400;
   line-height: 1.3;
   box-shadow: 3px 3px 0 rgba(255,255,255,0.25);
 }
@@ -3942,8 +3948,8 @@ body::after {
 }
 
 .mockup-tab {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 11.5px;
   color: #ffffff;
   padding: 4px 10px;
   background: #080808;
@@ -3964,15 +3970,16 @@ body::after {
 
 .mockup-badge {
   margin-left: auto;
-  font-size: 9px;
-  color: rgba(255,255,255,0.5);
-  font-family: 'Pixelify Sans', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
 }
 
 .mockup-editor-lines {
   padding: 16px 14px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11.5px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
   line-height: 1.7;
   color: rgba(255,255,255,0.85);
 }
@@ -4017,8 +4024,9 @@ body::after {
 }
 
 .glass-stat strong {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 16px;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 17px;
+  font-weight: 400;
   color: #ffffff;
 }
 
@@ -4047,26 +4055,27 @@ body::after {
 
 .section-index {
   color: #ffffff;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 18px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 19px;
+  font-weight: 400;
 }
 
 .kicker {
-  font-family: 'Pixelify Sans', monospace;
-  font-weight: 700;
-  font-size: 12px;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: 13px;
   letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.7);
   margin-bottom: 10px;
 }
 
 .manifesto-band h2,
 .section-heading h2,
 .proof-copy h2 {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: clamp(34px, 4.5vw, 68px);
-  line-height: 0.95;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1.05;
   margin-top: 12px;
   color: #ffffff;
 }
@@ -4080,6 +4089,7 @@ body::after {
   font-size: 15px;
   line-height: 1.7;
   color: rgba(255,255,255,0.75);
+  font-family: 'Roboto', sans-serif;
 }
 
 .terminal-note {
@@ -4088,8 +4098,9 @@ body::after {
   border: 1px solid rgba(255,255,255,0.3);
   background: #080808;
   color: #ffffff;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.8;
+  font-family: 'Roboto', sans-serif;
 }
 
 .terminal-note span {
@@ -4111,9 +4122,10 @@ body::after {
 
 .section-heading h2,
 .proof-copy h2 {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: clamp(32px, 4vw, 56px);
-  line-height: 0.95;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1.05;
   margin-top: 10px;
   color: #ffffff;
 }
@@ -4145,25 +4157,28 @@ body::after {
   margin-bottom: 28px;
   background: #ffffff;
   color: #000000;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 15px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .capability-card h3 {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 20px;
-  line-height: 1.2;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.25;
   text-transform: uppercase;
   color: #ffffff;
   margin-bottom: 12px;
+  letter-spacing: 0.02em;
 }
 
 .capability-card p {
-  color: rgba(255,255,255,0.65);
-  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  font-size: 14px;
   line-height: 1.65;
-  font-family: 'DM Mono', monospace;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 /* ── Proof Section ──────────────────────────────────────── */
@@ -4188,8 +4203,9 @@ body::after {
   justify-content: space-between;
   border-bottom: 1px solid rgba(255,255,255,0.2);
   color: #ffffff;
-  font-size: 11px;
-  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Roboto', sans-serif;
 }
 
 .terminal-row {
@@ -4199,8 +4215,9 @@ body::after {
   gap: 8px;
   align-items: start;
   border-bottom: 1px solid rgba(255,255,255,0.1);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.5;
+  font-family: 'Roboto', sans-serif;
 }
 
 .terminal-row:last-child {
@@ -4212,12 +4229,14 @@ body::after {
 }
 
 .terminal-row strong {
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-weight: 400;
+  font-size: 13px;
   letter-spacing: 0.04em;
 }
 
 .terminal-row span {
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.65);
 }
 
 .proof-copy {
@@ -4229,8 +4248,9 @@ body::after {
   max-width: 500px;
   margin: 20px 0 28px;
   line-height: 1.7;
-  color: rgba(255,255,255,0.72);
-  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+  font-size: 15px;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* ── Founder Note Section ───────────────────────────────── */
@@ -4279,9 +4299,9 @@ body::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 11px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 12px;
+  font-weight: 400;
   letter-spacing: 0.08em;
   color: #ffffff;
 }
@@ -4338,17 +4358,17 @@ body::after {
 }
 
 .founder-caption-name {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 20px;
-  font-weight: 800;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 22px;
+  font-weight: 400;
   letter-spacing: 0.06em;
   color: #ffffff;
   line-height: 1;
 }
 
 .founder-status-badge {
-  font-family: 'DM Mono', monospace;
-  font-size: 9.5px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.08em;
   padding: 2px 7px;
@@ -4360,10 +4380,10 @@ body::after {
 
 .founder-caption-role {
   display: block;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 11px;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
 }
 
 /* ── Founder Story / Letter ─────────────────────────────── */
@@ -4372,9 +4392,9 @@ body::after {
 }
 
 #founder-title {
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   font-size: clamp(34px, 4.5vw, 64px);
-  font-weight: 800;
+  font-weight: 400;
   line-height: 0.95;
   color: #ffffff;
   letter-spacing: -0.01em;
@@ -4382,9 +4402,9 @@ body::after {
 }
 
 .founder-statement {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: clamp(18px, 1.8vw, 24px);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.45;
   color: #ffffff;
   margin-bottom: 22px;
@@ -4394,11 +4414,12 @@ body::after {
 }
 
 .founder-letter p {
-  font-family: 'DM Mono', monospace;
-  font-size: 14.5px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 15px;
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.82);
   margin-bottom: 20px;
+  font-weight: 400;
 }
 
 .founder-highlight {
@@ -4417,9 +4438,9 @@ body::after {
   background: #070707;
   border: 2px solid rgba(255, 255, 255, 0.35);
   box-shadow: 6px 6px 0 rgba(255, 255, 255, 0.18);
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   font-size: clamp(20px, 2.2vw, 28px);
-  font-weight: 700;
+  font-weight: 400;
   color: #ffffff;
   line-height: 1.3;
   letter-spacing: 0.02em;
@@ -4451,17 +4472,17 @@ body::after {
 }
 
 .founder-sig-name {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 20px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 22px;
+  font-weight: 400;
   color: #ffffff;
   letter-spacing: 0.04em;
 }
 
 .founder-sig-title {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
+  font-family: 'Roboto', sans-serif;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.65);
   letter-spacing: 0.04em;
   margin-top: 2px;
 }
@@ -4483,8 +4504,9 @@ body::after {
   justify-content: space-between;
   background: #000000;
   color: #ffffff;
-  font-size: 10.5px;
-  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
   border-top: 1px solid rgba(255,255,255,0.1);
 }
 
@@ -4525,9 +4547,9 @@ body::after {
 
 /* ── Branding Logos (Clean, Normal, Crisp Solid White) ── */
 .brand-text-logo {
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   font-size: clamp(28px, 3.2vw, 38px);
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.05em;
   color: #ffffff;
   text-transform: uppercase;
@@ -4578,9 +4600,9 @@ body::after {
 }
 
 .footer-brand-text {
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.05em;
   color: #ffffff;
   line-height: 1;
@@ -4588,9 +4610,9 @@ body::after {
 }
 
 .auth-logo-text {
-  font-family: 'Pixelify Sans', monospace;
+  font-family: 'Bitcount Prop Single', monospace;
   font-size: 36px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: 0.05em;
   color: #ffffff;
   margin: 0 auto 12px auto;
@@ -4655,9 +4677,9 @@ body::after {
 }
 
 .feature-tag {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 10px;
-  font-weight: 700;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 11px;
+  font-weight: 400;
   letter-spacing: 0.1em;
   color: #000000;
   background: #ffffff;
@@ -4668,18 +4690,20 @@ body::after {
 }
 
 .feature-detail-card h4 {
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 18px;
+  font-family: 'Bitcount Prop Single', monospace;
+  font-size: 20px;
+  font-weight: 400;
   margin-bottom: 12px;
   color: #ffffff;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .feature-detail-card p {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.65;
-  color: rgba(255,255,255,0.7);
-  font-family: 'DM Mono', monospace;
+  color: rgba(255,255,255,0.75);
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
 }
 
 .feature-detail-card code {
