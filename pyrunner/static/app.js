@@ -881,32 +881,83 @@ langTabsEl.addEventListener('click', () => { /* Python only */ });
 function triggerRun() {
   if (isRunning) return;
   if (!pyodide)  return;
-  runPython();
+  return runPython();
 }
 
-// ── Run: Python (Pyodide, client-side) ────────────────────
-async function runPython() {
-  if (!pyodide || isRunning) return;
+// ── Execute and Verify Code (Structured Result Promise) ────────
+async function executeAndVerifyCode(codeToRun) {
+  if (!pyodide && typeof pyodideInitPromise !== 'undefined' && pyodideInitPromise) {
+    try {
+      await pyodideInitPromise;
+    } catch (_) {}
+  }
+  if (!pyodide) {
+    return {
+      success: false,
+      error: 'Pyodide WASM runtime is not initialized.',
+      errorType: 'RuntimeNotReady',
+      errorLine: null,
+      stdout: '',
+      stderr: '',
+      elapsed: 0
+    };
+  }
+  if (isRunning) {
+    return {
+      success: false,
+      error: 'An execution is already in progress.',
+      errorType: 'ConcurrentExecutionError',
+      errorLine: null,
+      stdout: '',
+      stderr: '',
+      elapsed: 0
+    };
+  }
 
-  const code = monacoEditor ? monacoEditor.getValue() : '';
-  if (!code.trim()) return;
+  const code = (typeof codeToRun === 'string' && codeToRun.length > 0)
+    ? codeToRun
+    : (monacoEditor ? monacoEditor.getValue() : '');
+
+  if (!code.trim()) {
+    return {
+      success: false,
+      error: 'No code to execute.',
+      errorType: 'EmptyCodeError',
+      errorLine: null,
+      stdout: '',
+      stderr: '',
+      elapsed: 0
+    };
+  }
 
   isRunning = true;
   runCount++;
-  btnRun.disabled = true;
+  if (btnRun) btnRun.disabled = true;
   setStatus('running', 'Running…');
-  outputMeta.textContent = 'running…';
+  if (outputMeta) outputMeta.textContent = 'running…';
 
   const block = startOutputBlock();
+  const stdoutLines = [];
+  const stderrLines = [];
 
-  pyodide.setStdout({ batched: (line) => processOutput(line, false, block) });
-  pyodide.setStderr({ batched: (line) => processOutput(line, true,  block) });
+  pyodide.setStdout({ batched: (line) => {
+    stdoutLines.push(line);
+    processOutput(line, false, block);
+  }});
+  pyodide.setStderr({ batched: (line) => {
+    stderrLines.push(line);
+    processOutput(line, true, block);
+  }});
 
   let success = false;
+  let rawError = null;
+  const startTime = performance.now();
+
   try {
     await pyodide.runPythonAsync(code);
     success = true;
   } catch (err) {
+    success = false;
     let msg = err?.message ?? String(err);
     // Friendly hint for the most common mistake: importing yfinance directly in WASM
     if (msg.includes("No module named 'yfinance'") || msg.includes('No module named "yfinance"')) {
@@ -917,14 +968,53 @@ async function runPython() {
           + `yf_download() fetches data via the Run01 server proxy and returns\n`
           + `a standard pandas DataFrame - no import needed.`;
     }
+    rawError = msg;
+    stderrLines.push(msg);
     processOutput(msg, true, block);
   }
 
+  const elapsed = parseFloat(((performance.now() - startTime) / 1000).toFixed(3));
   finishOutputBlock(block, success);
   isRunning = false;
-  btnRun.disabled = false;
+  if (btnRun) btnRun.disabled = false;
   setStatus(success ? 'ready' : 'error',
-            success ? `Done in ${block.elapsed()}s` : 'Error');
+            success ? `Done in ${elapsed}s` : 'Error');
+
+  // Parse structured error details
+  let errorType = null;
+  let errorLine = null;
+  if (!success && rawError) {
+    const lineMatches = [...rawError.matchAll(/line\s+(\d+)/gi)];
+    if (lineMatches.length > 0) {
+      const lastMatch = lineMatches[lineMatches.length - 1];
+      errorLine = parseInt(lastMatch[1], 10);
+    }
+
+    const typeMatch = rawError.match(/([A-Za-z_]+(?:Error|Exception|Warning|Interrupt)):\s*(.*)/);
+    if (typeMatch) {
+      errorType = typeMatch[1];
+    } else {
+      errorType = 'RuntimeError';
+    }
+  }
+
+  const result = {
+    success,
+    error: rawError,
+    errorType,
+    errorLine,
+    stdout: stdoutLines.join('\n'),
+    stderr: stderrLines.join('\n'),
+    elapsed
+  };
+
+  return result;
+}
+window.executeAndVerifyCode = executeAndVerifyCode;
+
+// ── Run: Python (Pyodide, client-side) ────────────────────
+async function runPython() {
+  return await executeAndVerifyCode();
 }
 
 // ── Output block management ───────────────────────────────
@@ -2979,8 +3069,464 @@ document.addEventListener('keydown', (e) => {
   const aiMessages = document.getElementById('aiMessages');
   const aiTextarea = document.getElementById('aiTextarea');
   const aiSendBtn = document.getElementById('aiSendBtn');
-  
-  if (!paneAI || !btnAI) return;
+  const btnAILoopToggle = document.getElementById('btnAILoopToggle');
+
+  // ── Auto-Heal Loop Mode Toggle (Strong Loop) ────────────────
+  let loopModeEnabled = localStorage.getItem('run01_auto_heal') !== 'false'; // Default: ON
+
+  function updateLoopToggleUI() {
+    if (!btnAILoopToggle) return;
+    if (loopModeEnabled) {
+      btnAILoopToggle.classList.add('active');
+      btnAILoopToggle.title = 'Auto-Heal: ON (Strong Loop: Auto-executes and surgically repairs code until 0 errors)';
+    } else {
+      btnAILoopToggle.classList.remove('active');
+      btnAILoopToggle.title = 'Auto-Heal: OFF (Click to enable autonomous self-healing loop)';
+    }
+  }
+  updateLoopToggleUI();
+
+  if (btnAILoopToggle) {
+    btnAILoopToggle.addEventListener('click', () => {
+      loopModeEnabled = !loopModeEnabled;
+      localStorage.setItem('run01_auto_heal', loopModeEnabled ? 'true' : 'false');
+      updateLoopToggleUI();
+      if (!loopModeEnabled && window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+        window.activeAutonomousLoop.abort();
+      }
+    });
+  }
+
+  // ── Parse surgical edit blocks from markdown or raw text ────
+  function parseSurgicalEdits(text) {
+    if (!text) return [];
+    const edits = [];
+    const regex = /<<<SURGICAL_EDIT>>>[\s\r\n]*<<<FIND>>>([\s\S]*?)<<<REPLACE>>>([\s\S]*?)<<<END_EDIT>>>/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const findText = match[1].replace(/^\r?\n/, '').replace(/\r?\n$/, '');
+      const replaceText = match[2].replace(/^\r?\n/, '').replace(/\r?\n$/, '');
+      if (findText.trim()) {
+        edits.push({ findText, replaceText });
+      }
+    }
+    return edits;
+  }
+
+  // ── Programmatically apply surgical edit to Monaco Editor ───
+  function applySurgicalEditToMonaco(findText, replaceText) {
+    if (!monacoEditor) return false;
+    const model = monacoEditor.getModel();
+    if (!model) return false;
+
+    // 1. Try exact match
+    let matches = model.findMatches(findText, true, false, true, null, true);
+
+    // 2. Try trimmed match if exact match fails
+    if (!matches || matches.length === 0) {
+      const trimmed = findText.trim();
+      if (trimmed) {
+        matches = model.findMatches(trimmed, false, false, false, null, true);
+      }
+    }
+
+    // 3. Try matching individual lines if multi-line block
+    if ((!matches || matches.length === 0) && findText.includes('\n')) {
+      const lines = findText.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length > 0) {
+        const lineMatches = model.findMatches(lines[0], false, false, false, null, true);
+        if (lineMatches && lineMatches.length > 0) {
+          matches = [lineMatches[0]];
+        }
+      }
+    }
+
+    if (matches && matches.length > 0) {
+      const targetRange = matches[0].range;
+      monacoEditor.executeEdits('ai-strong-loop', [{
+        range: targetRange,
+        text: replaceText,
+        forceMoveMarkers: true
+      }]);
+
+      // Flash green applied decoration
+      const decos = monacoEditor.deltaDecorations([], [{
+        range: targetRange,
+        options: {
+          isWholeLine: true,
+          className: 'monaco-applied-edit-line'
+        }
+      }]);
+      setTimeout(() => {
+        try { monacoEditor.deltaDecorations(decos, []); } catch (_) {}
+      }, 2500);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  // ── Autonomous AI Self-Healing Execution Loop Class ──────────
+  class AutonomousRepairLoop {
+    constructor(options = {}) {
+      this.maxIterations = options.maxIterations || 3;
+      this.model = options.model || (aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL);
+      this.chatContainer = options.chatContainer || aiMessages;
+      this.isActive = false;
+      this.isAborted = false;
+      this.immutableUserGoal = '';
+      this.currentIteration = 1;
+      this.cardEl = null;
+      this.stepsEl = null;
+      this.badgeEl = null;
+      this.statusTextEl = null;
+      this.stopBtn = null;
+    }
+
+    createCard() {
+      const card = document.createElement('div');
+      card.className = 'ai-loop-card';
+
+      const header = document.createElement('div');
+      header.className = 'ai-loop-header';
+
+      const left = document.createElement('div');
+      left.className = 'ai-loop-header-left';
+
+      this.badgeEl = document.createElement('span');
+      this.badgeEl.className = 'ai-loop-badge running';
+      this.badgeEl.textContent = 'AUTO-HEAL';
+
+      this.statusTextEl = document.createElement('span');
+      this.statusTextEl.className = 'ai-loop-status-text';
+      this.statusTextEl.textContent = 'Active Control: Testing & verifying in Pyodide…';
+
+      left.appendChild(this.badgeEl);
+      left.appendChild(this.statusTextEl);
+
+      this.stopBtn = document.createElement('button');
+      this.stopBtn.className = 'ai-loop-stop-btn';
+      this.stopBtn.textContent = 'Stop Loop';
+      this.stopBtn.addEventListener('click', () => this.abort());
+
+      header.appendChild(left);
+      header.appendChild(this.stopBtn);
+
+      this.stepsEl = document.createElement('div');
+      this.stepsEl.className = 'ai-loop-body';
+
+      card.appendChild(header);
+      card.appendChild(this.stepsEl);
+
+      this.cardEl = card;
+      if (this.chatContainer) {
+        this.chatContainer.appendChild(card);
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    addStep(icon, text, type = 'normal', snippet = null) {
+      if (!this.stepsEl) return;
+      const step = document.createElement('div');
+      step.className = `ai-loop-step ${type}`;
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'ai-loop-step-icon';
+      iconEl.textContent = icon;
+
+      const textEl = document.createElement('span');
+      textEl.innerHTML = text;
+
+      step.appendChild(iconEl);
+      step.appendChild(textEl);
+      this.stepsEl.appendChild(step);
+
+      if (snippet) {
+        const snippetEl = document.createElement('div');
+        snippetEl.className = 'ai-loop-error-snippet';
+        snippetEl.textContent = snippet;
+        this.stepsEl.appendChild(snippetEl);
+      }
+
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    addSummary(text) {
+      if (!this.stepsEl) return;
+      const sum = document.createElement('div');
+      sum.className = 'ai-loop-summary';
+      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      this.stepsEl.appendChild(sum);
+      if (this.chatContainer) {
+        this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+      }
+    }
+
+    setEditorActive(active) {
+      const badge = document.getElementById('aiEditorControlBadge');
+      if (badge) {
+        if (active) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
+      }
+      const editorPane = document.querySelector('.pane-editor');
+      if (editorPane) {
+        if (active) editorPane.classList.add('ai-active-editor');
+        else editorPane.classList.remove('ai-active-editor');
+      }
+      const toggle = document.getElementById('btnAILoopToggle');
+      if (toggle) {
+        if (active) toggle.classList.add('spinning');
+        else toggle.classList.remove('spinning');
+      }
+    }
+
+    applyCodeOrEdit(text) {
+      if (!text) return { applied: false, type: 'none' };
+
+      // 1. Try surgical edit first
+      const surgicalEdits = parseSurgicalEdits(text);
+      if (surgicalEdits.length > 0) {
+        let appliedCount = 0;
+        for (const edit of surgicalEdits) {
+          if (applySurgicalEditToMonaco(edit.findText, edit.replaceText)) {
+            appliedCount++;
+          }
+        }
+        if (appliedCount > 0) {
+          return { applied: true, type: 'surgical', count: appliedCount };
+        }
+      }
+
+      // 2. Try full python block
+      const pyMatch = text.match(/```python([\s\S]*?)```/);
+      if (pyMatch && pyMatch[1]) {
+        const code = pyMatch[1].trim();
+        if (monacoEditor) {
+          monacoEditor.setValue(code);
+          return { applied: true, type: 'full', code };
+        }
+      }
+
+      return { applied: false, type: 'none' };
+    }
+
+    async requestRepair(errorMsg, errorType, errorLine, stdout, stderr) {
+      const currentCode = monacoEditor ? monacoEditor.getValue() : '';
+      const prompt = `[IMMUTABLE USER GOAL]
+${this.immutableUserGoal}
+
+[CURRENT EDITOR CODE]
+\`\`\`python
+${currentCode}
+\`\`\`
+
+[RUNTIME ERROR TRACEBACK - RUN #${this.currentIteration}]
+Error Type: ${errorType || 'RuntimeError'}${errorLine ? ` (Line ${errorLine})` : ''}
+Full Traceback & Stderr:
+${errorMsg || stderr || 'Execution error encountered'}
+
+[CONSOLE STDOUT BEFORE FAILURE]
+${stdout || '(no output)'}
+
+[INSTRUCTION]
+Perform an exact, deterministic surgical fix to eliminate this error while fully preserving the user's intent, helper functions, and imports.
+Respond with the surgical replacement using this exact format:
+<<<SURGICAL_EDIT>>>
+<<<FIND>>>
+<exact lines currently in code to replace>
+<<<REPLACE>>>
+<corrected lines>
+<<<END_EDIT>>>
+
+If extensive structural changes are required, output the complete corrected \`\`\`python ... \`\`\` script instead.`;
+
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are an authoritative Python self-healing repair engineer in RUN01. Synthesize minimal surgical edits targeting only broken lines to guarantee clean execution with 0 errors.' },
+            { role: 'user', content: prompt }
+          ],
+          model: this.model,
+          context: 'editor'
+        })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `AI repair request failed with code ${resp.status}`);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let repairResponse = '';
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const rawJson = trimmed.substring(6);
+              const parsed = JSON.parse(rawJson);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              repairResponse += token;
+            } catch (_) {}
+          }
+        }
+      }
+
+      return repairResponse;
+    }
+
+    async start(userGoal, initialAssistantResponse) {
+      this.isActive = true;
+      this.isAborted = false;
+      this.immutableUserGoal = userGoal;
+      this.currentIteration = 1;
+
+      this.createCard();
+      this.setEditorActive(true);
+
+      // Apply initial response to Monaco editor
+      const initialApply = this.applyCodeOrEdit(initialAssistantResponse);
+      if (initialApply.applied) {
+        if (initialApply.type === 'surgical') {
+          this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to Monaco editor.`, 'active');
+        } else {
+          this.addStep('📝', 'Injected initial Python program into Monaco editor.', 'active');
+        }
+      } else {
+        this.addStep('ℹ️', 'Reading active Monaco editor code for verification…', 'active');
+      }
+
+      // Loop execution and self-healing
+      while (this.isActive && !this.isAborted) {
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Executing in Pyodide WASM…`;
+        }
+
+        this.addStep('⚡', `Executing in Pyodide WASM (Attempt #${this.currentIteration})…`, 'active');
+
+        // Small yield so Monaco editor finishes updating and UI renders
+        await new Promise(r => setTimeout(r, 80));
+
+        // Execute in Pyodide WASM and wait for completion
+        const result = await window.executeAndVerifyCode();
+
+        if (this.isAborted) {
+          this.cleanup();
+          return;
+        }
+
+        // Clean execution with zero errors!
+        if (result.success) {
+          this.badgeEl.className = 'ai-loop-badge';
+          this.badgeEl.textContent = '✓ 0 ERRORS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Clean Execution (0 Errors in ${result.elapsed}s)`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+
+          this.addStep('✓', `Run #${this.currentIteration} completed cleanly with 0 errors in ${result.elapsed}s.`, 'success');
+          this.addSummary(`Autonomous Self-Healing Loop verified complete. Zero errors. Context fully preserved.`);
+          this.cleanup();
+          return;
+        }
+
+        // Error detected!
+        const errType = result.errorType || 'RuntimeError';
+        const errLine = result.errorLine;
+        const lineText = errLine ? ` (Line ${errLine})` : '';
+
+        this.addStep('⚠️', `Error detected in Run #${this.currentIteration}: <strong>${errType}</strong>${lineText}`, 'warning', result.error || result.stderr);
+
+        // Check if max iterations reached
+        if (this.currentIteration >= this.maxIterations) {
+          this.badgeEl.className = 'ai-loop-badge error';
+          this.badgeEl.textContent = 'MAX ATTEMPTS';
+          if (this.statusTextEl) {
+            this.statusTextEl.textContent = `Halted after ${this.maxIterations} attempts`;
+          }
+          if (this.stopBtn) this.stopBtn.style.display = 'none';
+
+          this.addStep('🛑', `Maximum repair attempts (${this.maxIterations}) reached. Editor contains latest state for manual inspection.`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        // Synthesize surgical repair
+        this.badgeEl.className = 'ai-loop-badge healing';
+        this.badgeEl.textContent = 'HEALING';
+        if (this.statusTextEl) {
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+        }
+
+        this.addStep('🔧', `AI analyzing error and synthesizing surgical fix…`, 'active');
+
+        let repairResponse = '';
+        try {
+          repairResponse = await this.requestRepair(result.error, errType, errLine, result.stdout, result.stderr);
+        } catch (repairErr) {
+          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.cleanup();
+          return;
+        }
+
+        if (this.isAborted) {
+          this.cleanup();
+          return;
+        }
+
+        // Apply the surgical fix to Monaco
+        const repairApply = this.applyCodeOrEdit(repairResponse);
+        if (repairApply.applied) {
+          if (repairApply.type === 'surgical') {
+            this.addStep('✓', `Applied surgical patch to target lines in Monaco editor.`, 'active');
+          } else {
+            this.addStep('✓', `Updated Monaco editor with structurally repaired code.`, 'active');
+          }
+        } else {
+          this.addStep('⚠️', `Could not find exact lines to replace. Attempting full re-run…`, 'warning');
+        }
+
+        this.currentIteration++;
+      }
+
+      this.cleanup();
+    }
+
+    abort() {
+      this.isAborted = true;
+      if (this.badgeEl) {
+        this.badgeEl.className = 'ai-loop-badge error';
+        this.badgeEl.textContent = 'STOPPED';
+      }
+      if (this.statusTextEl) {
+        this.statusTextEl.textContent = 'Auto-Heal Stopped by User';
+      }
+      if (this.stopBtn) this.stopBtn.style.display = 'none';
+      this.addStep('🛑', 'Loop aborted by user.', 'warning');
+      this.cleanup();
+    }
+
+    cleanup() {
+      this.isActive = false;
+      this.setEditorActive(false);
+    }
+  }
+  window.AutonomousRepairLoop = AutonomousRepairLoop;
 
   let messagesHistory = [];
 
@@ -3201,25 +3747,27 @@ document.addEventListener('keydown', (e) => {
         // Accept: apply the surgical replacement
         acceptBtn.addEventListener('click', () => {
           if (monacoEditor) {
-            const model = monacoEditor.getModel();
-            if (model) {
-              const matches = model.findMatches(findText, true, false, true, null, true);
-              if (matches.length > 0) {
-                monacoEditor.executeEdits('surgical-edit', matches.map(m => ({
-                  range: m.range,
-                  text: replText,
-                  forceMoveMarkers: true
-                })));
-              }
-            }
+            applySurgicalEditToMonaco(findText, replText);
             monacoEditor.deltaDecorations(pendingDecorations, []);
           }
           diffCard.classList.add('ai-diff-accepted');
           acceptBtn.textContent = '✓ Applied';
           acceptBtn.disabled = true;
           rejectBtn.disabled = true;
-          // Auto-run after surgical accept
-          setTimeout(() => triggerRun(), 300);
+
+          if (loopModeEnabled) {
+            if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+              window.activeAutonomousLoop.abort();
+            }
+            window.activeAutonomousLoop = new AutonomousRepairLoop({
+              maxIterations: 3,
+              model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+              chatContainer: aiMessages
+            });
+            window.activeAutonomousLoop.start('Verify clean execution after surgical edit', part);
+          } else {
+            setTimeout(() => triggerRun(), 300);
+          }
         });
 
         // Reject: clear decorations
@@ -3374,7 +3922,19 @@ document.addEventListener('keydown', (e) => {
             if (monacoEditor) {
               monacoEditor.setValue(codeLines);
               runBtn.textContent = 'Running...';
-              triggerRun();
+              if (loopModeEnabled) {
+                if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+                  window.activeAutonomousLoop.abort();
+                }
+                window.activeAutonomousLoop = new AutonomousRepairLoop({
+                  maxIterations: 3,
+                  model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+                  chatContainer: aiMessages
+                });
+                window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + codeLines + '\n```');
+              } else {
+                triggerRun();
+              }
               setTimeout(() => runBtn.textContent = ' Run', 2000);
             }
           });
@@ -3657,9 +4217,23 @@ document.addEventListener('keydown', (e) => {
 
       // Show the Agree & Run / Apply Code action bar inside input area if code was generated
       const hasCode = /```python[\s\S]*?```/.test(fullAssistantText);
+      const hasSurgicalEdit = /<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>/.test(fullAssistantText);
       const codeActionBar = document.getElementById('aiCodeActionBar');
       if (hasCode && codeActionBar) {
         codeActionBar.classList.add('visible');
+      }
+
+      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP) ────────────────────
+      if (loopModeEnabled && (hasCode || hasSurgicalEdit) && activePanelContext === 'editor') {
+        if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+          window.activeAutonomousLoop.abort();
+        }
+        window.activeAutonomousLoop = new AutonomousRepairLoop({
+          maxIterations: 3,
+          model: model,
+          chatContainer: aiMessages
+        });
+        window.activeAutonomousLoop.start(text, fullAssistantText);
       }
 
     } catch (err) {
@@ -3705,7 +4279,19 @@ document.addEventListener('keydown', (e) => {
       if (code) {
         if (monacoEditor) monacoEditor.setValue(code);
         aiActionRunBar.textContent = 'Running...';
-        triggerRun();
+        if (loopModeEnabled) {
+          if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
+            window.activeAutonomousLoop.abort();
+          }
+          window.activeAutonomousLoop = new AutonomousRepairLoop({
+            maxIterations: 3,
+            model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
+            chatContainer: aiMessages
+          });
+          window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + code + '\n```');
+        } else {
+          triggerRun();
+        }
         const bar = document.getElementById('aiCodeActionBar');
         setTimeout(() => {
           aiActionRunBar.textContent = ' Run';

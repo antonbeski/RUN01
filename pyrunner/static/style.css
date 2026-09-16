@@ -4916,3 +4916,250 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-chat-messages::-webkit-scrollbar-thumb,
 .cad-params-grid::-webkit-scrollbar-thumb,
 .cad-source-editor::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+
+/* ══════════════════════════════════════════════════════════════════
+   STRONG LOOP: AUTONOMOUS SELF-HEALING & ACTIVE EDITOR CONTROL
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Header Auto-Heal toggle button */
+.btn-loop-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+.btn-loop-mode:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.btn-loop-mode .loop-icon {
+  font-size: 12px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+.btn-loop-mode.active {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #34d399;
+}
+.btn-loop-mode.active:hover {
+  background: rgba(52, 211, 153, 0.2);
+  border-color: rgba(52, 211, 153, 0.6);
+}
+.btn-loop-mode.spinning .loop-icon {
+  animation: spinLoop 1s linear infinite;
+}
+@keyframes spinLoop {
+  100% { transform: rotate(360deg); }
+}
+
+/* Light mode */
+[data-theme="light"] .btn-loop-mode {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.03);
+  color: #666666;
+}
+[data-theme="light"] .btn-loop-mode:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000000;
+}
+[data-theme="light"] .btn-loop-mode.active {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.5);
+  color: #059669;
+}
+
+/* Monaco AI Active Control Badge */
+.ai-editor-control-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #c084fc;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: badgePulse 2s ease-in-out infinite;
+  user-select: none;
+}
+.ai-editor-control-badge.hidden {
+  display: none !important;
+}
+.ai-editor-control-badge .control-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a855f7;
+  box-shadow: 0 0 8px #a855f7;
+  animation: dotBlink 1.2s infinite ease-in-out;
+}
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); }
+  50% { box-shadow: 0 0 8px 1px rgba(168, 85, 247, 0.25); }
+}
+
+/* Active editor subtle glowing border */
+.pane-editor.ai-active-editor {
+  box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 12px rgba(168, 85, 247, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Monaco line decorations for surgical edit */
+.monaco-pending-edit-line {
+  background: rgba(234, 179, 8, 0.18) !important;
+}
+.monaco-applied-edit-line {
+  background: rgba(52, 211, 153, 0.22) !important;
+  transition: background 1.5s ease-out;
+}
+
+/* Auto-Heal Loop Chat Progress Card */
+.ai-loop-card {
+  margin: 10px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0d0d0f;
+  font-family: inherit;
+}
+[data-theme="light"] .ai-loop-card {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+.ai-loop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+}
+[data-theme="light"] .ai-loop-header {
+  background: rgba(0, 0, 0, 0.04);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+.ai-loop-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ai-loop-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #34d399;
+  color: #000000;
+}
+.ai-loop-badge.healing {
+  background: #fbbf24;
+  color: #000000;
+}
+.ai-loop-badge.running {
+  background: #60a5fa;
+  color: #000000;
+}
+.ai-loop-badge.error {
+  background: #f87171;
+  color: #000000;
+}
+.ai-loop-stop-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ai-loop-stop-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  color: #ffffff;
+}
+.ai-loop-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.ai-loop-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.ai-loop-step.active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.ai-loop-step.success {
+  color: #34d399;
+}
+.ai-loop-step.warning {
+  color: #fbbf24;
+}
+.ai-loop-step-icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+.ai-loop-error-snippet {
+  margin: 4px 0 2px 22px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid #ef4444;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #fca5a5;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+[data-theme="light"] .ai-loop-error-snippet {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.ai-loop-summary {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: #34d399;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+[data-theme="light"] .ai-loop-summary {
+  background: #f0fdf4;
+  border-color: rgba(5, 150, 105, 0.3);
+  color: #059669;
+}

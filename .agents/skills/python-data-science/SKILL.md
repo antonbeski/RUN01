@@ -87,3 +87,26 @@ RUN01 executes Python code **100% inside the user's browser** via Pyodide v0.26.
   ````
 - Ensure the code is **immediately executable** without placeholders or missing imports.
 - Be concise and focused on high-signal code edits.
+
+---
+
+## 5. Autonomous Self-Healing & Surgical Edits
+
+When operating inside RUN01's autonomous self-healing loop or fixing an existing script:
+1. **Targeted Surgical Edits**:
+   - For bug fixes, optimizations, or line adjustments in existing code, output a precise surgical edit block:
+     ```text
+     <<<SURGICAL_EDIT>>>
+     <<<FIND>>>
+     exact lines currently in user's editor
+     <<<REPLACE>>>
+     corrected, working replacement lines
+     <<<END_EDIT>>>
+     ```
+   - The `<<<FIND>>>` block must match exact characters from the existing code (including indentation).
+2. **Context & Variable Preservation (Immutable Context Preservation)**:
+   - Never delete or overwrite unrelated user helper functions, imports, comments, or data structures.
+   - Fix the root error directly (e.g. correct dictionary keys, check for None, fix shape mismatches, add missing imports).
+3. **Deterministic Full Scripts & Zero-Error Execution Guarantee**:
+   - If generating an entirely new program or if the architecture requires a full rebuild, provide a single, complete, immediately runnable ` ```python ` block guaranteed to execute cleanly with zero errors.
+
