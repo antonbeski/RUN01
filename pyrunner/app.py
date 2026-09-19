@@ -1258,5 +1258,202 @@ def ai_chat():
         return jsonify({"error": str(exc)}), 500
 
 
+
+# ── Computer Vision Studio Routes ─────────────────────────────────────────────
+import uuid
+import threading
+import tempfile
+import os as _os
+
+# In-memory job store (replace with MongoDB for persistence)
+_cv_jobs: dict = {}
+
+def _cv_job_default(job_id: str) -> dict:
+    return {
+        "id": job_id,
+        "status": "idle",
+        "progress": 0,
+        "total_frames": 0,
+        "processed_frames": 0,
+        "error": None,
+        "output_path": None,
+    }
+
+@app.route("/api/cv/upload", methods=["POST"])
+def cv_upload():
+    """Accept a video file and return a job_id for processing."""
+    if "video" not in request.files:
+        return jsonify({"error": "No video file provided"}), 400
+    f = request.files["video"]
+    if not f.filename:
+        return jsonify({"error": "Empty filename"}), 400
+
+    job_id = str(uuid.uuid4())
+    suffix = _os.path.splitext(f.filename or "video.mp4")[1] or ".mp4"
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    f.save(tmp.name)
+    tmp.close()
+
+    _cv_jobs[job_id] = _cv_job_default(job_id)
+    _cv_jobs[job_id]["video_path"] = tmp.name
+    _cv_jobs[job_id]["status"] = "uploaded"
+
+    return jsonify({"job_id": job_id, "status": "uploaded"})
+
+
+def _run_cv_task(job_id: str, video_path: str, task: str, model_size: str, config: dict):
+    """Background thread: run YOLO inference and write annotated video."""
+    job = _cv_jobs.get(job_id)
+    if not job:
+        return
+
+    job["status"] = "processing"
+
+    try:
+        import cv2  # type: ignore
+        from ultralytics import YOLO  # type: ignore
+
+        model_map = {
+            "detect": {"nano": "yolov8n.pt", "small": "yolov8s.pt", "medium": "yolov8m.pt"},
+            "track":  {"nano": "yolov8n.pt", "small": "yolov8s.pt", "medium": "yolov8m.pt"},
+            "segment":{"nano": "yolov8n-seg.pt", "small": "yolov8s-seg.pt", "medium": "yolov8m-seg.pt"},
+            "pose":   {"nano": "yolov8n-pose.pt","small": "yolov8s-pose.pt","medium": "yolov8m-pose.pt"},
+        }
+        weights = model_map.get(task, model_map["detect"]).get(model_size, "yolov8n.pt")
+        model = YOLO(weights)
+
+        cap = cv2.VideoCapture(video_path)
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        job["total_frames"] = total
+
+        out_path = video_path.replace(_os.path.splitext(video_path)[1], "_annotated.mp4")
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(out_path, fourcc, fps, (w, h))
+
+        conf = config.get("confidenceThreshold", 0.45)
+        iou  = config.get("iouThreshold", 0.45)
+        stride = max(1, int(config.get("stride", 1)))
+
+        frame_idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if frame_idx % stride == 0:
+                if task == "track":
+                    results = model.track(frame, conf=conf, iou=iou, persist=True, verbose=False)
+                else:
+                    results = model(frame, conf=conf, iou=iou, verbose=False)
+                annotated = results[0].plot()
+            else:
+                annotated = frame
+
+            writer.write(annotated)
+            frame_idx += 1
+            job["processed_frames"] = frame_idx
+            job["progress"] = int((frame_idx / max(total, 1)) * 100)
+
+        cap.release()
+        writer.release()
+
+        job["output_path"] = out_path
+        job["status"] = "done"
+        job["progress"] = 100
+
+    except ImportError:
+        job["status"] = "error"
+        job["error"] = "Backend CV requires ultralytics and opencv-python-headless. Install them or use browser mode."
+    except Exception as exc:
+        job["status"] = "error"
+        job["error"] = str(exc)
+    finally:
+        # Clean up input temp file
+        try:
+            _os.unlink(video_path)
+        except Exception:
+            pass
+
+
+@app.route("/api/cv/process", methods=["POST"])
+def cv_process():
+    """Start background processing for an uploaded job."""
+    data = request.get_json() or {}
+    job_id = data.get("job_id")
+    if not job_id or job_id not in _cv_jobs:
+        return jsonify({"error": "Invalid job_id"}), 404
+
+    job = _cv_jobs[job_id]
+    if job.get("status") == "processing":
+        return jsonify({"error": "Already processing"}), 409
+
+    task       = data.get("task", "detect")
+    model_size = data.get("modelSize", "nano")
+    config     = data.get("config", {})
+    video_path = job.get("video_path")
+
+    if not video_path:
+        return jsonify({"error": "No video uploaded for this job"}), 400
+
+    t = threading.Thread(
+        target=_run_cv_task,
+        args=(job_id, video_path, task, model_size, config),
+        daemon=True,
+    )
+    t.start()
+
+    return jsonify({"job_id": job_id, "status": "processing"})
+
+
+@app.route("/api/cv/status/<job_id>", methods=["GET"])
+def cv_status(job_id: str):
+    """Poll processing status and progress."""
+    job = _cv_jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify({
+        "id": job["id"],
+        "status": job["status"],
+        "progress": job["progress"],
+        "total_frames": job["total_frames"],
+        "processed_frames": job["processed_frames"],
+        "error": job.get("error"),
+        "has_output": bool(job.get("output_path")),
+    })
+
+
+@app.route("/api/cv/result/<job_id>", methods=["GET"])
+def cv_result(job_id: str):
+    """Stream the annotated video back to the client."""
+    from flask import send_file
+    job = _cv_jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    if job.get("status") != "done":
+        return jsonify({"error": f"Job status is '{job.get('status')}', not done"}), 409
+    out = job.get("output_path")
+    if not out or not _os.path.isfile(out):
+        return jsonify({"error": "Output file not found"}), 404
+    return send_file(out, mimetype="video/mp4", as_attachment=False)
+
+
+@app.route("/api/cv/cleanup/<job_id>", methods=["DELETE"])
+def cv_cleanup(job_id: str):
+    """Delete job data and temp files."""
+    job = _cv_jobs.pop(job_id, None)
+    if job:
+        for key in ("video_path", "output_path"):
+            path = job.get(key)
+            if path:
+                try:
+                    _os.unlink(path)
+                except Exception:
+                    pass
+    return jsonify({"deleted": bool(job)})
+
+
 if __name__ == "__main__":
     app.run(debug=True)

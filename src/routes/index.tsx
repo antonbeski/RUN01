@@ -28,6 +28,7 @@ const capabilities = [
   ["10", "A data layer no one else built", "Live yfinance plus 930k+ FRED series, normalized into one clean API call."],
   ["11", "Parametric CAD & Desmos Studio", "In-browser OpenSCAD CSG 3D modeling, STL export, and interactive Desmos graphing."],
   ["100", "AI that edits", "Surgical code edits applied live across active workspace panels. Accept or reject, then run in one click."],
+  ["101", "Video CV Studio", "Upload any video. Run object detection, tracking, segmentation and pose estimation. Annotated output plays back in your browser — zero servers."],
 ];
 
 const pipelineSteps = [
@@ -80,6 +81,7 @@ function Index() {
           <a href="#stack">STACK</a>
           <a href="#why">WHY RUN01</a>
           <a href="#founder">FOUNDER</a>
+          <a href="/vision" style={{ color: "#9B5CF6", fontWeight: 600 }}>VISION ✦</a>
         </nav>
         <a className="pixel-button pixel-button-dark" href="#engine">RUN IDE <Play size={13} fill="currentColor" /></a>
       </header>
