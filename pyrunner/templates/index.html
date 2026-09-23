@@ -466,6 +466,18 @@
       <!-- Divider -->
       <div class="nav-divider" aria-hidden="true"></div>
 
+      <!-- Vision CV Studio toggle -->
+      <button class="btn btn-ghost btn-vision" id="btnVision" title="Video Computer Vision Studio — Roboflow & YOLOv8" aria-label="Toggle Vision Studio">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        Vision ✦
+      </button>
+
+      <!-- Divider -->
+      <div class="nav-divider" aria-hidden="true"></div>
+
       <!-- AI Assistant toggle -->
       <button class="btn btn-ghost btn-ai" id="btnAI" title="AI Assistant (Ctrl+K)" aria-label="Toggle AI Assistant">
         AI
@@ -838,6 +850,168 @@
     </div>
   </div>
 
+
+  <!-- ══ VIDEO COMPUTER VISION STUDIO MODAL ══════════════════════════════════ -->
+  <div class="vision-modal-overlay hidden" id="visionModalOverlay" role="dialog"
+       aria-modal="true" aria-labelledby="visionModalTitle">
+    <div class="vision-modal-card">
+
+      <!-- Header -->
+      <div class="vision-modal-header">
+        <div class="vision-modal-header-left">
+          <span class="vision-badge">VISION ✦</span>
+          <span class="vision-modal-title" id="visionModalTitle">Video CV Studio</span>
+          <span class="vision-status-badge" id="visionStatusBadge">READY</span>
+        </div>
+        <div class="vision-modal-header-center">
+          <!-- Prompt / description bar -->
+          <input type="text" class="vision-prompt-input" id="visionPromptInput"
+                 placeholder="Describe what to detect… e.g. 'track the red team players'" />
+          <button class="vision-send-btn" id="btnVisionRun" aria-label="Run Vision" title="Run CV inference">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            RUN
+          </button>
+        </div>
+        <div class="vision-modal-header-right">
+          <button class="btn btn-ghost cad-hdr-btn" id="btnVisionExport" title="Export detections JSON" style="display:none">Export JSON</button>
+          <button class="vision-modal-close" id="btnCloseVisionModal" aria-label="Close Vision Studio">&times;</button>
+        </div>
+      </div>
+
+      <!-- Body: 3-column layout -->
+      <div class="vision-modal-body">
+
+        <!-- LEFT SIDEBAR: upload + config -->
+        <div class="vision-left-pane">
+
+          <!-- Upload zone -->
+          <div class="vision-section-label">VIDEO INPUT</div>
+          <div class="vision-upload-zone" id="visionUploadZone" tabindex="0" role="button" aria-label="Upload video">
+            <input type="file" id="visionFileInput" accept="video/*" style="display:none" />
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p class="vision-upload-label">DROP VIDEO HERE</p>
+            <p class="vision-upload-sub">MP4 · WebM · MOV · AVI</p>
+          </div>
+          <!-- Uploaded file info -->
+          <div class="vision-upload-info hidden" id="visionUploadInfo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B5CF6" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+            <div class="vision-upload-meta">
+              <span class="vision-upload-filename" id="visionFileName">video.mp4</span>
+              <span class="vision-upload-dims" id="visionFileDims">—</span>
+            </div>
+            <button class="vision-upload-clear" id="btnVisionClear" title="Remove video">&times;</button>
+          </div>
+
+          <!-- Config -->
+          <div class="vision-section-label" style="margin-top:14px;">MODEL CONFIG</div>
+
+          <div class="vision-config-group">
+            <label class="vision-config-label">TASK</label>
+            <select class="vision-select" id="visionTask">
+              <option value="detect">Object Detection</option>
+              <option value="track">Object Tracking</option>
+              <option value="segment">Instance Segmentation</option>
+              <option value="pose">Pose Estimation</option>
+            </select>
+          </div>
+
+          <div class="vision-config-group">
+            <label class="vision-config-label">MODEL SIZE</label>
+            <div class="vision-size-pills">
+              <button class="vision-pill vision-pill-active" data-size="nano">Nano</button>
+              <button class="vision-pill" data-size="small">Small</button>
+              <button class="vision-pill" data-size="medium">Medium</button>
+            </div>
+          </div>
+
+          <div class="vision-config-group">
+            <label class="vision-config-label">CONFIDENCE <span class="vision-config-val" id="visionConfLabel">45%</span></label>
+            <input type="range" class="vision-slider" id="visionConf" min="0" max="100" value="45" />
+          </div>
+
+          <div class="vision-config-group">
+            <label class="vision-config-label">FRAME STRIDE <span class="vision-config-val" id="visionStrideLabel">every 1f</span></label>
+            <input type="range" class="vision-slider" id="visionStride" min="1" max="10" value="1" />
+          </div>
+
+          <div class="vision-config-group">
+            <label class="vision-config-label">PALETTE</label>
+            <div class="vision-palette-row">
+              <button class="vision-palette-btn vision-palette-btn-active" data-palette="default">default</button>
+              <button class="vision-palette-btn" data-palette="neon">neon</button>
+              <button class="vision-palette-btn" data-palette="pastel">pastel</button>
+            </div>
+          </div>
+
+          <div class="vision-config-toggles">
+            <label class="vision-toggle"><input type="checkbox" id="visionShowLabels" checked /><span>Labels</span></label>
+            <label class="vision-toggle"><input type="checkbox" id="visionShowConf" checked /><span>Scores</span></label>
+            <label class="vision-toggle"><input type="checkbox" id="visionShowTrails" checked /><span>Trails</span></label>
+          </div>
+
+          <!-- Status -->
+          <div class="vision-status-panel" id="visionStatusPanel" style="display:none">
+            <div class="vision-status-row" id="visionStatusRow">
+              <span class="vision-spinner" id="visionSpinner"></span>
+              <span id="visionStatusText">Loading model...</span>
+            </div>
+            <div class="vision-progress-bar"><div class="vision-progress-fill" id="visionProgressFill" style="width:0%"></div></div>
+            <span class="vision-progress-pct" id="visionProgressPct">0%</span>
+          </div>
+        </div>
+
+        <!-- CENTER: video player + canvas -->
+        <div class="vision-center-pane">
+          <div class="vision-empty-state" id="visionEmptyState">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.25"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <p>Upload a video to begin</p>
+            <p style="font-size:11px;opacity:0.5;">Object Detection · Tracking · Segmentation · Pose</p>
+          </div>
+          <div class="vision-player-wrap hidden" id="visionPlayerWrap">
+            <video id="visionVideo" class="vision-video" playsinline muted preload="auto"></video>
+            <canvas id="visionCanvas" class="vision-canvas"></canvas>
+            <div class="vision-player-controls">
+              <button class="vision-play-btn" id="btnVisionPlay" aria-label="Play/Pause">
+                <svg id="visionPlayIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg id="visionPauseIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+            </div>
+          </div>
+          <!-- Frame scrubber -->
+          <div class="vision-scrubber hidden" id="visionScrubber">
+            <div class="vision-scrubber-info">
+              <span class="vision-frame-badge" id="visionFrameBadge">Frame 0</span>
+              <span class="vision-time-display" id="visionTimeDisplay">0:00 / 0:00</span>
+            </div>
+            <div class="vision-scrubber-controls">
+              <button class="vision-scrubber-btn" id="btnVisionPrev">&#8249;</button>
+              <div class="vision-scrubber-track">
+                <div class="vision-scrubber-processed" id="visionScrubberProcessed" style="width:0%"></div>
+                <input type="range" class="vision-scrubber-range" id="visionScrubberRange" min="0" max="1000" value="0" />
+              </div>
+              <button class="vision-scrubber-btn" id="btnVisionNext">&#8250;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR: detections list -->
+        <div class="vision-right-pane">
+          <div class="vision-detections-header">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            DETECTIONS
+            <span class="vision-det-count" id="visionDetCount">0 this frame</span>
+          </div>
+          <ul class="vision-det-list" id="visionDetList">
+            <li class="vision-det-empty">Process video to see results</li>
+          </ul>
+          <div class="vision-det-footer" id="visionDetFooter">0 total detections</div>
+        </div>
+
+      </div><!-- /.vision-modal-body -->
+    </div><!-- /.vision-modal-card -->
+  </div><!-- /#visionModalOverlay -->
+
+
   <!-- ══ AI PARAMETRIC CAD STUDIO MODAL ═══════════════════════════════════════ -->
   <div class="cad-modal-overlay hidden" id="cadModalOverlay" role="dialog"
        aria-modal="true" aria-labelledby="cadModalTitle">
@@ -971,6 +1145,8 @@
   <!-- marked.js  -  full Markdown parser for the AI chat renderer -->
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" crossorigin
           onerror="var s=document.createElement('script');s.src='https://unpkg.com/marked@12.0.0/marked.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+  <!-- ONNX Runtime Web — for Vision Studio YOLOv8 browser inference -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js" crossorigin></script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 
   <!-- Service Worker -->

@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Run01 - app.js  (v2 - production-ready)
    Key improvements over v1:
      • Monaco + Pyodide initialise IN PARALLEL via Promise.all
@@ -4122,6 +4122,11 @@ If extensive structural changes are required, output the complete corrected \`\`
   }
 
   function getActivePanelContext() {
+    // Detect if Vision modal is open
+    const visionOverlay = document.getElementById('visionModalOverlay');
+    if (visionOverlay && !visionOverlay.classList.contains('hidden')) {
+      return 'vision';
+    }
     // Detect if CAD modal is open
     const cadOverlay = document.getElementById('cadModalOverlay');
     if (cadOverlay && !cadOverlay.classList.contains('hidden')) {
@@ -7008,4 +7013,650 @@ If extensive structural rewriting is required, output the complete corrected \`\
     if (cadStatusBar) cadStatusBar.textContent = msg;
   }
 
+})();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VISION STUDIO — Video Computer Vision Panel
+// Browser-first: ONNX Runtime Web (YOLOv8) — zero server cost
+// ══════════════════════════════════════════════════════════════════════════════
+(function initVisionStudio() {
+  'use strict';
+
+  // ── Palette definitions ──────────────────────────────────────────────────────
+  const PALETTES = {
+    default: ['#9B5CF6','#F97316','#EC4899','#10B981','#3B82F6','#EAB308','#EF4444','#06B6D4','#8B5CF6','#84CC16','#F59E0B','#14B8A6'],
+    neon:    ['#FF00FF','#00FFFF','#00FF00','#FFFF00','#FF6600','#FF0099','#00FF99','#9900FF','#0099FF','#FF9900','#FF0033','#33FF00'],
+    pastel:  ['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF','#D4BAFF','#FFB3E6','#B3FFE6','#FFE4B3','#B3D4FF','#FFC9BA','#C9FFB3'],
+  };
+
+  const COCO_CLASSES = [
+    'person','bicycle','car','motorcycle','airplane','bus','train','truck','boat',
+    'traffic light','fire hydrant','stop sign','parking meter','bench','bird','cat',
+    'dog','horse','sheep','cow','elephant','bear','zebra','giraffe','backpack',
+    'umbrella','handbag','tie','suitcase','frisbee','skis','snowboard','sports ball',
+    'kite','baseball bat','baseball glove','skateboard','surfboard','tennis racket',
+    'bottle','wine glass','cup','fork','knife','spoon','bowl','banana','apple',
+    'sandwich','orange','broccoli','carrot','hot dog','pizza','donut','cake','chair',
+    'couch','potted plant','bed','dining table','toilet','tv','laptop','mouse',
+    'remote','keyboard','cell phone','microwave','oven','toaster','sink',
+    'refrigerator','book','clock','vase','scissors','teddy bear','hair drier','toothbrush',
+  ];
+
+  // ONNX model CDN URLs
+  const MODEL_URLS = {
+    detect:  { nano: 'https://huggingface.co/onnx-community/yolov8n/resolve/main/yolov8n.onnx', small: 'https://huggingface.co/onnx-community/yolov8s/resolve/main/yolov8s.onnx', medium: 'https://huggingface.co/onnx-community/yolov8m/resolve/main/yolov8m.onnx' },
+    track:   { nano: 'https://huggingface.co/onnx-community/yolov8n/resolve/main/yolov8n.onnx', small: 'https://huggingface.co/onnx-community/yolov8s/resolve/main/yolov8s.onnx', medium: 'https://huggingface.co/onnx-community/yolov8m/resolve/main/yolov8m.onnx' },
+    segment: { nano: 'https://huggingface.co/onnx-community/yolov8n-seg/resolve/main/yolov8n-seg.onnx', small: 'https://huggingface.co/onnx-community/yolov8s-seg/resolve/main/yolov8s-seg.onnx', medium: 'https://huggingface.co/onnx-community/yolov8m-seg/resolve/main/yolov8m-seg.onnx' },
+    pose:    { nano: 'https://huggingface.co/onnx-community/yolov8n-pose/resolve/main/yolov8n-pose.onnx', small: 'https://huggingface.co/onnx-community/yolov8s-pose/resolve/main/yolov8s-pose.onnx', medium: 'https://huggingface.co/onnx-community/yolov8m-pose/resolve/main/yolov8m-pose.onnx' },
+  };
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let videoUrl = null;
+  let videoMeta = { w: 0, h: 0, duration: 0, fps: 25 };
+  let ortSession = null;
+  let allResults = [];       // FrameResult[]
+  let totalDetections = 0;
+  let currentFrame = 0;
+  let totalFrames = 0;
+  let abortController = null;
+  let trackHistory = new Map();  // trackId -> [{x,y}]
+  let selectedModelSize = 'nano';
+  let selectedPalette = 'default';
+  let isProcessing = false;
+  let isPlaying = false;
+
+  // ── DOM refs ─────────────────────────────────────────────────────────────────
+  const overlay       = document.getElementById('visionModalOverlay');
+  const btnOpen       = document.getElementById('btnVision');
+  const btnClose      = document.getElementById('btnCloseVisionModal');
+  const uploadZone    = document.getElementById('visionUploadZone');
+  const fileInput     = document.getElementById('visionFileInput');
+  const uploadInfo    = document.getElementById('visionUploadInfo');
+  const fileNameEl    = document.getElementById('visionFileName');
+  const fileDimsEl    = document.getElementById('visionFileDims');
+  const btnClear      = document.getElementById('btnVisionClear');
+  const emptyState    = document.getElementById('visionEmptyState');
+  const playerWrap    = document.getElementById('visionPlayerWrap');
+  const videoEl       = document.getElementById('visionVideo');
+  const canvas        = document.getElementById('visionCanvas');
+  const ctx           = canvas ? canvas.getContext('2d') : null;
+  const scrubber      = document.getElementById('visionScrubber');
+  const scrubRange    = document.getElementById('visionScrubberRange');
+  const scrubProcessed= document.getElementById('visionScrubberProcessed');
+  const frameBadge    = document.getElementById('visionFrameBadge');
+  const timeDisplay   = document.getElementById('visionTimeDisplay');
+  const btnPlay       = document.getElementById('btnVisionPlay');
+  const playIcon      = document.getElementById('visionPlayIcon');
+  const pauseIcon     = document.getElementById('visionPauseIcon');
+  const btnPrev       = document.getElementById('btnVisionPrev');
+  const btnNext       = document.getElementById('btnVisionNext');
+  const btnRun        = document.getElementById('btnVisionRun');
+  const btnExport     = document.getElementById('btnVisionExport');
+  const taskSelect    = document.getElementById('visionTask');
+  const confSlider    = document.getElementById('visionConf');
+  const confLabel     = document.getElementById('visionConfLabel');
+  const strideSlider  = document.getElementById('visionStride');
+  const strideLabel   = document.getElementById('visionStrideLabel');
+  const statusPanel   = document.getElementById('visionStatusPanel');
+  const statusText    = document.getElementById('visionStatusText');
+  const progressFill  = document.getElementById('visionProgressFill');
+  const progressPct   = document.getElementById('visionProgressPct');
+  const statusBadge   = document.getElementById('visionStatusBadge');
+  const detList       = document.getElementById('visionDetList');
+  const detCount      = document.getElementById('visionDetCount');
+  const detFooter     = document.getElementById('visionDetFooter');
+  const promptInput   = document.getElementById('visionPromptInput');
+  if (promptInput) {
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (btnRun) btnRun.click();
+      }
+    });
+  }
+
+  if (!overlay || !btnOpen) return; // panel not in DOM
+
+  // ── Open / Close ─────────────────────────────────────────────────────────────
+  function openVisionModal() { overlay.classList.remove('hidden'); }
+  function closeVisionModal() { overlay.classList.add('hidden'); }
+
+  window.btnVision = btnOpen;
+  window.openVisionModal = openVisionModal;
+  window.closeVisionModal = closeVisionModal;
+  btnOpen.addEventListener('click', openVisionModal);
+  btnClose.addEventListener('click', closeVisionModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeVisionModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeVisionModal(); });
+
+  // ── Slider labels ────────────────────────────────────────────────────────────
+  if (confSlider) confSlider.addEventListener('input', () => { if (confLabel) confLabel.textContent = confSlider.value + '%'; });
+  if (strideSlider) strideSlider.addEventListener('input', () => { if (strideLabel) strideLabel.textContent = 'every ' + strideSlider.value + 'f'; });
+
+  // ── Model size pills ──────────────────────────────────────────────────────────
+  document.querySelectorAll('.vision-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.vision-pill').forEach(b => b.classList.remove('vision-pill-active'));
+      btn.classList.add('vision-pill-active');
+      selectedModelSize = btn.dataset.size;
+      ortSession = null; // reset cached session on size change
+    });
+  });
+
+  // ── Palette pills ─────────────────────────────────────────────────────────────
+  document.querySelectorAll('.vision-palette-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.vision-palette-btn').forEach(b => b.classList.remove('vision-palette-btn-active'));
+      btn.classList.add('vision-palette-btn-active');
+      selectedPalette = btn.dataset.palette;
+      renderCurrentFrame();
+    });
+  });
+
+  // ── Video upload ─────────────────────────────────────────────────────────────
+  uploadZone.addEventListener('click', () => fileInput.click());
+  uploadZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+  uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('vision-upload-zone--active'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('vision-upload-zone--active'));
+  uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('vision-upload-zone--active');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) loadVideoFile(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadVideoFile(fileInput.files[0]);
+  });
+
+  function loadVideoFile(file) {
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    videoUrl = URL.createObjectURL(file);
+    videoEl.src = videoUrl;
+    videoEl.onloadedmetadata = () => {
+      videoMeta.w = videoEl.videoWidth;
+      videoMeta.h = videoEl.videoHeight;
+      videoMeta.duration = videoEl.duration;
+      totalFrames = Math.floor(videoEl.duration * videoMeta.fps);
+
+      // Update info bar
+      fileNameEl.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      const dur = formatTime(videoEl.duration);
+      fileDimsEl.textContent = videoMeta.w + '×' + videoMeta.h + ' · ' + dur + ' · ' + mb + ' MB';
+
+      uploadZone.classList.add('hidden');
+      uploadInfo.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      playerWrap.classList.remove('hidden');
+      scrubber.classList.remove('hidden');
+
+      scrubRange.max = totalFrames - 1;
+      updateScrubberDisplay(0);
+      resetResults();
+    };
+  }
+
+  if (btnClear) btnClear.addEventListener('click', () => {
+    if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
+    videoEl.src = '';
+    uploadZone.classList.remove('hidden');
+    uploadInfo.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    playerWrap.classList.add('hidden');
+    scrubber.classList.add('hidden');
+    if (btnExport) btnExport.style.display = 'none';
+    resetResults();
+    setStatus('ready', 'READY');
+  });
+
+  // ── Playback ─────────────────────────────────────────────────────────────────
+  if (btnPlay) btnPlay.addEventListener('click', togglePlay);
+  function togglePlay() {
+    if (!videoEl.src) return;
+    if (videoEl.paused) { videoEl.play(); isPlaying = true; }
+    else { videoEl.pause(); isPlaying = false; }
+    playIcon.style.display = isPlaying ? 'none' : '';
+    pauseIcon.style.display = isPlaying ? '' : 'none';
+  }
+  if (videoEl) {
+    videoEl.addEventListener('timeupdate', () => {
+      const frame = Math.floor(videoEl.currentTime * videoMeta.fps);
+      seekToFrame(frame, false);
+    });
+    videoEl.addEventListener('ended', () => {
+      isPlaying = false;
+      playIcon.style.display = '';
+      pauseIcon.style.display = 'none';
+    });
+  }
+
+  // ── Scrubber ─────────────────────────────────────────────────────────────────
+  if (scrubRange) scrubRange.addEventListener('input', () => {
+    const frame = parseInt(scrubRange.value);
+    videoEl.currentTime = frame / videoMeta.fps;
+    seekToFrame(frame, false);
+  });
+  if (btnPrev) btnPrev.addEventListener('click', () => {
+    const frame = Math.max(0, currentFrame - 1);
+    videoEl.currentTime = frame / videoMeta.fps;
+    seekToFrame(frame, false);
+  });
+  if (btnNext) btnNext.addEventListener('click', () => {
+    const frame = Math.min(totalFrames - 1, currentFrame + 1);
+    videoEl.currentTime = frame / videoMeta.fps;
+    seekToFrame(frame, false);
+  });
+
+  function seekToFrame(frame, updateVideo = true) {
+    currentFrame = frame;
+    if (updateVideo) videoEl.currentTime = frame / videoMeta.fps;
+    scrubRange.value = frame;
+    updateScrubberDisplay(frame);
+    renderCurrentFrame();
+    updateDetectionsList();
+  }
+
+  function updateScrubberDisplay(frame) {
+    const total = totalFrames || 1;
+    frameBadge.textContent = 'Frame ' + frame;
+    timeDisplay.textContent = formatTime(frame / videoMeta.fps) + ' / ' + formatTime(videoMeta.duration || 0);
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return m + ':' + sec;
+  }
+
+  // ── ONNX Inference ───────────────────────────────────────────────────────────
+  async function ensureSession() {
+    if (ortSession) return ortSession;
+    setStatus('loading', 'Loading ONNX model…');
+    const task = taskSelect ? taskSelect.value : 'detect';
+    const url = MODEL_URLS[task][selectedModelSize];
+    if (!window.ort) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load ONNX Runtime Web from CDN. Please check network connection.'));
+        document.head.appendChild(s);
+      });
+    }
+    const ort = window.ort;
+    if (!ort) throw new Error('ONNX Runtime Web not loaded.');
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
+    ortSession = await ort.InferenceSession.create(url, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+    setStatus('processing', 'Model loaded');
+    return ortSession;
+  }
+
+  function extractFrameImageData(width = 640, height = 640) {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = width; offscreen.height = height;
+    const octx = offscreen.getContext('2d');
+    octx.drawImage(videoEl, 0, 0, width, height);
+    return octx.getImageData(0, 0, width, height);
+  }
+
+  function nms(boxes, scores, iouThresh) {
+    const idxs = scores.map((s, i) => ({ s, i })).sort((a, b) => b.s - a.s).map(x => x.i);
+    const kept = [], sup = new Set();
+    for (const i of idxs) {
+      if (sup.has(i)) continue;
+      kept.push(i);
+      for (const j of idxs) {
+        if (i === j || sup.has(j)) continue;
+        const [ax, ay, aw, ah] = boxes[i]; const [bx, by, bw, bh] = boxes[j];
+        const ix = Math.max(0, Math.min(ax+aw, bx+bw) - Math.max(ax, bx));
+        const iy = Math.max(0, Math.min(ay+ah, by+bh) - Math.max(ay, by));
+        const inter = ix * iy, union = aw*ah + bw*bh - inter;
+        if (union > 0 && inter/union > iouThresh) sup.add(j);
+      }
+    }
+    return kept;
+  }
+
+  async function runFrameInference(session, imageData) {
+    const ort = window.ort;
+    const { data, width, height } = imageData;
+    const tensor = new Float32Array(3 * width * height);
+    for (let i = 0; i < width * height; i++) {
+      tensor[i]                      = data[i*4]   / 255;
+      tensor[i + width*height]       = data[i*4+1] / 255;
+      tensor[i + 2*width*height]     = data[i*4+2] / 255;
+    }
+    const input = new ort.Tensor('float32', tensor, [1, 3, height, width]);
+    const results = await session.run({ images: input });
+    const output = results.output0 || results[Object.keys(results)[0]];
+    const raw = output.data;
+    const N = output.dims[2];
+    const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.45;
+    const iouThresh = 0.45;
+    const origW = videoMeta.w, origH = videoMeta.h;
+    const sx = origW / width, sy = origH / height;
+    const boxes = [], scores = [], classIds = [];
+    for (let i = 0; i < N; i++) {
+      let maxScore = 0, maxClass = 0;
+      for (let c = 0; c < 80; c++) { const s = raw[(4+c)*N+i]; if (s > maxScore) { maxScore = s; maxClass = c; } }
+      if (maxScore < conf) continue;
+      const cx = raw[0*N+i], cy = raw[1*N+i], w = raw[2*N+i], h = raw[3*N+i];
+      boxes.push([(cx-w/2)*sx, (cy-h/2)*sy, w*sx, h*sy]);
+      scores.push(maxScore); classIds.push(maxClass);
+    }
+    const kept = nms(boxes, scores, iouThresh);
+    return kept.map(idx => ({ classId: classIds[idx], className: COCO_CLASSES[classIds[idx]] || 'obj_'+classIds[idx], confidence: scores[idx], bbox: boxes[idx] }));
+  }
+
+  // ── Run button ───────────────────────────────────────────────────────────────
+  if (btnRun) btnRun.addEventListener('click', async () => {
+    if (isProcessing) { stopProcessing(); return; }
+    if (!videoEl.src) { alert('Please upload a video first.'); return; }
+    await startProcessing();
+  });
+
+  let nextTrackId = 1;
+  function assignTracks(currentDets, prevDets) {
+    const updated = [];
+    const usedPrev = new Set();
+    for (const det of currentDets) {
+      let bestMatchIdx = -1;
+      let bestDist = Infinity;
+      const [cx, cy, cw, ch] = det.bbox;
+      const cCentroidX = cx + cw / 2;
+      const cCentroidY = cy + ch / 2;
+      for (let j = 0; j < prevDets.length; j++) {
+        if (usedPrev.has(j)) continue;
+        const prev = prevDets[j];
+        if (prev.classId !== det.classId) continue;
+        const [px, py, pw, ph] = prev.bbox;
+        const pCentroidX = px + pw / 2;
+        const pCentroidY = py + ph / 2;
+        const dist = Math.hypot(cCentroidX - pCentroidX, cCentroidY - pCentroidY);
+        if (dist < Math.max(cw, ch, 80) && dist < bestDist) {
+          bestDist = dist;
+          bestMatchIdx = j;
+        }
+      }
+      if (bestMatchIdx !== -1 && prevDets[bestMatchIdx].trackId !== undefined) {
+        usedPrev.add(bestMatchIdx);
+        updated.push({ ...det, trackId: prevDets[bestMatchIdx].trackId });
+      } else {
+        updated.push({ ...det, trackId: nextTrackId++ });
+      }
+    }
+    return updated;
+  }
+  async function startProcessing() {
+    isProcessing = true;
+    abortController = new AbortController();
+    resetResults();
+    btnRun.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> STOP';
+    setStatus('processing', 'Initializing…');
+    statusPanel.style.display = '';
+
+    try {
+      const session = await ensureSession();
+      const stride = strideSlider ? parseInt(strideSlider.value) : 1;
+      const fps = videoMeta.fps;
+      videoEl.pause(); isPlaying = false;
+      playIcon.style.display = ''; pauseIcon.style.display = 'none';
+      videoEl.currentTime = 0;
+      nextTrackId = 1;
+      let prevDetections = [];
+      trackHistory.clear();
+
+      for (let frame = 0; frame < totalFrames; frame += stride) {
+        if (abortController.signal.aborted) break;
+        await seekVideoAsync(frame / fps);
+        const imgData = extractFrameImageData(640, 640);
+        let detections = await runFrameInference(session, imgData);
+
+        const query = promptInput ? promptInput.value.toLowerCase().trim() : '';
+        if (query) {
+          detections = detections.filter(d => {
+            const name = d.className.toLowerCase();
+            if (query.includes('player') || query.includes('people') || query.includes('person') || query.includes('team')) {
+              return name === 'person';
+            }
+            if (query.includes('ball')) return name === 'sports ball' || name === 'ball';
+            if (query.includes('car') || query.includes('vehicle')) return ['car', 'bus', 'truck', 'motorcycle'].includes(name);
+            return name.includes(query) || query.includes(name);
+          });
+        }
+
+        const task = taskSelect ? taskSelect.value : 'detect';
+        if (task === 'track' || query.includes('track')) {
+          detections = assignTracks(detections, prevDetections);
+          prevDetections = detections;
+          for (const det of detections) {
+            if (det.trackId !== undefined) {
+              if (!trackHistory.has(det.trackId)) trackHistory.set(det.trackId, []);
+              const [bx, by, bw, bh] = det.bbox;
+              const trail = trackHistory.get(det.trackId);
+              trail.push({ x: bx + bw / 2, y: by + bh / 2 });
+              if (trail.length > 25) trail.shift();
+            }
+          }
+        }
+
+        const result = { frameIndex: frame, timestamp: frame / fps, detections };
+        allResults.push(result);
+        totalDetections += detections.length;
+        const pct = Math.round(((frame + 1) / totalFrames) * 100);
+        setProgress(pct, `Frame ${frame + 1} / ${totalFrames}`);
+        detFooter.textContent = totalDetections + ' total detections';
+        scrubberProcessedUpdate(frame);
+        // Show current frame annotations live
+        if (frame === currentFrame || Math.abs(frame - currentFrame) < stride) {
+          renderDetections(result.detections);
+          updateDetectionsList(result);
+        }
+        await yieldToUI();
+      }
+
+      setStatus('done', 'DONE');
+      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RE-RUN';
+      if (btnExport) btnExport.style.display = '';
+      renderCurrentFrame();
+    } catch (err) {
+      setStatus('error', 'ERROR: ' + err.message);
+      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RUN';
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  function stopProcessing() {
+    if (abortController) abortController.abort();
+    isProcessing = false;
+    btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RUN';
+    setStatus('ready', 'READY');
+  }
+
+  function seekVideoAsync(time) {
+    return new Promise(resolve => {
+      videoEl.currentTime = time;
+      const onSeeked = () => { videoEl.removeEventListener('seeked', onSeeked); resolve(); };
+      videoEl.addEventListener('seeked', onSeeked);
+    });
+  }
+
+  function yieldToUI() { return new Promise(r => setTimeout(r, 0)); }
+
+  // ── Annotation rendering ─────────────────────────────────────────────────────
+  function getColor(classId, trackId) {
+    const pal = PALETTES[selectedPalette] || PALETTES.default;
+    const idx = (trackId !== undefined ? trackId : classId) % pal.length;
+    return pal[idx];
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function renderDetections(detections) {
+    if (!ctx || !canvas) return;
+    const rect = videoEl.getBoundingClientRect();
+    if (rect.width < 1) return;
+    if (canvas.width !== rect.width || canvas.height !== rect.height) {
+      canvas.width = rect.width; canvas.height = rect.height;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const sx = rect.width / (videoMeta.w || 1);
+    const sy = rect.height / (videoMeta.h || 1);
+    const showLabels = document.getElementById('visionShowLabels')?.checked !== false;
+    const showConf   = document.getElementById('visionShowConf')?.checked !== false;
+    ctx.font = 'bold 11px "DM Mono", monospace';
+    // Draw motion trails
+    const showTrails = document.getElementById('visionShowTrails')?.checked !== false;
+    if (showTrails) {
+      for (const det of detections) {
+        if (det.trackId !== undefined && trackHistory.has(det.trackId)) {
+          const trail = trackHistory.get(det.trackId);
+          if (trail.length > 1) {
+            ctx.beginPath();
+            ctx.strokeStyle = getColor(det.classId, det.trackId);
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            for (let t = 0; t < trail.length; t++) {
+              const tx = trail[t].x * sx;
+              const ty = trail[t].y * sy;
+              if (t === 0) ctx.moveTo(tx, ty);
+              else ctx.lineTo(tx, ty);
+            }
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    // Draw bounding boxes and confidence/label badges
+    for (const det of detections) {
+      const color = getColor(det.classId, det.trackId);
+      const [bx, by, bw, bh] = det.bbox;
+      const x = bx * sx, y = by * sy, w = bw * sx, h = bh * sy;
+      
+      // Semi-transparent box background + sharp border
+      ctx.fillStyle = hexToRgba(color, 0.15);
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+
+      // Top corner badge
+      if (showLabels || showConf || det.trackId !== undefined) {
+        const parts = [];
+        if (det.trackId !== undefined) parts.push('#' + det.trackId);
+        if (showLabels) parts.push(det.className);
+        if (showConf) parts.push(Math.round(det.confidence * 100));
+        const label = parts.join(' ');
+        const tw = ctx.measureText(label).width;
+        const bH = 18;
+        const bW = tw + 10;
+        const bY = y - bH > 0 ? y - bH : y;
+        
+        ctx.fillStyle = color;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(x, bY, bW, bH, [3, 3, 0, 0]);
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, bY, bW, bH);
+        }
+        
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 11px "DM Mono", monospace';
+        ctx.fillText(label, x + 5, bY + 13);
+      }
+    }
+  }
+
+  function renderCurrentFrame() {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const result = allResults.find(r => r.frameIndex === currentFrame);
+    if (result && result.detections.length > 0) renderDetections(result.detections);
+  }
+
+  function scrubberProcessedUpdate(frame) {
+    const pct = totalFrames > 0 ? (frame / totalFrames) * 100 : 0;
+    scrubberProcessed && (scrubberProcessed.style.width = pct + '%');
+  }
+
+  // ── Detections sidebar ────────────────────────────────────────────────────────
+  function updateDetectionsList(result) {
+    const res = result || allResults.find(r => r.frameIndex === currentFrame);
+    const dets = res ? res.detections : [];
+    detCount.textContent = dets.length + ' this frame';
+    if (dets.length === 0) {
+      detList.innerHTML = '<li class="vision-det-empty">' + (allResults.length ? 'No detections this frame' : 'Process video to see results') + '</li>';
+      return;
+    }
+    const pal = PALETTES[selectedPalette] || PALETTES.default;
+    detList.innerHTML = dets.map((det, i) => {
+      const color = pal[(det.trackId !== undefined ? det.trackId : det.classId) % pal.length];
+      const [bx, by, bw, bh] = det.bbox;
+      return `<li class="vision-det-item">
+        <span class="vision-det-color" style="background:${color}"></span>
+        <div class="vision-det-info">
+          <span class="vision-det-class">${det.className}${det.trackId !== undefined ? ' <span style="color:rgba(155,92,246,.7)">#'+det.trackId+'</span>' : ''}</span>
+          <span class="vision-det-bbox">${Math.round(bx)},${Math.round(by)} ${Math.round(bw)}×${Math.round(bh)}</span>
+        </div>
+        <span class="vision-det-conf" style="color:${color}">${Math.round(det.confidence*100)}</span>
+      </li>`;
+    }).join('');
+  }
+
+  // ── Status helpers ────────────────────────────────────────────────────────────
+  function setStatus(state, text) {
+    statusText.textContent = text;
+    statusBadge.textContent = text;
+    statusBadge.className = 'vision-status-badge vision-status-badge--' + state;
+  }
+
+  function setProgress(pct, label) {
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    if (label) statusText.textContent = label;
+  }
+
+  function resetResults() {
+    allResults = []; totalDetections = 0; currentFrame = 0;
+    trackHistory.clear();
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    detList.innerHTML = '<li class="vision-det-empty">Process video to see results</li>';
+    detCount.textContent = '0 this frame';
+    detFooter.textContent = '0 total detections';
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressPct) progressPct.textContent = '0%';
+    if (scrubberProcessed) scrubberProcessed.style.width = '0%';
+    if (btnExport) btnExport.style.display = 'none';
+    statusPanel.style.display = 'none';
+  }
+
+  // ── Export ───────────────────────────────────────────────────────────────────
+  if (btnExport) btnExport.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'run01-cv-detections.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ── Canvas resize observer ────────────────────────────────────────────────────
+  if (videoEl && canvas) {
+    const ro = new ResizeObserver(() => {
+      const rect = videoEl.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        canvas.width = rect.width; canvas.height = rect.height;
+        renderCurrentFrame();
+      }
+    });
+    ro.observe(videoEl);
+  }
+
+  console.log('[RUN01] Vision Studio panel initialised.');
 })();
