@@ -83,7 +83,7 @@ function Index() {
           <a href="#founder">FOUNDER</a>
           <a href="/vision" style={{ color: "#9B5CF6", fontWeight: 600 }}>VISION ✦</a>
         </nav>
-        <a className="pixel-button pixel-button-dark" href="#engine">RUN IDE <Play size={13} fill="currentColor" /></a>
+        <a className="pixel-button pixel-button-dark" href="/#ide">RUN IDE <Play size={13} fill="currentColor" /></a>
       </header>
 
       <BinaryRail />
@@ -97,7 +97,7 @@ function Index() {
           <h1>IDEAS IN.<br /><span>MODELS OUT.</span></h1>
           <p className="hero-lede">A full data science stack in your browser. No installation. No server. No waiting.</p>
           <div className="flex flex-wrap gap-3">
-            <a className="pixel-button pixel-button-accent" href="#engine">START RUNNING <ArrowUpRight size={16} /></a>
+            <a className="pixel-button pixel-button-accent" href="/#ide">START RUNNING <ArrowUpRight size={16} /></a>
             <a className="text-link" href="#why">HOW IT WORKS <ArrowDown size={14} /></a>
           </div>
           <div className="boot-line"><span>SYS.READY</span><span>PYODIDE.WASM</span><span>0ms SERVER TIME</span></div>

@@ -65,7 +65,7 @@
       </nav>
       <div class="landing-header-actions">
         <button class="pixel-button pixel-button-ghost btn-landing-auth" id="btnLandingAuth" title="Sign In or Sign Up">SIGN IN</button>
-        <button class="pixel-button pixel-button-dark btn-launch-ide" id="btnLandingLaunchIDE" title="Launch RUN01 IDE">
+        <button class="pixel-button pixel-button-dark btn-launch-ide" id="btnLandingLaunchIDE" title="Launch RUN01 IDE" onclick="if(window.ViewManager){window.ViewManager.showIDE();}else{document.body.classList.add('in-ide');document.getElementById('landingView')?.classList.add('hidden');document.getElementById('ideView')?.classList.remove('hidden');window.location.hash='ide';}">
           RUN IDE
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         </button>
@@ -84,7 +84,7 @@
         <h1>IDEAS IN.<br><span>MODELS OUT.</span></h1>
         <p class="hero-lede">A full data science stack, parametric CAD studio &amp; live financial engine running 100% in your browser. Zero setup. Zero latency. Zero server compute costs.</p>
         <div class="flex-actions">
-          <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnHeroLaunchIDE">
+          <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnHeroLaunchIDE" onclick="if(window.ViewManager){window.ViewManager.showIDE();}else{document.body.classList.add('in-ide');document.getElementById('landingView')?.classList.add('hidden');document.getElementById('ideView')?.classList.remove('hidden');window.location.hash='ide';}">
             START RUNNING
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
           </button>
@@ -220,7 +220,7 @@
         <p class="kicker">WHY RUN01</p>
         <h2>THE FASTEST PATH FROM IDEA TO WORKING MODEL.</h2>
         <p>Built for people who would rather test the thought than configure the environment.</p>
-        <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnProofLaunchIDE">
+        <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnProofLaunchIDE" onclick="if(window.ViewManager){window.ViewManager.showIDE();}else{document.body.classList.add('in-ide');document.getElementById('landingView')?.classList.add('hidden');document.getElementById('ideView')?.classList.remove('hidden');window.location.hash='ide';}">
           OPEN RUN01
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         </button>
@@ -297,7 +297,7 @@
           </div>
 
           <div class="founder-action">
-            <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnFounderLaunchIDE">
+            <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnFounderLaunchIDE" onclick="if(window.ViewManager){window.ViewManager.showIDE();}else{document.body.classList.add('in-ide');document.getElementById('landingView')?.classList.add('hidden');document.getElementById('ideView')?.classList.remove('hidden');window.location.hash='ide';}">
               RUN IT NOW
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
             </button>

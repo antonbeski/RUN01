@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Run01 - app.js  (v2 - production-ready)
    Key improvements over v1:
      • Monaco + Pyodide initialise IN PARALLEL via Promise.all
@@ -5570,13 +5570,35 @@ window.ViewManager = (function() {
     }
   }
 
-  // Bind all CTA launch buttons
+  // Global delegation for all launch buttons
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('.btn-launch-ide, #btnLandingLaunchIDE, #btnHeroLaunchIDE, #btnProofLaunchIDE, #btnFounderLaunchIDE');
+    if (btn) {
+      e.preventDefault();
+      showIDE();
+    }
+  });
+
+  // Handle URL hash changes
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash;
+    if (h === '#ide' || h === '#workspace') {
+      showIDE();
+    } else if (h === '' || h === '#top' || h === '#landingStack' || h === '#landingFeatures' || h === '#landingWhy' || h === '#founder') {
+      showLanding();
+    }
+  });
+
+  // Direct binding on all CTA launch buttons
   document.querySelectorAll('.btn-launch-ide').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       showIDE();
     });
   });
+
+  window.showIDE = showIDE;
+  window.showLanding = showLanding;
 
   if (btnLandingAuth) {
     btnLandingAuth.addEventListener('click', (e) => {
@@ -7351,7 +7373,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         }
       }
       if (!modelBuffer) {
-        throw new Error(Failed to download model binary: );
+        throw new Error('Failed to download model binary: ' + (lastFetchErr ? lastFetchErr.message : 'network error'));
       }
     }
 
@@ -7365,10 +7387,10 @@ If extensive structural rewriting is required, output the complete corrected \`\
           executionProviders: [ep],
           graphOptimizationLevel: 'all'
         });
-        console.log([Vision] Initialized session with );
+        console.log('[Vision] Initialized session with', ep);
         break;
       } catch (e) {
-        console.warn([Vision] Backend  unavailable, trying next:, e);
+        console.warn('[Vision] Backend ' + ep + ' unavailable, trying next:', e);
       }
     }
 
