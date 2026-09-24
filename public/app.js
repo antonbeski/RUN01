@@ -7154,109 +7154,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   });
 
   // ── Video upload ─────────────────────────────────────────────────────────────
-  const btnSample = document.getElementById('btnVisionSample');
-  if (btnSample) {
-    btnSample.addEventListener('click', (e) => {
-      e.stopPropagation();
-      loadSyntheticSampleVideo();
-    });
-  }
-
-  function loadSyntheticSampleVideo() {
-    setStatus('loading', 'Generating sample football clip…');
-    const width = 640;
-    const height = 360;
-    const c = document.createElement('canvas');
-    c.width = width;
-    c.height = height;
-    const cctx = c.getContext('2d');
-
-    const stream = c.captureStream(30);
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm';
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 1000000 });
-    const chunks = [];
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const sampleFile = new File([blob], 'football_sample_match.webm', { type: 'video/webm' });
-      loadVideoFile(sampleFile);
-      setStatus('ready', 'Sample video loaded — click RUN to detect & track');
-    };
-
-    recorder.start();
-
-    let frame = 0;
-    const totalSampleFrames = 150;
-    function drawSampleFrame() {
-      cctx.fillStyle = '#1e3a1e';
-      cctx.fillRect(0, 0, width, height);
-
-      cctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      cctx.lineWidth = 3;
-      cctx.strokeRect(40, 30, width - 80, height - 60);
-      cctx.beginPath();
-      cctx.moveTo(width / 2, 30);
-      cctx.lineTo(width / 2, height - 30);
-      cctx.stroke();
-      cctx.beginPath();
-      cctx.arc(width / 2, height / 2, 45, 0, Math.PI * 2);
-      cctx.stroke();
-
-      const t = frame / 30;
-
-      // Player 1 (Red)
-      const p1x = 120 + Math.sin(t * 1.5) * 60 + t * 25;
-      const p1y = 110 + Math.cos(t * 2) * 20;
-      cctx.fillStyle = '#ef4444';
-      cctx.fillRect(p1x - 12, p1y - 30, 24, 40);
-      cctx.fillStyle = '#fde047';
-      cctx.beginPath(); cctx.arc(p1x, p1y - 38, 9, 0, Math.PI * 2); cctx.fill();
-
-      // Player 2 (Red)
-      const p2x = 180 + Math.sin(t * 1.2) * 40 + t * 20;
-      const p2y = 220 + Math.sin(t * 2.2) * 25;
-      cctx.fillStyle = '#ef4444';
-      cctx.fillRect(p2x - 12, p2y - 30, 24, 40);
-      cctx.fillStyle = '#fde047';
-      cctx.beginPath(); cctx.arc(p2x, p2y - 38, 9, 0, Math.PI * 2); cctx.fill();
-
-      // Player 3 (Blue)
-      const p3x = 380 - Math.cos(t * 1.4) * 50 - t * 15;
-      const p3y = 130 + Math.sin(t * 1.8) * 30;
-      cctx.fillStyle = '#3b82f6';
-      cctx.fillRect(p3x - 12, p3y - 30, 24, 40);
-      cctx.fillStyle = '#fde047';
-      cctx.beginPath(); cctx.arc(p3x, p3y - 38, 9, 0, Math.PI * 2); cctx.fill();
-
-      // Player 4 (Blue)
-      const p4x = 420 - Math.sin(t * 1.1) * 35 - t * 18;
-      const p4y = 210 + Math.cos(t * 1.5) * 25;
-      cctx.fillStyle = '#3b82f6';
-      cctx.fillRect(p4x - 12, p4y - 30, 24, 40);
-      cctx.fillStyle = '#fde047';
-      cctx.beginPath(); cctx.arc(p4x, p4y - 38, 9, 0, Math.PI * 2); cctx.fill();
-
-      // Soccer Ball
-      const bx = 160 + t * 50 + Math.sin(t * 4) * 15;
-      const by = 160 + Math.sin(t * 5) * 40;
-      cctx.fillStyle = '#ffffff';
-      cctx.beginPath(); cctx.arc(bx, by, 7, 0, Math.PI * 2); cctx.fill();
-      cctx.strokeStyle = '#000000'; cctx.lineWidth = 1.5; cctx.stroke();
-
-      frame++;
-      if (frame < totalSampleFrames) {
-        requestAnimationFrame(drawSampleFrame);
-      } else {
-        recorder.stop();
-      }
-    }
-    drawSampleFrame();
-  }
-
-  uploadZone.addEventListener('click', (e) => {
-    if (e.target === btnSample) return;
-    fileInput.click();
-  });
+  uploadZone.addEventListener('click', () => fileInput.click());
   uploadZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
   uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('vision-upload-zone--active'); });
   uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('vision-upload-zone--active'));
@@ -7582,10 +7480,14 @@ If extensive structural rewriting is required, output the complete corrected \`\
         await yieldToUI();
       }
 
-      setStatus('done', 'DONE');
-      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RE-RUN';
+      setStatus('done', 'ANALYSIS COMPLETE (' + totalDetections + ' detections)');
+      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RE-ANALYSE';
       if (btnExport) btnExport.style.display = '';
-      renderCurrentFrame();
+      seekToFrame(0, true);
+      videoEl.play();
+      isPlaying = true;
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = '';
     } catch (err) {
       setStatus('error', 'ERROR: ' + err.message);
       btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RUN';
@@ -7603,9 +7505,22 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   function seekVideoAsync(time) {
     return new Promise(resolve => {
-      videoEl.currentTime = time;
-      const onSeeked = () => { videoEl.removeEventListener('seeked', onSeeked); resolve(); };
+      if (Math.abs(videoEl.currentTime - time) < 0.008) {
+        resolve();
+        return;
+      }
+      let timer = null;
+      const onSeeked = () => {
+        if (timer) clearTimeout(timer);
+        videoEl.removeEventListener('seeked', onSeeked);
+        resolve();
+      };
+      timer = setTimeout(() => {
+        videoEl.removeEventListener('seeked', onSeeked);
+        resolve();
+      }, 250);
       videoEl.addEventListener('seeked', onSeeked);
+      videoEl.currentTime = time;
     });
   }
 
@@ -7689,44 +7604,46 @@ If extensive structural rewriting is required, output the complete corrected \`\
       }
     }
 
-    // Draw bounding boxes and confidence/label badges
+    // Bounded boxes around detected objects with label above each box
     for (const det of detections) {
       const color = getColor(det.classId, det.trackId);
       const [bx, by, bw, bh] = det.bbox;
-      const x = offsetX + bx * sx, y = offsetY + by * sy, w = bw * sx, h = bh * sy;
-      
-      // Semi-transparent box background + sharp border
+      const x = Math.round(offsetX + bx * sx);
+      const y = Math.round(offsetY + by * sy);
+      const w = Math.round(bw * sx);
+      const h = Math.round(bh * sy);
+
+      if (w < 4 || h < 4) continue;
+
+      // 1. Box bounded on object detected
       ctx.fillStyle = hexToRgba(color, 0.15);
       ctx.fillRect(x, y, w, h);
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, w, h);
 
-      // Top corner badge
-      if (showLabels || showConf || det.trackId !== undefined) {
-        const parts = [];
-        if (det.trackId !== undefined) parts.push('#' + det.trackId);
-        if (showLabels) parts.push(det.className);
-        if (showConf) parts.push(Math.round(det.confidence * 100));
-        const label = parts.join(' ');
-        const tw = ctx.measureText(label).width;
-        const bH = 18;
-        const bW = tw + 10;
-        const bY = y - bH > 0 ? y - bH : y;
-        
-        ctx.fillStyle = color;
-        if (ctx.roundRect) {
-          ctx.beginPath();
-          ctx.roundRect(x, bY, bW, bH, [3, 3, 0, 0]);
-          ctx.fill();
-        } else {
-          ctx.fillRect(x, bY, bW, bH);
-        }
-        
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 11px "DM Mono", monospace';
-        ctx.fillText(label, x + 5, bY + 13);
+      // 2. Above the box: label what the object is
+      const objName = det.trackId !== undefined 
+        ? '#' + det.trackId + ' ' + det.className + ' ' + Math.round(det.confidence * 100) + '%'
+        : det.className + ' ' + Math.round(det.confidence * 100) + '%';
+
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "DM Mono", monospace';
+      const textW = ctx.measureText(objName).width;
+      const badgeH = 18;
+      const badgeW = Math.round(textW + 10);
+      const badgeY = y - badgeH >= 0 ? y - badgeH : y;
+
+      ctx.fillStyle = color;
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x, badgeY, badgeW, badgeH, [3, 3, 0, 0]);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, badgeY, badgeW, badgeH);
       }
+
+      ctx.fillStyle = '#000000';
+      ctx.fillText(objName, x + 5, badgeY + 13);
     }
   }
 
