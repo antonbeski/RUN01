@@ -864,12 +864,9 @@
           <span class="vision-status-badge" id="visionStatusBadge">READY</span>
         </div>
         <div class="vision-modal-header-center">
-          <!-- Prompt / description bar -->
-          <input type="text" class="vision-prompt-input" id="visionPromptInput"
-                 placeholder="Describe what to detect… e.g. 'track the red team players'" />
-          <button class="vision-send-btn" id="btnVisionRun" aria-label="Run Vision" title="Run CV inference">
+          <button class="vision-send-btn" id="btnVisionRun" aria-label="Analyse Video" title="Analyse and track all objects in video">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            RUN
+            ANALYSE &amp; TRACK VIDEO
           </button>
         </div>
         <div class="vision-modal-header-right">
@@ -925,8 +922,8 @@
           </div>
 
           <div class="vision-config-group">
-            <label class="vision-config-label">CONFIDENCE <span class="vision-config-val" id="visionConfLabel">45%</span></label>
-            <input type="range" class="vision-slider" id="visionConf" min="0" max="100" value="45" />
+            <label class="vision-config-label">CONFIDENCE <span class="vision-config-val" id="visionConfLabel">25%</span></label>
+            <input type="range" class="vision-slider" id="visionConf" min="5" max="95" value="25" />
           </div>
 
           <div class="vision-config-group">

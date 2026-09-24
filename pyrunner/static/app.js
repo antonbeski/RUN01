@@ -7247,13 +7247,31 @@ If extensive structural rewriting is required, output the complete corrected \`\
     seekToFrame(frame, false);
   });
 
-  function seekToFrame(frame, updateVideo = true) {
+  async function seekToFrame(frame, updateVideo = true) {
     currentFrame = frame;
     if (updateVideo) videoEl.currentTime = frame / videoMeta.fps;
     scrubRange.value = frame;
     updateScrubberDisplay(frame);
-    renderCurrentFrame();
-    updateDetectionsList();
+
+    const cached = allResults.find(r => r.frameIndex === frame);
+    if (cached) {
+      renderDetections(cached.detections);
+      updateDetectionsList(cached);
+    } else if (ortSession && !isProcessing && !isPlaying) {
+      // Immediate single-frame detection when scrubbing before full analysis
+      try {
+        const pre = extractFrameImageData(640);
+        const dets = await runFrameInference(ortSession, pre);
+        renderDetections(dets);
+        updateDetectionsList({ detections: dets });
+      } catch (e) {
+        renderCurrentFrame();
+        updateDetectionsList();
+      }
+    } else {
+      renderCurrentFrame();
+      updateDetectionsList();
+    }
   }
 
   function updateScrubberDisplay(frame) {
@@ -7272,23 +7290,96 @@ If extensive structural rewriting is required, output the complete corrected \`\
   async function ensureSession() {
     if (ortSession) return ortSession;
     setStatus('loading', 'Loading ONNX model…');
-    const task = taskSelect ? taskSelect.value : 'detect';
-    const url = MODEL_URLS[task][selectedModelSize];
+    
+    // Primary and fallback CDN URLs for YOLOv8 nano ONNX
+    const modelUrls = [
+      'https://huggingface.co/onnx-community/yolov8n/resolve/main/yolov8n.onnx',
+      'https://cdn.jsdelivr.net/gh/hyuto/yolov8-onnxruntime-web@master/public/model/yolov8n.onnx'
+    ];
+
     if (!window.ort) {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js';
         s.crossOrigin = 'anonymous';
         s.onload = resolve;
-        s.onerror = () => reject(new Error('Failed to load ONNX Runtime Web from CDN. Please check network connection.'));
+        s.onerror = () => reject(new Error('Failed to load ONNX Runtime Web from CDN. Please check your network connection.'));
         document.head.appendChild(s);
       });
     }
     const ort = window.ort;
-    if (!ort) throw new Error('ONNX Runtime Web not loaded.');
+    if (!ort) throw new Error('ONNX Runtime Web library unavailable');
+
     ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
-    ortSession = await ort.InferenceSession.create(url, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-    setStatus('processing', 'Model loaded');
+    ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
+    ort.env.wasm.simd = true;
+
+    // Fetch model binary as ArrayBuffer with Cache API persistence
+    let modelBuffer = null;
+    const cacheKey = 'run01-yolov8n-v1';
+
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open('run01-vision-cache');
+        const cachedResp = await cache.match(cacheKey);
+        if (cachedResp) {
+          modelBuffer = await cachedResp.arrayBuffer();
+        }
+      } catch (e) {
+        console.warn('Cache API lookup failed:', e);
+      }
+    }
+
+    if (!modelBuffer) {
+      setStatus('loading', 'Downloading YOLOv8 nano model (12 MB)…');
+      let lastFetchErr = null;
+      for (const url of modelUrls) {
+        try {
+          const resp = await fetch(url);
+          if (resp.ok) {
+            modelBuffer = await resp.arrayBuffer();
+            if ('caches' in window) {
+              try {
+                const cache = await caches.open('run01-vision-cache');
+                await cache.put(cacheKey, new Response(modelBuffer.slice(0)));
+              } catch (_) {}
+            }
+            break;
+          }
+        } catch (err) {
+          lastFetchErr = err;
+        }
+      }
+      if (!modelBuffer) {
+        throw new Error(Failed to download model binary: );
+      }
+    }
+
+    setStatus('loading', 'Compiling WebAssembly / WebGPU engine…');
+
+    // Try execution providers in order of performance
+    const eps = ['webgpu', 'webgl', 'wasm'];
+    for (const ep of eps) {
+      try {
+        ortSession = await ort.InferenceSession.create(modelBuffer, {
+          executionProviders: [ep],
+          graphOptimizationLevel: 'all'
+        });
+        console.log([Vision] Initialized session with );
+        break;
+      } catch (e) {
+        console.warn([Vision] Backend  unavailable, trying next:, e);
+      }
+    }
+
+    if (!ortSession) {
+      ortSession = await ort.InferenceSession.create(modelBuffer, {
+        executionProviders: ['wasm'],
+        graphOptimizationLevel: 'all'
+      });
+    }
+
+    setStatus('ready', 'Model Ready');
     return ortSession;
   }
 
@@ -7354,7 +7445,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     const output = results.output0 || results[Object.keys(results)[0]];
     const raw = output.data;
     const N = output.dims[2];
-    const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.45;
+    const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.25;
     const iouThresh = 0.45;
     const boxes = [], scores = [], classIds = [];
     for (let i = 0; i < N; i++) {
@@ -7437,21 +7528,10 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const imgData = extractFrameImageData(640, 640);
         let detections = await runFrameInference(session, imgData);
 
-        const query = promptInput ? promptInput.value.toLowerCase().trim() : '';
-        if (query) {
-          detections = detections.filter(d => {
-            const name = d.className.toLowerCase();
-            if (query.includes('player') || query.includes('people') || query.includes('person') || query.includes('team')) {
-              return name === 'person';
-            }
-            if (query.includes('ball')) return name === 'sports ball' || name === 'ball';
-            if (query.includes('car') || query.includes('vehicle')) return ['car', 'bus', 'truck', 'motorcycle'].includes(name);
-            return name.includes(query) || query.includes(name);
-          });
-        }
+        // Always detect and track all objects in video
 
         const task = taskSelect ? taskSelect.value : 'detect';
-        if (task === 'track' || query.includes('track')) {
+        if (task === 'track' || task === 'detect') {
           detections = assignTracks(detections, prevDetections);
           prevDetections = detections;
           for (const det of detections) {
@@ -7490,7 +7570,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
       pauseIcon.style.display = '';
     } catch (err) {
       setStatus('error', 'ERROR: ' + err.message);
-      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RUN';
+      btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> ANALYSE & TRACK VIDEO';
     } finally {
       isProcessing = false;
     }
@@ -7499,7 +7579,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   function stopProcessing() {
     if (abortController) abortController.abort();
     isProcessing = false;
-    btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> RUN';
+    btnRun.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> ANALYSE & TRACK VIDEO';
     setStatus('ready', 'READY');
   }
 
