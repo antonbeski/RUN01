@@ -7417,23 +7417,30 @@ If extensive structural rewriting is required, output the complete corrected \`\
     if (!window.ort) {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js';
+        // Use ort.all.min.js — bundles all WASM backends without dynamic .mjs imports
+        s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.all.min.js';
         s.crossOrigin = 'anonymous';
         s.onload = resolve;
-        s.onerror = () => reject(new Error('Failed to load ONNX Runtime Web from CDN. Please check your network connection.'));
+        s.onerror = () => reject(new Error('Failed to load ONNX Runtime Web from CDN.'));
         document.head.appendChild(s);
       });
     }
     const ort = window.ort;
     if (!ort) throw new Error('ONNX Runtime Web library unavailable');
 
-    ort.env.wasm.wasmPaths = '/ort/';
-    ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
-    ort.env.wasm.simd = true;
+    // ── CRITICAL FIX: point wasmPaths to the CDN matching the loaded ort.min.js ──
+    // The /ort/ local path does not exist on Vercel — it caused:
+    // "Failed to fetch dynamically imported module: .../ort-wasm-simd-threaded.mjs"
+    const ORT_CDN_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
+    ort.env.wasm.wasmPaths = ORT_CDN_BASE;
+
+    // Disable multi-threading: Vercel does NOT serve the COOP/COEP headers required
+    // for SharedArrayBuffer. Threaded WASM always fails with the .mjs import error.
+    ort.env.wasm.numThreads = 1;
 
     // Fetch model binary as ArrayBuffer with Cache API persistence
     let modelBuffer = null;
-    const cacheKey = 'run01-yolov8n-v1';
+    const cacheKey = 'run01-yolov8n-v2';
 
     if ('caches' in window) {
       try {
@@ -7441,17 +7448,19 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const cachedResp = await cache.match(cacheKey);
         if (cachedResp) {
           modelBuffer = await cachedResp.arrayBuffer();
+          console.log('[Vision] Model loaded from browser cache');
         }
       } catch (e) {
-        console.warn('Cache API lookup failed:', e);
+        console.warn('[Vision] Cache API lookup failed:', e);
       }
     }
 
     if (!modelBuffer) {
-      setStatus('loading', 'Downloading YOLOv8 nano model (12 MB)…');
+      setStatus('loading', 'Downloading YOLOv8 nano model (~12 MB, cached after first load)…');
       let lastFetchErr = null;
       for (const url of modelUrls) {
         try {
+          console.log('[Vision] Fetching model from:', url);
           const resp = await fetch(url);
           if (resp.ok) {
             modelBuffer = await resp.arrayBuffer();
@@ -7464,39 +7473,41 @@ If extensive structural rewriting is required, output the complete corrected \`\
             break;
           }
         } catch (err) {
+          console.warn('[Vision] Fetch failed for', url, ':', err.message);
           lastFetchErr = err;
         }
       }
       if (!modelBuffer) {
-        throw new Error('Failed to download model binary: ' + (lastFetchErr ? lastFetchErr.message : 'network error'));
+        throw new Error('Failed to download model: ' + (lastFetchErr ? lastFetchErr.message : 'network error'));
       }
     }
 
-    setStatus('loading', 'Compiling WebAssembly / WebGPU engine…');
+    setStatus('loading', 'Initialising inference engine…');
 
-    // Try execution providers in order of performance
-    const eps = ['webgpu', 'webgl', 'wasm'];
-    for (const ep of eps) {
+    // Try GPU first, gracefully fall back to pure single-threaded WASM
+    const backends = [
+      { ep: 'webgpu', label: 'WebGPU' },
+      { ep: 'webgl',  label: 'WebGL'  },
+      { ep: 'wasm',   label: 'WASM'   },
+    ];
+    for (const { ep, label } of backends) {
       try {
         ortSession = await ort.InferenceSession.create(modelBuffer, {
           executionProviders: [ep],
-          graphOptimizationLevel: 'all'
+          graphOptimizationLevel: 'all',
         });
-        console.log('[Vision] Initialized session with', ep);
+        console.log('[Vision] Session ready — backend:', label);
+        setStatus('ready', `Model ready (${label})`);
         break;
       } catch (e) {
-        console.warn('[Vision] Backend ' + ep + ' unavailable, trying next:', e);
+        console.warn('[Vision]', label, 'backend failed:', e.message || e);
       }
     }
 
     if (!ortSession) {
-      ortSession = await ort.InferenceSession.create(modelBuffer, {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all'
-      });
+      throw new Error('No ONNX backend available (webgpu / webgl / wasm all failed).');
     }
 
-    setStatus('ready', 'Model Ready');
     return ortSession;
   }
 

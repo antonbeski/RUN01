@@ -1151,7 +1151,9 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" crossorigin
           onerror="var s=document.createElement('script');s.src='https://unpkg.com/marked@12.0.0/marked.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
   <!-- ONNX Runtime Web — for Vision Studio YOLOv8 browser inference -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js" crossorigin></script>
+  <!-- ort.all.min.js bundles all backends statically (no dynamic .mjs imports) -->
+  <!-- This avoids "Failed to fetch ort-wasm-simd-threaded.mjs" on Vercel        -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.all.min.js" crossorigin></script>
   <script src="./app.js" defer></script>
 
   <!-- Service Worker -->
