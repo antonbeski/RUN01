@@ -551,6 +551,7 @@ def db_health_check():
     return jsonify(check_db_health())
 
 @app.route("/")
+@app.route("/vision")
 def index():
     return render_template("index.html")
 
@@ -565,6 +566,23 @@ def service_worker():
     resp.headers["Content-Type"] = "application/javascript"
     resp.headers["Cache-Control"] = "no-cache"  # SW itself must not be cached
     return resp
+
+# ── Static file fallback for root-level assets (/app.js, /style.css, /ort/*, /models/*) ──
+@app.route("/<path:filename>")
+def serve_static_root(filename):
+    # First check pyrunner/static
+    static_file = os.path.join(app.static_folder, filename)
+    if os.path.isfile(static_file):
+        return send_from_directory(app.static_folder, filename)
+    # Then check public folder
+    pub_dir = os.path.join(os.path.dirname(__file__), "..", "public")
+    pub_file = os.path.join(pub_dir, filename)
+    if os.path.isfile(pub_file):
+        return send_from_directory(pub_dir, filename)
+    # If it is a client route without extension, return index.html
+    if "." not in filename:
+        return render_template("index.html")
+    return jsonify({"error": "File not found"}), 404
 
 # ── Yahoo Finance server-side proxy ───────────────────────────────────────────
 # Pyodide runs inside the browser sandbox; direct HTTP requests to Yahoo Finance

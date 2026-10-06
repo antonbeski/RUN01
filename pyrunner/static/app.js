@@ -7141,7 +7141,14 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   // ── Open / Close ─────────────────────────────────────────────────────────────
   function openVisionModal() { overlay.classList.remove('hidden'); }
-  function closeVisionModal() { overlay.classList.add('hidden'); }
+  function closeVisionModal() {
+    overlay.classList.add('hidden');
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    if (videoEl) videoEl.pause();
+  }
 
   window.btnVision = btnOpen;
   window.openVisionModal = openVisionModal;
@@ -7218,9 +7225,54 @@ If extensive structural rewriting is required, output the complete corrected \`\
     };
   }
 
+  let cameraStream = null;
+  const btnCamera = document.getElementById('btnVisionCamera');
+  if (btnCamera) {
+    btnCamera.addEventListener('click', async () => {
+      try {
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(t => t.stop());
+          cameraStream = null;
+        }
+        if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
+        setStatus('loading', 'Requesting camera access…');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
+          audio: false
+        });
+        cameraStream = stream;
+        videoEl.src = '';
+        videoEl.srcObject = stream;
+        videoEl.play();
+        
+        videoMeta.w = 1280;
+        videoMeta.h = 720;
+        videoMeta.duration = 0;
+        totalFrames = 1000;
+        
+        uploadZone.classList.add('hidden');
+        uploadInfo.classList.remove('hidden');
+        fileNameEl.textContent = 'Live Camera Feed';
+        fileDimsEl.textContent = '1280×720 · LIVE · WEBCAM';
+        emptyState.classList.add('hidden');
+        playerWrap.classList.remove('hidden');
+        scrubber.classList.add('hidden');
+        resetResults();
+        setStatus('ready', 'CAMERA ACTIVE');
+      } catch (err) {
+        setStatus('error', 'Camera access failed: ' + err.message);
+      }
+    });
+  }
+
   if (btnClear) btnClear.addEventListener('click', () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
     if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
     videoEl.src = '';
+    videoEl.srcObject = null;
     uploadZone.classList.remove('hidden');
     uploadInfo.classList.add('hidden');
     emptyState.classList.remove('hidden');
@@ -7313,8 +7365,9 @@ If extensive structural rewriting is required, output the complete corrected \`\
     if (ortSession) return ortSession;
     setStatus('loading', 'Loading ONNX model…');
     
-    // Primary and fallback CDN URLs for YOLOv8 nano ONNX
+    // Primary same-origin local model, with fallback CDN URLs
     const modelUrls = [
+      '/models/yolov8n.onnx',
       'https://huggingface.co/onnx-community/yolov8n/resolve/main/yolov8n.onnx',
       'https://cdn.jsdelivr.net/gh/hyuto/yolov8-onnxruntime-web@master/public/model/yolov8n.onnx'
     ];
@@ -7332,7 +7385,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     const ort = window.ort;
     if (!ort) throw new Error('ONNX Runtime Web library unavailable');
 
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
+    ort.env.wasm.wasmPaths = '/ort/';
     ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
     ort.env.wasm.simd = true;
 
@@ -7489,7 +7542,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   // ── Run button ───────────────────────────────────────────────────────────────
   if (btnRun) btnRun.addEventListener('click', async () => {
     if (isProcessing) { stopProcessing(); return; }
-    if (!videoEl.src) { alert('Please upload a video first.'); return; }
+    if (!videoEl.src && !cameraStream) { alert('Please upload a video or start the camera first.'); return; }
     await startProcessing();
   });
 
@@ -7537,12 +7590,39 @@ If extensive structural rewriting is required, output the complete corrected \`\
       const session = await ensureSession();
       const stride = strideSlider ? parseInt(strideSlider.value) : 1;
       const fps = videoMeta.fps;
-      videoEl.pause(); isPlaying = false;
-      playIcon.style.display = ''; pauseIcon.style.display = 'none';
-      videoEl.currentTime = 0;
       nextTrackId = 1;
       let prevDetections = [];
       trackHistory.clear();
+
+      if (cameraStream) {
+        // Continuous live camera detection loop
+        while (!abortController.signal.aborted) {
+          const imgData = extractFrameImageData(640);
+          let detections = await runFrameInference(session, imgData);
+          detections = assignTracks(detections, prevDetections);
+          prevDetections = detections;
+          for (const det of detections) {
+            if (det.trackId !== undefined) {
+              if (!trackHistory.has(det.trackId)) trackHistory.set(det.trackId, []);
+              const [bx, by, bw, bh] = det.bbox;
+              const trail = trackHistory.get(det.trackId);
+              trail.push({ x: bx + bw / 2, y: by + bh / 2 });
+              if (trail.length > 25) trail.shift();
+            }
+          }
+          totalDetections += detections.length;
+          renderDetections(detections);
+          updateDetectionsList({ detections });
+          detFooter.textContent = `${detections.length} objects · ${totalDetections} total`;
+          setStatus('processing', `LIVE CAMERA: ${detections.length} OBJECTS TRACKED`);
+          await yieldToUI();
+        }
+        return;
+      }
+
+      videoEl.pause(); isPlaying = false;
+      playIcon.style.display = ''; pauseIcon.style.display = 'none';
+      videoEl.currentTime = 0;
 
       for (let frame = 0; frame < totalFrames; frame += stride) {
         if (abortController.signal.aborted) break;
