@@ -7074,6 +7074,8 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   // ── State ────────────────────────────────────────────────────────────────────
   let videoUrl = null;
+  let cameraStream = null;
+  let isCameraActive = false;
   let videoMeta = { w: 0, h: 0, duration: 0, fps: 25 };
   let ortSession = null;
   let allResults = [];       // FrameResult[]
@@ -7082,6 +7084,8 @@ If extensive structural rewriting is required, output the complete corrected \`\
   let totalFrames = 0;
   let abortController = null;
   let trackHistory = new Map();  // trackId -> [{x,y}]
+  let activeTracks = [];         // [{ id, classId, bbox, lastSeen }]
+  let nextTrackId = 1;
   let selectedModelSize = 'nano';
   let selectedPalette = 'default';
   let isProcessing = false;
@@ -7105,6 +7109,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   const scrubber      = document.getElementById('visionScrubber');
   const scrubRange    = document.getElementById('visionScrubberRange');
   const scrubProcessed= document.getElementById('visionScrubberProcessed');
+  const scrubberProcessed = scrubProcessed;
   const frameBadge    = document.getElementById('visionFrameBadge');
   const timeDisplay   = document.getElementById('visionTimeDisplay');
   const btnPlay       = document.getElementById('btnVisionPlay');
@@ -7143,11 +7148,20 @@ If extensive structural rewriting is required, output the complete corrected \`\
   function openVisionModal() { overlay.classList.remove('hidden'); }
   function closeVisionModal() {
     overlay.classList.add('hidden');
+    stopProcessing();
     if (cameraStream) {
       cameraStream.getTracks().forEach(t => t.stop());
       cameraStream = null;
+      isCameraActive = false;
     }
-    if (videoEl) videoEl.pause();
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.srcObject = null;
+    }
+    const btnCam = document.getElementById('btnVisionCamera');
+    if (btnCam) {
+      btnCam.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> USE LIVE CAMERA';
+    }
   }
 
   window.btnVision = btnOpen;
@@ -7225,50 +7239,77 @@ If extensive structural rewriting is required, output the complete corrected \`\
     };
   }
 
-  let cameraStream = null;
   const btnCamera = document.getElementById('btnVisionCamera');
   if (btnCamera) {
     btnCamera.addEventListener('click', async () => {
       try {
-        if (cameraStream) {
+        if (isCameraActive && cameraStream) {
+          // Toggle off if already active
           cameraStream.getTracks().forEach(t => t.stop());
           cameraStream = null;
+          isCameraActive = false;
+          stopProcessing();
+          videoEl.pause();
+          videoEl.srcObject = null;
+          uploadZone.classList.remove('hidden');
+          uploadInfo.classList.add('hidden');
+          emptyState.classList.remove('hidden');
+          playerWrap.classList.add('hidden');
+          scrubber.classList.add('hidden');
+          btnCamera.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> USE LIVE CAMERA';
+          resetResults();
+          setStatus('ready', 'READY');
+          return;
         }
+
         if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
+        videoEl.src = '';
         setStatus('loading', 'Requesting camera access…');
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
+          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
           audio: false
         });
+
         cameraStream = stream;
-        videoEl.src = '';
+        isCameraActive = true;
         videoEl.srcObject = stream;
-        videoEl.play();
-        
-        videoMeta.w = 1280;
-        videoMeta.h = 720;
+        videoEl.muted = true;
+        videoEl.playsInline = true;
+        await videoEl.play();
+
+        videoMeta.w = videoEl.videoWidth || 1280;
+        videoMeta.h = videoEl.videoHeight || 720;
         videoMeta.duration = 0;
         totalFrames = 1000;
-        
+
         uploadZone.classList.add('hidden');
         uploadInfo.classList.remove('hidden');
         fileNameEl.textContent = 'Live Camera Feed';
-        fileDimsEl.textContent = '1280×720 · LIVE · WEBCAM';
+        fileDimsEl.textContent = (videoEl.videoWidth || 1280) + '×' + (videoEl.videoHeight || 720) + ' · LIVE';
         emptyState.classList.add('hidden');
         playerWrap.classList.remove('hidden');
         scrubber.classList.add('hidden');
+        btnCamera.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> STOP CAMERA';
+
         resetResults();
         setStatus('ready', 'CAMERA ACTIVE');
+
+        // Automatically start real-time tracking on live camera!
+        startProcessing();
       } catch (err) {
+        console.error('[Vision Camera Error]', err);
         setStatus('error', 'Camera access failed: ' + err.message);
       }
     });
   }
 
   if (btnClear) btnClear.addEventListener('click', () => {
+    stopProcessing();
     if (cameraStream) {
       cameraStream.getTracks().forEach(t => t.stop());
       cameraStream = null;
+      isCameraActive = false;
     }
     if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
     videoEl.src = '';
@@ -7279,6 +7320,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     playerWrap.classList.add('hidden');
     scrubber.classList.add('hidden');
     if (btnExport) btnExport.style.display = 'none';
+    if (btnCamera) btnCamera.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> USE LIVE CAMERA';
     resetResults();
     setStatus('ready', 'READY');
   });
@@ -7459,17 +7501,21 @@ If extensive structural rewriting is required, output the complete corrected \`\
   }
 
   function extractFrameImageData(targetSize = 640) {
+    if (!videoEl || videoEl.readyState < 2) return null;
+    const srcW = videoEl.videoWidth;
+    const srcH = videoEl.videoHeight;
+    if (!srcW || !srcH) return null;
+
     const offscreen = document.createElement('canvas');
     offscreen.width = targetSize;
     offscreen.height = targetSize;
     const octx = offscreen.getContext('2d', { willReadFrequently: true });
-    
+    if (!octx) return null;
+
     // Standard YOLO neutral gray 114
     octx.fillStyle = 'rgb(114, 114, 114)';
     octx.fillRect(0, 0, targetSize, targetSize);
 
-    const srcW = videoMeta.w || videoEl.videoWidth || 640;
-    const srcH = videoMeta.h || videoEl.videoHeight || 640;
     const scale = Math.min(targetSize / srcW, targetSize / srcH);
     const newW = Math.round(srcW * scale);
     const newH = Math.round(srcH * scale);
@@ -7506,6 +7552,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   }
 
   async function runFrameInference(session, preprocessed) {
+    if (!preprocessed) return [];
     const ort = window.ort;
     const { imageData, scale, padX, padY, srcW, srcH } = preprocessed;
     const { data, width, height } = imageData;
@@ -7516,135 +7563,212 @@ If extensive structural rewriting is required, output the complete corrected \`\
       tensor[i + 2*width*height]     = data[i*4+2] / 255.0;
     }
     const input = new ort.Tensor('float32', tensor, [1, 3, height, width]);
-    const results = await session.run({ images: input });
-    const output = results.output0 || results[Object.keys(results)[0]];
+    const inputName = (session.inputNames && session.inputNames[0]) || 'images';
+    const results = await session.run({ [inputName]: input });
+    const outputKey = (session.outputNames && session.outputNames[0]) || (results.output0 ? 'output0' : Object.keys(results)[0]);
+    const output = results[outputKey];
+    if (!output) return [];
+
     const raw = output.data;
-    const N = output.dims[2];
+    const dims = output.dims;
+
+    let N, numChannels, isChannelsFirst;
+    if (dims.length === 3) {
+      if (dims[1] < dims[2]) {
+        numChannels = dims[1]; // 84
+        N = dims[2];           // 8400
+        isChannelsFirst = true;
+      } else {
+        N = dims[1];           // 8400
+        numChannels = dims[2]; // 84
+        isChannelsFirst = false;
+      }
+    } else {
+      N = dims[dims.length - 1];
+      numChannels = 84;
+      isChannelsFirst = true;
+    }
+
+    const numClasses = numChannels - 4;
     const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.25;
     const iouThresh = 0.45;
     const boxes = [], scores = [], classIds = [];
+
     for (let i = 0; i < N; i++) {
+      let cx, cy, w, h;
       let maxScore = 0, maxClass = 0;
-      for (let c = 0; c < 80; c++) { const s = raw[(4+c)*N+i]; if (s > maxScore) { maxScore = s; maxClass = c; } }
+
+      if (isChannelsFirst) {
+        cx = raw[0 * N + i];
+        cy = raw[1 * N + i];
+        w  = raw[2 * N + i];
+        h  = raw[3 * N + i];
+        for (let c = 0; c < numClasses; c++) {
+          const s = raw[(4 + c) * N + i];
+          if (s > maxScore) { maxScore = s; maxClass = c; }
+        }
+      } else {
+        const stride = numChannels;
+        cx = raw[i * stride + 0];
+        cy = raw[i * stride + 1];
+        w  = raw[i * stride + 2];
+        h  = raw[i * stride + 3];
+        for (let c = 0; c < numClasses; c++) {
+          const s = raw[i * stride + 4 + c];
+          if (s > maxScore) { maxScore = s; maxClass = c; }
+        }
+      }
+
       if (maxScore < conf) continue;
-      const cx = raw[0*N+i], cy = raw[1*N+i], w = raw[2*N+i], h = raw[3*N+i];
+
       const origX = Math.max(0, (cx - w / 2 - padX) / scale);
       const origY = Math.max(0, (cy - h / 2 - padY) / scale);
       const origW = Math.min(srcW - origX, w / scale);
       const origH = Math.min(srcH - origY, h / scale);
       boxes.push([origX, origY, origW, origH]);
-      scores.push(maxScore); classIds.push(maxClass);
+      scores.push(maxScore);
+      classIds.push(maxClass);
     }
+
     const kept = nms(boxes, scores, iouThresh);
-    return kept.map(idx => ({ classId: classIds[idx], className: COCO_CLASSES[classIds[idx]] || 'obj_'+classIds[idx], confidence: scores[idx], bbox: boxes[idx] }));
+    return kept.map(idx => ({
+      classId: classIds[idx],
+      className: COCO_CLASSES[classIds[idx]] || 'obj_' + classIds[idx],
+      confidence: scores[idx],
+      bbox: boxes[idx],
+    }));
   }
 
   // ── Run button ───────────────────────────────────────────────────────────────
   if (btnRun) btnRun.addEventListener('click', async () => {
     if (isProcessing) { stopProcessing(); return; }
-    if (!videoEl.src && !cameraStream) { alert('Please upload a video or start the camera first.'); return; }
+    if (!videoEl.src && !cameraStream) { alert('Please upload a video or click "USE LIVE CAMERA" first.'); return; }
     await startProcessing();
   });
 
-  let nextTrackId = 1;
-  function assignTracks(currentDets, prevDets) {
+  function assignTracks(currentDets) {
     const updated = [];
     const usedPrev = new Set();
+    const now = Date.now();
+
+    currentDets.sort((a, b) => b.confidence - a.confidence);
+
     for (const det of currentDets) {
       let bestMatchIdx = -1;
-      let bestDist = Infinity;
-      const [cx, cy, cw, ch] = det.bbox;
-      const cCentroidX = cx + cw / 2;
-      const cCentroidY = cy + ch / 2;
-      for (let j = 0; j < prevDets.length; j++) {
+      let bestIoU = 0;
+      const [ax, ay, aw, ah] = det.bbox;
+
+      for (let j = 0; j < activeTracks.length; j++) {
         if (usedPrev.has(j)) continue;
-        const prev = prevDets[j];
+        const prev = activeTracks[j];
         if (prev.classId !== det.classId) continue;
-        const [px, py, pw, ph] = prev.bbox;
-        const pCentroidX = px + pw / 2;
-        const pCentroidY = py + ph / 2;
-        const dist = Math.hypot(cCentroidX - pCentroidX, cCentroidY - pCentroidY);
-        if (dist < Math.max(cw, ch, 80) && dist < bestDist) {
-          bestDist = dist;
+        const [bx, by, bw, bh] = prev.bbox;
+
+        const ix = Math.max(0, Math.min(ax + aw, bx + bw) - Math.max(ax, bx));
+        const iy = Math.max(0, Math.min(ay + ah, by + bh) - Math.max(ay, by));
+        const inter = ix * iy;
+        const union = aw * ah + bw * bh - inter;
+        const iou = union > 0 ? inter / union : 0;
+
+        const acx = ax + aw / 2, acy = ay + ah / 2;
+        const bcx = bx + bw / 2, bcy = by + bh / 2;
+        const dist = Math.hypot(acx - bcx, acy - bcy);
+        const maxDist = Math.max(aw, ah, bw, bh, 100);
+
+        if (iou > 0.25 && iou > bestIoU) {
+          bestIoU = iou;
+          bestMatchIdx = j;
+        } else if (bestIoU === 0 && dist < maxDist * 0.75) {
           bestMatchIdx = j;
         }
       }
-      if (bestMatchIdx !== -1 && prevDets[bestMatchIdx].trackId !== undefined) {
+
+      if (bestMatchIdx !== -1) {
         usedPrev.add(bestMatchIdx);
-        updated.push({ ...det, trackId: prevDets[bestMatchIdx].trackId });
+        const track = activeTracks[bestMatchIdx];
+        track.bbox = det.bbox;
+        track.lastSeen = now;
+        updated.push({ ...det, trackId: track.id });
       } else {
-        updated.push({ ...det, trackId: nextTrackId++ });
+        const newId = nextTrackId++;
+        activeTracks.push({
+          id: newId,
+          classId: det.classId,
+          bbox: det.bbox,
+          lastSeen: now,
+        });
+        updated.push({ ...det, trackId: newId });
       }
     }
+
+    activeTracks = activeTracks.filter(t => now - t.lastSeen < 1500);
+
+    for (const det of updated) {
+      if (det.trackId !== undefined) {
+        if (!trackHistory.has(det.trackId)) trackHistory.set(det.trackId, []);
+        const [bx, by, bw, bh] = det.bbox;
+        const trail = trackHistory.get(det.trackId);
+        trail.push({ x: bx + bw / 2, y: by + bh / 2 });
+        if (trail.length > 30) trail.shift();
+      }
+    }
+
     return updated;
   }
+
   async function startProcessing() {
+    if (isProcessing) return;
     isProcessing = true;
     abortController = new AbortController();
-    resetResults();
     btnRun.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> STOP';
-    setStatus('processing', 'Initializing…');
-    statusPanel.style.display = '';
+    setStatus('processing', 'Starting AI engine…');
+    if (statusPanel) statusPanel.style.display = '';
 
     try {
       const session = await ensureSession();
-      const stride = strideSlider ? parseInt(strideSlider.value) : 1;
-      const fps = videoMeta.fps;
-      nextTrackId = 1;
-      let prevDetections = [];
-      trackHistory.clear();
 
-      if (cameraStream) {
-        // Continuous live camera detection loop
-        while (!abortController.signal.aborted) {
+      if (isCameraActive && cameraStream) {
+        setStatus('processing', 'LIVE TRACKING ACTIVE');
+
+        while (!abortController.signal.aborted && isCameraActive) {
           const imgData = extractFrameImageData(640);
-          let detections = await runFrameInference(session, imgData);
-          detections = assignTracks(detections, prevDetections);
-          prevDetections = detections;
-          for (const det of detections) {
-            if (det.trackId !== undefined) {
-              if (!trackHistory.has(det.trackId)) trackHistory.set(det.trackId, []);
-              const [bx, by, bw, bh] = det.bbox;
-              const trail = trackHistory.get(det.trackId);
-              trail.push({ x: bx + bw / 2, y: by + bh / 2 });
-              if (trail.length > 25) trail.shift();
-            }
+          if (!imgData) {
+            await new Promise(r => setTimeout(r, 40));
+            continue;
           }
+
+          let detections = await runFrameInference(session, imgData);
+          detections = assignTracks(detections);
+
           totalDetections += detections.length;
           renderDetections(detections);
           updateDetectionsList({ detections });
-          detFooter.textContent = `${detections.length} objects · ${totalDetections} total`;
-          setStatus('processing', `LIVE CAMERA: ${detections.length} OBJECTS TRACKED`);
-          await yieldToUI();
+
+          if (detFooter) detFooter.textContent = `${detections.length} objects visible`;
+          setStatus('processing', `TRACKING LIVE: ${detections.length} OBJECTS`);
+
+          await new Promise(r => requestAnimationFrame(r));
         }
         return;
       }
 
-      videoEl.pause(); isPlaying = false;
-      playIcon.style.display = ''; pauseIcon.style.display = 'none';
+      const stride = strideSlider ? parseInt(strideSlider.value) : 1;
+      const fps = videoMeta.fps || 25;
+      videoEl.pause();
+      isPlaying = false;
+      if (playIcon) playIcon.style.display = '';
+      if (pauseIcon) pauseIcon.style.display = 'none';
       videoEl.currentTime = 0;
 
       for (let frame = 0; frame < totalFrames; frame += stride) {
         if (abortController.signal.aborted) break;
         await seekVideoAsync(frame / fps);
-        const imgData = extractFrameImageData(640, 640);
-        let detections = await runFrameInference(session, imgData);
-
-        // Always detect and track all objects in video
+        const imgData = extractFrameImageData(640);
+        let detections = imgData ? await runFrameInference(session, imgData) : [];
 
         const task = taskSelect ? taskSelect.value : 'detect';
         if (task === 'track' || task === 'detect') {
-          detections = assignTracks(detections, prevDetections);
-          prevDetections = detections;
-          for (const det of detections) {
-            if (det.trackId !== undefined) {
-              if (!trackHistory.has(det.trackId)) trackHistory.set(det.trackId, []);
-              const [bx, by, bw, bh] = det.bbox;
-              const trail = trackHistory.get(det.trackId);
-              trail.push({ x: bx + bw / 2, y: by + bh / 2 });
-              if (trail.length > 25) trail.shift();
-            }
-          }
+          detections = assignTracks(detections);
         }
 
         const result = { frameIndex: frame, timestamp: frame / fps, detections };
