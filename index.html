@@ -62,6 +62,7 @@
         <a href="#landingFeatures">FEATURES</a>
         <a href="#landingWhy">ADVANTAGE</a>
         <a href="#founder">FOUNDER</a>
+        <a href="/vision" style="color: #9B5CF6; font-weight: 600;">VISION ✦</a>
       </nav>
       <div class="landing-header-actions">
         <button class="pixel-button pixel-button-ghost btn-landing-auth" id="btnLandingAuth" title="Sign In or Sign Up">SIGN IN</button>
@@ -152,6 +153,12 @@
           <div class="capability-number">06</div>
           <h3>Surgical AI Assistant</h3>
           <p>Context-aware AI coding assistant for automated refactoring, bug fixing, code explanations, and 1-click execution.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">07</div>
+          <h3>Real-Time Vision &amp; Tracking</h3>
+          <p>100% in-browser WebGPU object detection and ByteTrack multi-object tracking for uploaded videos and live cameras. Zero server compute.</p>
           <div class="pixel-rule"></div>
         </article>
       </div>
@@ -870,7 +877,12 @@
           </button>
         </div>
         <div class="vision-modal-header-right">
-          <button class="btn btn-ghost cad-hdr-btn" id="btnVisionExport" title="Export detections JSON" style="display:none">Export JSON</button>
+          <a href="/vision" class="btn btn-ghost cad-hdr-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;color:#9B5CF6;border:1px solid rgba(155,92,246,0.3)" title="Open Full-Screen Real-Time Vision Studio">FULL STUDIO ↗</a>
+          <button class="btn btn-primary cad-hdr-btn" id="btnVisionExportVideo" title="Download processed video with bounding boxes and labels" style="background:#9333ea;color:#fff;border:none;font-weight:600;display:none;align-items:center;gap:6px;cursor:pointer;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            DOWNLOAD VIDEO
+          </button>
+          <button class="btn btn-ghost cad-hdr-btn" id="btnVisionExport" title="Export detections JSON" style="display:none">JSON</button>
           <button class="vision-modal-close" id="btnCloseVisionModal" aria-label="Close Vision Studio">&times;</button>
         </div>
       </div>
@@ -889,6 +901,10 @@
             <p class="vision-upload-label">DROP VIDEO HERE</p>
             <p class="vision-upload-sub">MP4 · WebM · MOV · AVI</p>
           </div>
+          <button class="pixel-button pixel-button-ghost" id="btnVisionCamera" style="width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;padding:6px;" title="Use Live Camera">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            USE LIVE CAMERA
+          </button>
           <!-- Uploaded file info -->
           <div class="vision-upload-info hidden" id="visionUploadInfo">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B5CF6" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
