@@ -309,10 +309,425 @@ async def fred_download(series_id, limit=100, sort_order="desc", observation_sta
         "frequency": data["frequency"],
         "df":        df,
     }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ── RUN01 PREBUILT COMPUTER VISION SUITE (OpenCV, YOLO, Pillow, Skimage) ──────
+# ═══════════════════════════════════════════════════════════════════════════════
+import sys, types, io, base64
+import numpy as _np
+from PIL import Image as _PIL_Image, ImageDraw as _PIL_ImageDraw, ImageFilter as _PIL_ImageFilter
+
+# ── Patch PIL Image.show() to display inline in RUN01 output ─────────────────
+def _pil_show_capture(self, title=None, **kwargs):
+    buf = io.BytesIO()
+    self.save(buf, format='PNG')
+    b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    buf.close()
+    print(f'__RUN01_IMG__:{b64}', flush=True)
+
+_PIL_Image.Image.show = _pil_show_capture
+
+# ── Server-side CV proxy runner ───────────────────────────────────────────────
+async def cv_run(code=None, *, timeout=30):
+    """Execute Python CV code via RUN01 server-side CV proxy."""
+    import js, pyodide.http
+    if not code:
+        raise ValueError("cv_run(code) requires a code string argument.")
+    resp = await pyodide.http.pyfetch(
+        "/api/cv/run",
+        method="POST",
+        body=js.JSON.stringify(js.Object.fromEntries(
+            js.Object.entries(js.JSON.parse(__import__('json').dumps({
+                "code": code,
+                "timeout": timeout,
+            })))
+        )),
+        headers={"Content-Type": "application/json"},
+    )
+    res = await resp.json()
+    if res.get("stdout"):
+        print(res["stdout"])
+    for b64 in (res.get("images") or []):
+        print(f"__RUN01_IMG__:{b64}", flush=True)
+    if res.get("stderr"):
+        print(res["stderr"], file=sys.stderr)
+    if res.get("error"):
+        raise RuntimeError(f"CV execution error: {res['error']}")
+    return res
+
+# ── Prebuilt cv2 (OpenCV) Module ──────────────────────────────────────────────
+class _CV2Module(types.ModuleType):
+    """In-browser OpenCV (cv2) engine powered by NumPy, Pillow, and SciPy."""
+    COLOR_BGR2GRAY = 6; COLOR_RGB2GRAY = 7; COLOR_GRAY2BGR = 8; COLOR_GRAY2RGB = 8
+    COLOR_BGR2RGB = 4; COLOR_RGB2BGR = 4; COLOR_BGR2HSV = 40; COLOR_HSV2BGR = 54
+    COLOR_BGR2RGBA = 0; COLOR_RGB2RGBA = 2; COLOR_BGR2LAB = 44; COLOR_LAB2BGR = 55
+    IMREAD_COLOR = 1; IMREAD_GRAYSCALE = 0; IMREAD_UNCHANGED = -1
+    INTER_NEAREST = 0; INTER_LINEAR = 1; INTER_CUBIC = 2; INTER_AREA = 3; INTER_LANCZOS4 = 4
+    THRESH_BINARY = 0; THRESH_BINARY_INV = 1; THRESH_TRUNC = 2; THRESH_TOZERO = 3; THRESH_OTSU = 8
+    FONT_HERSHEY_SIMPLEX = 0; FONT_HERSHEY_PLAIN = 1; FONT_HERSHEY_DUPLEX = 2
+    FONT_HERSHEY_COMPLEX = 3; FONT_HERSHEY_TRIPLEX = 4; FONT_HERSHEY_COMPLEX_SMALL = 5
+    LINE_AA = 16; LINE_8 = 8; LINE_4 = 4; FILLED = -1
+    MORPH_RECT = 0; MORPH_CROSS = 1; MORPH_ELLIPSE = 2; MORPH_ERODE = 0; MORPH_DILATE = 1
+    MORPH_OPEN = 2; MORPH_CLOSE = 3; MORPH_GRADIENT = 4; MORPH_TOPHAT = 5; MORPH_BLACKHAT = 6
+    RETR_EXTERNAL = 0; RETR_LIST = 1; RETR_CCOMP = 2; RETR_TREE = 3
+    CHAIN_APPROX_NONE = 1; CHAIN_APPROX_SIMPLE = 2
+
+    def __init__(self):
+        super().__init__('cv2')
+
+    def imread(self, source='sample', flags=1):
+        """Read image from path or generate high-contrast test image."""
+        if not source or source in ('sample', 'test', 'shapes'):
+            arr = _np.zeros((400, 600, 3), dtype=_np.uint8)
+            for y in range(400):
+                arr[y, :] = [int(40 + y*0.1), int(20 + y*0.1), int(10 + y*0.05)]
+            self.rectangle(arr, (50, 60), (260, 220), (0, 210, 130), -1)
+            self.circle(arr, (430, 140), 75, (255, 130, 0), 4)
+            self.line(arr, (40, 280), (560, 280), (140, 90, 240), 3)
+            self.putText(arr, "RUN01 OPENCV", (50, 340), self.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+            return arr
+        import os
+        if isinstance(source, str) and os.path.exists(source):
+            pil_img = _PIL_Image.open(source).convert('RGB')
+            rgb = _np.array(pil_img)
+            return rgb[:, :, ::-1]
+        return None
+
+    def imwrite(self, filename, mat):
+        arr = mat.copy()
+        if arr.ndim == 3 and arr.shape[2] == 3:
+            arr = arr[:, :, ::-1]
+        pil_img = _PIL_Image.fromarray(arr.astype(_np.uint8))
+        pil_img.save(filename)
+        return True
+
+    def imshow(self, winname, mat):
+        if not isinstance(mat, _np.ndarray):
+            raise TypeError("cv2.imshow expects a numpy ndarray")
+        arr = mat.copy()
+        if arr.dtype != _np.uint8:
+            if arr.max() <= 1.0:
+                arr = (arr * 255).clip(0, 255).astype(_np.uint8)
+            else:
+                arr = arr.clip(0, 255).astype(_np.uint8)
+        if arr.ndim == 2:
+            pil_img = _PIL_Image.fromarray(arr, mode='L')
+        elif arr.ndim == 3 and arr.shape[2] == 3:
+            pil_img = _PIL_Image.fromarray(arr[:, :, ::-1], mode='RGB')
+        elif arr.ndim == 3 and arr.shape[2] == 4:
+            pil_img = _PIL_Image.fromarray(arr[:, :, [2, 1, 0, 3]], mode='RGBA')
+        else:
+            raise ValueError(f"Unsupported image shape for cv2.imshow: {arr.shape}")
+        buf = io.BytesIO()
+        pil_img.save(buf, format='PNG')
+        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        buf.close()
+        print(f"[{winname}] Image ({mat.shape[1]}x{mat.shape[0]}, {mat.dtype})")
+        print(f'__RUN01_IMG__:{b64}', flush=True)
+
+    def waitKey(self, delay=0): return 0
+    def destroyAllWindows(self): pass
+    def destroyWindow(self, name): pass
+
+    def cvtColor(self, src, code):
+        arr = src.astype(_np.float32)
+        if code in (self.COLOR_BGR2GRAY,):
+            gray = 0.114 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.299 * arr[:, :, 2]
+            return gray.clip(0, 255).astype(_np.uint8)
+        elif code in (self.COLOR_RGB2GRAY,):
+            gray = 0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]
+            return gray.clip(0, 255).astype(_np.uint8)
+        elif code in (self.COLOR_GRAY2BGR, self.COLOR_GRAY2RGB):
+            if src.ndim == 2:
+                return _np.stack([src, src, src], axis=-1).astype(_np.uint8)
+            return src
+        elif code in (self.COLOR_BGR2RGB, self.COLOR_RGB2BGR):
+            return src[:, :, ::-1].copy()
+        return src
+
+    def resize(self, src, dsize, fx=0, fy=0, interpolation=1):
+        pil_img = _PIL_Image.fromarray(src)
+        w, h = dsize if dsize else (int(src.shape[1] * fx), int(src.shape[0] * fy))
+        res = pil_img.resize((max(1, w), max(1, h)), resample=_PIL_Image.Resampling.BILINEAR)
+        return _np.array(res)
+
+    def GaussianBlur(self, src, ksize, sigmaX, sigmaY=0):
+        import scipy.ndimage
+        s = sigmaX if sigmaX > 0 else (ksize[0] - 1) / 6.0
+        if src.ndim == 2:
+            return scipy.ndimage.gaussian_filter(src, sigma=s).astype(src.dtype)
+        out = src.copy()
+        for c in range(src.shape[2]):
+            out[:, :, c] = scipy.ndimage.gaussian_filter(src[:, :, c], sigma=s)
+        return out
+
+    def Canny(self, image, threshold1, threshold2, apertureSize=3, L2gradient=False):
+        import skimage.feature
+        gray = self.cvtColor(image, self.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        edges = skimage.feature.canny(gray / 255.0, low_threshold=threshold1 / 255.0, high_threshold=threshold2 / 255.0)
+        return (edges * 255).astype(_np.uint8)
+
+    def threshold(self, src, thresh, maxval, type):
+        gray = self.cvtColor(src, self.COLOR_BGR2GRAY) if src.ndim == 3 else src.copy()
+        if type & self.THRESH_OTSU:
+            import skimage.filters
+            thresh = skimage.filters.threshold_otsu(gray)
+        dst = _np.zeros_like(gray)
+        if type & self.THRESH_BINARY_INV:
+            dst[gray <= thresh] = maxval
+        else:
+            dst[gray > thresh] = maxval
+        return float(thresh), dst
+
+    def rectangle(self, img, pt1, pt2, color, thickness=1, lineType=8):
+        x1, y1 = max(0, min(pt1[0], pt2[0])), max(0, min(pt1[1], pt2[1]))
+        x2, y2 = min(img.shape[1] - 1, max(pt1[0], pt2[0])), min(img.shape[0] - 1, max(pt1[1], pt2[1]))
+        col = _np.array(color[:img.shape[2] if img.ndim==3 else 1], dtype=img.dtype)
+        if thickness == -1 or thickness == self.FILLED:
+            img[y1:y2+1, x1:x2+1] = col
+        else:
+            t = max(1, thickness)
+            img[y1:min(y1+t, img.shape[0]), x1:x2+1] = col
+            img[max(0, y2-t+1):y2+1, x1:x2+1] = col
+            img[y1:y2+1, x1:min(x1+t, img.shape[1])] = col
+            img[y1:y2+1, max(0, x2-t+1):x2+1] = col
+        return img
+
+    def circle(self, img, center, radius, color, thickness=1, lineType=8):
+        pil_img = _PIL_Image.fromarray(img)
+        draw = _PIL_ImageDraw.Draw(pil_img)
+        cx, cy = center; r = radius
+        col = tuple(int(c) for c in color)
+        if thickness == -1 or thickness == self.FILLED:
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=col)
+        else:
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=col, width=max(1, thickness))
+        img[:] = _np.array(pil_img)
+        return img
+
+    def line(self, img, pt1, pt2, color, thickness=1, lineType=8):
+        pil_img = _PIL_Image.fromarray(img)
+        draw = _PIL_ImageDraw.Draw(pil_img)
+        col = tuple(int(c) for c in color)
+        draw.line([pt1, pt2], fill=col, width=max(1, thickness))
+        img[:] = _np.array(pil_img)
+        return img
+
+    def putText(self, img, text, org, fontFace, fontScale, color, thickness=1, lineType=8):
+        pil_img = _PIL_Image.fromarray(img)
+        draw = _PIL_ImageDraw.Draw(pil_img)
+        col = tuple(int(c) for c in color)
+        draw.text(org, str(text), fill=col)
+        img[:] = _np.array(pil_img)
+        return img
+
+    def findContours(self, image, mode, method):
+        import skimage.measure
+        gray = self.cvtColor(image, self.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        contours = skimage.measure.find_contours(gray, 127)
+        pts_list = [c[:, ::-1].astype(_np.int32) for c in contours]
+        return pts_list, None
+
+    def drawContours(self, image, contours, contourIdx, color, thickness=1):
+        col = tuple(int(c) for c in color)
+        target = contours if contourIdx < 0 else [contours[contourIdx]]
+        for pts in target:
+            if len(pts) > 1:
+                for i in range(len(pts) - 1):
+                    self.line(image, tuple(pts[i]), tuple(pts[i+1]), col, thickness)
+        return image
+
+_cv2_inst = _CV2Module()
+sys.modules['cv2'] = _cv2_inst
+cv2 = _cv2_inst
+
+# ── Prebuilt ultralytics Module (YOLO) ─────────────────────────────────────────
+class _YOLOBoxes:
+    def __init__(self, data):
+        self.data = _np.array(data, dtype=_np.float32) if len(data) else _np.zeros((0, 6), dtype=_np.float32)
+        self.xyxy = self.data[:, :4] if len(self.data) else _np.zeros((0, 4), dtype=_np.float32)
+        self.conf = self.data[:, 4] if len(self.data) else _np.zeros((0,), dtype=_np.float32)
+        self.cls  = self.data[:, 5] if len(self.data) else _np.zeros((0,), dtype=_np.float32)
+        if len(self.data):
+            w = self.xyxy[:, 2] - self.xyxy[:, 0]
+            h = self.xyxy[:, 3] - self.xyxy[:, 1]
+            cx = self.xyxy[:, 0] + w / 2
+            cy = self.xyxy[:, 1] + h / 2
+            self.xywh = _np.stack([cx, cy, w, h], axis=-1)
+        else:
+            self.xywh = _np.zeros((0, 4), dtype=_np.float32)
+
+    def __len__(self): return len(self.data)
+    def __iter__(self):
+        for i in range(len(self.data)):
+            yield _YOLOBoxes([self.data[i]])
+    def __repr__(self):
+        return f"ultralytics.engine.results.Boxes object with {len(self.data)} detections"
+
+class _YOLOResults:
+    def __init__(self, orig_img, boxes_data, names, speed=None):
+        self.orig_img = orig_img
+        self.names = names
+        self.boxes = _YOLOBoxes(boxes_data)
+        self.speed = speed or {"preprocess": 1.5, "inference": 32.0, "postprocess": 1.2}
+
+    def plot(self):
+        img = self.orig_img.copy() if self.orig_img is not None else _np.zeros((480, 640, 3), dtype=_np.uint8)
+        colors = [(235, 92, 155), (22, 115, 249), (180, 80, 250), (30, 200, 100), (250, 180, 20), (20, 200, 240)]
+        for i, box in enumerate(self.boxes):
+            x1, y1, x2, y2 = [int(v) for v in box.xyxy[0]]
+            conf = float(box.conf[0])
+            cls_id = int(box.cls[0])
+            name = self.names.get(cls_id, f"obj_{cls_id}")
+            color = colors[cls_id % len(colors)]
+            cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+            label = f"{name} {conf:.2f}"
+            cv2.rectangle(img, (x1, max(0, y1 - 20)), (x1 + len(label)*9, y1), color, -1)
+            cv2.putText(img, label, (x1 + 2, max(14, y1 - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        return img
+
+    def show(self):
+        annotated = self.plot()
+        cv2.imshow("YOLOv8 Detections", annotated)
+
+    def __repr__(self):
+        counts = {}
+        for b in self.boxes:
+            cname = self.names.get(int(b.cls[0]), "obj")
+            counts[cname] = counts.get(cname, 0) + 1
+        summary = ", ".join(f"{v} {k}" for k, v in counts.items()) or "(no detections)"
+        h, w = (self.orig_img.shape[0], self.orig_img.shape[1]) if self.orig_img is not None else (640, 640)
+        return f"image 1/1: {h}x{w} {summary}, {self.speed['inference']:.1f}ms"
+
+class _YOLOModel:
+    COCO_CLASSES = {
+        0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus',
+        6: 'train', 7: 'truck', 8: 'boat', 9: 'traffic light', 10: 'fire hydrant',
+        11: 'stop sign', 12: 'parking meter', 13: 'bench', 14: 'bird', 15: 'cat',
+        16: 'dog', 17: 'horse', 18: 'sheep', 19: 'cow', 20: 'elephant', 21: 'bear',
+        22: 'zebra', 23: 'giraffe', 24: 'backpack', 25: 'umbrella', 26: 'handbag',
+        27: 'tie', 28: 'suitcase', 29: 'frisbee', 30: 'skis', 31: 'snowboard',
+        32: 'sports ball', 33: 'kite', 34: 'baseball bat', 35: 'baseball glove',
+        36: 'skateboard', 37: 'surfboard', 38: 'tennis racket', 39: 'bottle',
+        40: 'wine glass', 41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon',
+        45: 'bowl', 46: 'banana', 47: 'apple', 48: 'sandwich', 49: 'orange',
+        50: 'broccoli', 51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut',
+        55: 'cake', 56: 'chair', 57: 'couch', 58: 'potted plant', 59: 'bed',
+        60: 'dining table', 61: 'toilet', 62: 'tv', 63: 'laptop', 64: 'mouse',
+        65: 'remote', 66: 'keyboard', 67: 'cell phone', 68: 'microwave', 69: 'oven',
+        70: 'toaster', 71: 'sink', 72: 'refrigerator', 73: 'book', 74: 'clock',
+        75: 'vase', 76: 'scissors', 77: 'teddy bear', 78: 'hair drier', 79: 'toothbrush'
+    }
+
+    def __init__(self, model='yolov8n.pt'):
+        self.model_name = str(model)
+        self.names = self.COCO_CLASSES
+
+    async def __call__(self, source, conf=0.25, **kwargs):
+        return await self.predict(source, conf=conf, **kwargs)
+
+    async def predict(self, source, conf=0.25, **kwargs):
+        import js, json
+        img_b64 = None; orig_img = None
+        if isinstance(source, _np.ndarray):
+            orig_img = source.copy()
+            rgb = orig_img[:, :, ::-1] if (orig_img.ndim == 3 and orig_img.shape[2] == 3) else orig_img
+            pil_img = _PIL_Image.fromarray(rgb.astype(_np.uint8))
+            buf = io.BytesIO()
+            pil_img.save(buf, format='JPEG', quality=90)
+            img_b64 = 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+            buf.close()
+        elif isinstance(source, _PIL_Image.Image):
+            orig_img = _np.array(source)[:, :, ::-1]
+            buf = io.BytesIO()
+            source.save(buf, format='JPEG', quality=90)
+            img_b64 = 'data:image/jpeg;base64,' + base64.b64encode(buf.getvalue()).decode('ascii')
+            buf.close()
+        elif isinstance(source, str):
+            img_b64 = source
+            if source in ('sample', 'test'):
+                img_b64 = 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=640'
+
+        try:
+            res_str = await js.window.runVisionInferenceOnImage(img_b64, float(conf))
+            res = json.loads(str(res_str))
+            dets = res.get("detections", [])
+            w = res.get("width", 640); h = res.get("height", 480)
+            if orig_img is None: orig_img = _np.zeros((h, w, 3), dtype=_np.uint8)
+            boxes_data = []
+            for d in dets:
+                x1, y1, bw, bh = d["bbox"]
+                boxes_data.append([x1, y1, x1 + bw, y1 + bh, d["confidence"], d["classId"]])
+            return [_YOLOResults(orig_img, boxes_data, self.names)]
+        except Exception as err:
+            print(f"[YOLO Bridge Warning] Browser inference fallback: {err}", file=sys.stderr)
+            return [_YOLOResults(orig_img or _np.zeros((480, 640, 3), dtype=_np.uint8), [], self.names)]
+
+class _UltralyticsModule(types.ModuleType):
+    def __init__(self):
+        super().__init__('ultralytics')
+        self.YOLO = _YOLOModel
+
+_ultra_inst = _UltralyticsModule()
+sys.modules['ultralytics'] = _ultra_inst
+
+class _SupervisionModule(types.ModuleType):
+    def __init__(self): super().__init__('supervision')
+    class Detections:
+        @classmethod
+        def from_ultralytics(cls, result): return result
+
+_sv_inst = _SupervisionModule()
+sys.modules['supervision'] = _sv_inst
+
 `;
 
 // ── Data Source Example Codes ─────────────────────────────
 const DATA_SOURCE_CODES = {
+  vision: `\\
+# ╔═══════════════════════════════════════════════════════════╗
+# ║        RUN01 Computer Vision Tour — OpenCV & YOLOv8       ║
+# ║  cv2 · YOLOv8 · Pillow · Canny · Contour · Detection      ║
+# ╚═══════════════════════════════════════════════════════════╝
+import cv2
+import numpy as np
+from PIL import Image, ImageFilter
+from ultralytics import YOLO
+
+print("▶  1. Testing OpenCV Drawing & Edge Detection…")
+img = np.zeros((400, 600, 3), dtype=np.uint8)
+for y in range(400):
+    img[y, :] = [int(40 + y*0.1), int(20 + y*0.1), int(10 + y*0.05)]
+
+cv2.rectangle(img, (50, 60), (260, 220), (0, 210, 130), -1)
+cv2.circle(img, (430, 140), 75, (255, 130, 0), 4)
+cv2.line(img, (40, 280), (560, 280), (140, 90, 240), 3)
+cv2.putText(img, "RUN01 COMPUTER VISION", (50, 340), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+edges = cv2.Canny(gray, 50, 150)
+
+cv2.imshow("OpenCV Art Canvas", img)
+cv2.imshow("Canny Edges", edges)
+print("✓ OpenCV rendering complete!\\n")
+
+print("▶  2. Testing YOLOv8 AI Object Detection…")
+model = YOLO('yolov8n.pt')
+test_url = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=640"
+print(f"   Analyzing: {test_url}")
+results = await model(test_url)
+
+for r in results:
+    print(r)
+    for box in r.boxes:
+        cls_name = r.names.get(int(box.cls[0]), "obj")
+        conf = float(box.conf[0])
+        print(f"   • {cls_name.upper()} ({conf*100:.1f}%) at {box.xyxy[0].astype(int).tolist()}")
+    r.show()
+
+print("\\n✓ Computer Vision & YOLOv8 demo complete!")
+`,
+
 
 yfinance: `\
 # ╔═══════════════════════════════════════════════════════════╗
@@ -807,7 +1222,7 @@ async function initPyodide() {
   setProgress(20, 'Loading core packages in parallel…');
   await pyodide.loadPackage([
     'numpy', 'pandas', 'scipy', 'scikit-learn',
-    'matplotlib', 'statsmodels', 'micropip',
+    'matplotlib', 'statsmodels', 'pillow', 'scikit-image', 'micropip',
   ]);
   markPillLoaded('ip-numpy');
   markPillLoaded('ip-pandas');
@@ -815,6 +1230,10 @@ async function initPyodide() {
   markPillLoaded('ip-sklearn');
   markPillLoaded('ip-mpl');
   markPillLoaded('ip-sm');
+  markPillLoaded('ip-pillow');
+  markPillLoaded('ip-skimage');
+  markPillLoaded('ip-cv2');
+  markPillLoaded('ip-yolo');
 
   setProgress(75, 'Installing Seaborn + Plotly via micropip…');
   const micropip = pyodide.pyimport('micropip');
@@ -1352,6 +1771,21 @@ dsFRED.addEventListener('click', () => {
   openDataExplorer();
   switchTab('fred');
 });
+
+  const dsVision = document.getElementById('dsVision');
+  if (dsVision) {
+    dsVision.addEventListener('click', () => {
+      if (monacoEditor && DATA_SOURCE_CODES.vision) {
+        monacoEditor.setValue(DATA_SOURCE_CODES.vision);
+        dataDropdown.classList.remove('open');
+        btnData.setAttribute('aria-expanded', 'false');
+        clearOutput();
+        appendWelcome();
+        setStatus('ready', 'Loaded Computer Vision sample');
+      }
+    });
+  }
+
 
 // ── DATA INVENTORY STRUCTURES ─────────────────────────────────
 const YF_TREE = {
@@ -7484,28 +7918,33 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
     setStatus('loading', 'Initialising inference engine…');
 
-    // Try GPU first, gracefully fall back to pure single-threaded WASM
+    // WASM (SIMD) is the primary engine: complete operator coverage for YOLOv8 (including
+    // Softmax on axis=1 in DFL layer which WebGPU rejects).
     const backends = [
-      { ep: 'webgpu', label: 'WebGPU' },
-      { ep: 'webgl',  label: 'WebGL'  },
-      { ep: 'wasm',   label: 'WASM'   },
+      { ep: 'wasm',  label: 'WASM (SIMD)' },
+      { ep: 'webgl', label: 'WebGL'       },
     ];
     for (const { ep, label } of backends) {
       try {
-        ortSession = await ort.InferenceSession.create(modelBuffer, {
+        const sess = await ort.InferenceSession.create(modelBuffer, {
           executionProviders: [ep],
           graphOptimizationLevel: 'all',
         });
-        console.log('[Vision] Session ready — backend:', label);
+        // Warmup test run with dummy input to verify all model kernels execute without runtime error
+        const inName = (sess.inputNames && sess.inputNames[0]) || 'images';
+        const dummy = new ort.Tensor('float32', new Float32Array(3 * 640 * 640), [1, 3, 640, 640]);
+        await sess.run({ [inName]: dummy });
+        ortSession = sess;
+        console.log('[Vision] Session ready & verified with backend:', label);
         setStatus('ready', `Model ready (${label})`);
         break;
       } catch (e) {
-        console.warn('[Vision]', label, 'backend failed:', e.message || e);
+        console.warn('[Vision]', label, 'backend failed verification:', e.message || e);
       }
     }
 
     if (!ortSession) {
-      throw new Error('No ONNX backend available (webgpu / webgl / wasm all failed).');
+      throw new Error('No ONNX backend available (WASM / WebGL both failed).');
     }
 
     return ortSession;
@@ -7580,9 +8019,11 @@ If extensive structural rewriting is required, output the complete corrected \`\
     const output = results[outputKey];
     if (!output) return [];
 
-    const raw = output.data;
-    const dims = output.dims;
+    const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.25;
+    return decodeYoloRaw(output.data, output.dims, scale, padX, padY, srcW, srcH, conf);
+  }
 
+  function decodeYoloRaw(raw, dims, scale, padX, padY, srcW, srcH, confThresh = 0.25) {
     let N, numChannels, isChannelsFirst;
     if (dims.length === 3) {
       if (dims[1] < dims[2]) {
@@ -7601,7 +8042,6 @@ If extensive structural rewriting is required, output the complete corrected \`\
     }
 
     const numClasses = numChannels - 4;
-    const conf = confSlider ? parseInt(confSlider.value) / 100 : 0.25;
     const iouThresh = 0.45;
     const boxes = [], scores = [], classIds = [];
 
@@ -7630,7 +8070,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         }
       }
 
-      if (maxScore < conf) continue;
+      if (maxScore < confThresh) continue;
 
       const origX = Math.max(0, (cx - w / 2 - padX) / scale);
       const origY = Math.max(0, (cy - h / 2 - padY) / scale);
@@ -7649,6 +8089,64 @@ If extensive structural rewriting is required, output the complete corrected \`\
       bbox: boxes[idx],
     }));
   }
+
+  // ── Global YOLO Inference Bridge for Python ──────────────────────────────────
+  window.runVisionInferenceOnImage = async function(imageSource, conf = 0.25) {
+    const session = await ensureSession();
+    let img;
+    if (typeof imageSource === 'string') {
+      img = new Image();
+      img.crossOrigin = 'anonymous';
+      let src = imageSource.trim();
+      if (!src.startsWith('data:') && !src.startsWith('http:') && !src.startsWith('https:') && !src.startsWith('blob:')) {
+        src = 'data:image/png;base64,' + src;
+      }
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = () => rej(new Error('Failed to load image for YOLO inference: ' + src.slice(0, 50)));
+        img.src = src;
+      });
+    } else {
+      img = imageSource;
+    }
+
+    const targetSize = 640;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = targetSize;
+    offscreen.height = targetSize;
+    const octx = offscreen.getContext('2d', { willReadFrequently: true });
+    octx.fillStyle = 'rgb(114, 114, 114)';
+    octx.fillRect(0, 0, targetSize, targetSize);
+
+    const srcW = img.naturalWidth || img.videoWidth || img.width || 640;
+    const srcH = img.naturalHeight || img.videoHeight || img.height || 640;
+    const scale = Math.min(targetSize / srcW, targetSize / srcH);
+    const newW = Math.round(srcW * scale);
+    const newH = Math.round(srcH * scale);
+    const padX = Math.floor((targetSize - newW) / 2);
+    const padY = Math.floor((targetSize - newH) / 2);
+
+    octx.drawImage(img, padX, padY, newW, newH);
+    const imgData = octx.getImageData(0, 0, targetSize, targetSize);
+    const { data } = imgData;
+
+    const tensor = new Float32Array(3 * targetSize * targetSize);
+    for (let i = 0; i < targetSize * targetSize; i++) {
+      tensor[i]                                = data[i * 4]     / 255.0;
+      tensor[i + targetSize * targetSize]     = data[i * 4 + 1] / 255.0;
+      tensor[i + 2 * targetSize * targetSize] = data[i * 4 + 2] / 255.0;
+    }
+
+    const input = new ort.Tensor('float32', tensor, [1, 3, targetSize, targetSize]);
+    const inName = (session.inputNames && session.inputNames[0]) || 'images';
+    const results = await session.run({ [inName]: input });
+    const outKey = (session.outputNames && session.outputNames[0]) || (results.output0 ? 'output0' : Object.keys(results)[0]);
+    const output = results[outKey];
+    if (!output) return JSON.stringify({ detections: [], width: srcW, height: srcH });
+
+    const detections = decodeYoloRaw(output.data, output.dims, scale, padX, padY, srcW, srcH, conf);
+    return JSON.stringify({ detections, width: srcW, height: srcH });
+  };
 
   // ── Run button ───────────────────────────────────────────────────────────────
   if (btnRun) btnRun.addEventListener('click', async () => {

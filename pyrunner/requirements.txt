@@ -6,3 +6,9 @@ certifi>=2024.2.2
 google-auth>=2.0.0
 pyjwt>=2.8.0
 requests>=2.31.0
+# ── Computer Vision packages ─────────────────────────────────
+opencv-python-headless>=4.9.0
+Pillow>=10.2.0
+scikit-image>=0.22.0
+ultralytics>=8.2.0
+supervision>=0.20.0

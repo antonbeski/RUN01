@@ -1019,6 +1019,174 @@ def fred_meta_proxy(endpoint):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+# ── Computer Vision Python Execution Proxy ────────────────────────────────────
+# Executes Python code server-side with full cv2 / ultralytics / PIL / skimage
+# available. Results (stdout + images) are returned as JSON so the browser
+# Pyodide runner can display them identically to native Pyodide output.
+#
+# Security: Runs inside a subprocess with a strict timeout. No shell=True.
+# Images are returned as base64 PNG so no files need to persist.
+# ─────────────────────────────────────────────────────────────────────────────
+import subprocess
+import sys
+import tempfile
+import textwrap
+
+_CV_RUNNER_PRELUDE = textwrap.dedent("""\
+import sys, io, os, base64, warnings
+warnings.filterwarnings('ignore')
+
+# ── Pillow / PIL ──────────────────────────────────────────────────────────
+try:
+    from PIL import Image as _PIL_Image
+    import PIL
+except ImportError:
+    PIL = None
+
+# ── OpenCV ────────────────────────────────────────────────────────────────
+try:
+    import cv2
+    # Monkey-patch cv2.imshow so it encodes the frame and prints a sentinel
+    _cv2_imshow_orig = None
+    def _cv2_imshow_patch(winname, mat):
+        import cv2 as _cv2
+        _, buf = _cv2.imencode('.png', mat)
+        b64 = base64.b64encode(buf.tobytes()).decode('ascii')
+        print(f'__RUN01_IMG__:{b64}', flush=True)
+    cv2.imshow = _cv2_imshow_patch
+    cv2.waitKey = lambda ms=0: 0
+    cv2.destroyAllWindows = lambda: None
+    cv2.destroyWindow = lambda name: None
+except ImportError:
+    cv2 = None
+
+# ── Matplotlib ────────────────────────────────────────────────────────────
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import io as _io
+    def _mpl_show(*args, **kwargs):
+        buf = _io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight',
+                    facecolor='#0a0a0a', edgecolor='none')
+        buf.seek(0)
+        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        buf.close()
+        plt.close('all')
+        print(f'__RUN01_IMG__:{b64}', flush=True)
+    plt.show = _mpl_show
+except ImportError:
+    pass
+
+# ── PIL Image.show() patch ────────────────────────────────────────────────
+try:
+    from PIL import Image as _PIL_Image
+    import io as _io
+    _orig_pil_show = _PIL_Image.Image.show
+    def _pil_show_patch(self, title=None, command=None):
+        buf = _io.BytesIO()
+        self.save(buf, format='PNG')
+        b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        print(f'__RUN01_IMG__:{b64}', flush=True)
+    _PIL_Image.Image.show = _pil_show_patch
+except Exception:
+    pass
+
+# ── scikit-image ──────────────────────────────────────────────────────────
+try:
+    import skimage
+    from skimage import io as skio, transform, filters, feature, color, measure
+    # Patch skimage.io.imshow
+    def _ski_imshow(img, *a, **kw):
+        import cv2 as _cv2, numpy as _np
+        if img.dtype != _np.uint8:
+            img = (_np.clip(img, 0, 1) * 255).astype(_np.uint8)
+        if len(img.shape) == 3 and img.shape[2] == 3:
+            img = _cv2.cvtColor(img, _cv2.COLOR_RGB2BGR)
+        _, buf = _cv2.imencode('.png', img)
+        b64 = base64.b64encode(buf.tobytes()).decode('ascii')
+        print(f'__RUN01_IMG__:{b64}', flush=True)
+    skio.imshow = _ski_imshow
+    skio.show = lambda: None
+except ImportError:
+    pass
+
+# ── numpy is always available ──────────────────────────────────────────────
+import numpy as np
+
+# ── ultralytics (YOLO) ────────────────────────────────────────────────────
+try:
+    from ultralytics import YOLO
+    import supervision as sv
+except ImportError:
+    pass
+
+""")
+
+@app.route("/api/cv/run", methods=["POST"])
+def cv_run():
+    """
+    Execute Python CV code server-side with opencv, ultralytics, PIL, skimage.
+    Body: { "code": "...", "timeout": 30 }
+    Returns: { "stdout": "...", "stderr": "...", "images": ["base64png", ...], "error": null }
+    """
+    try:
+        body = request.get_json(force=True) or {}
+        code = body.get("code", "")
+        timeout = min(int(body.get("timeout", 30)), 60)  # cap at 60s
+
+        if not code.strip():
+            return jsonify({"stdout": "", "stderr": "", "images": [], "error": None})
+
+        full_code = _CV_RUNNER_PRELUDE + "\n" + code
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py",
+                                         delete=False, encoding="utf-8") as f:
+            f.write(full_code)
+            tmp_path = f.name
+
+        try:
+            result = subprocess.run(
+                [sys.executable, tmp_path],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env={**os.environ, "MPLBACKEND": "Agg",
+                     "PYTHONDONTWRITEBYTECODE": "1"},
+            )
+            raw_stdout = result.stdout or ""
+            raw_stderr = result.stderr or ""
+        except subprocess.TimeoutExpired:
+            return jsonify({"stdout": "", "stderr": f"Execution timed out after {timeout}s.",
+                            "images": [], "error": "timeout"})
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+        # Split stdout into text lines and __RUN01_IMG__ sentinels
+        lines = []
+        images = []
+        for line in raw_stdout.splitlines():
+            if line.startswith("__RUN01_IMG__:"):
+                images.append(line[len("__RUN01_IMG__:"):])
+            else:
+                lines.append(line)
+
+        return jsonify({
+            "stdout": "\n".join(lines),
+            "stderr": raw_stderr,
+            "images": images,
+            "error": None if result.returncode == 0 else raw_stderr or "Non-zero exit code",
+        })
+
+    except Exception as exc:
+        app.logger.exception("cv_run error")
+        return jsonify({"stdout": "", "stderr": str(exc), "images": [], "error": str(exc)}), 500
+
+
 # ── Piston code execution proxy (C++, C#, Rust) ──────────────────────────────
 # Routes compilation requests to the Piston API (https://emkc.org) which runs
 # code server-side. This avoids needing to install gcc/mono/rustc locally and
