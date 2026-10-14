@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="RUN01 - Browser-based Python IDE. NumPy, Pandas, SciPy, Scikit-Learn, Statsmodels, Matplotlib, Seaborn, Plotly, Yahoo Finance." />
+  <meta name="description" content="RUN01 - In-browser Python IDE, Parametric Mechanical &amp; PCB CAD Studio, Computer Vision Studio, Desmos Math Calculator &amp; Real-Time Financial Engine. NumPy, Pandas, Scikit-Learn, OpenSCAD WASM, WebGPU, YOLOv8." />
   <title>RUN01</title>
 
   <!-- Preconnect / DNS-prefetch -->
@@ -80,9 +80,9 @@
     <!-- HERO SECTION (Full-Width Clean Horizontal Flow, No Dividing Lines) -->
     <section id="top" class="hero-section">
       <div class="hero-content">
-        <div class="eyebrow"><span class="status-dot"></span> RUN01 // IN-BROWSER PYTHON</div>
+        <div class="eyebrow"><span class="status-dot"></span> RUN01 // IN-BROWSER SCIENTIFIC, CAD &amp; AI RUNTIME</div>
         <h1>IDEAS IN.<br><span>MODELS OUT.</span></h1>
-        <p class="hero-lede">A full data science stack, parametric CAD studio &amp; live financial engine running 100% in your browser. Zero setup. Zero latency. Zero server compute costs.</p>
+        <p class="hero-lede">A full data science stack, parametric mechanical &amp; PCB CAD studio, in-browser WebGPU computer vision, Desmos math &amp; live financial engine running 100% in your browser. Zero setup. Zero latency. Zero server compute costs.</p>
         <div class="flex-actions">
           <button class="pixel-button pixel-button-accent btn-launch-ide" id="btnHeroLaunchIDE" onclick="if(window.ViewManager){window.ViewManager.showIDE();}else{document.body.classList.add('in-ide');document.getElementById('landingView')?.classList.add('hidden');document.getElementById('ideView')?.classList.remove('hidden');window.location.hash='ide';}">
             START RUNNING
@@ -95,7 +95,9 @@
         </div>
         <div class="boot-line">
           <span>PYODIDE v0.26.4</span>
-          <span>NUMPY  PANDAS  SCIPY  SKLEARN  PLOTLY</span>
+          <span>OPENSCAD WASM</span>
+          <span>WEBGPU VISION</span>
+          <span>DESMOS 2D/3D</span>
           <span>0ms SERVER COMPUTE</span>
         </div>
       </div>
@@ -121,37 +123,49 @@
         <article class="capability-card">
           <div class="capability-number">01</div>
           <h3>Client-Side Python WASM</h3>
-          <p>Executes locally in browser memory via Pyodide v0.26.4 with zero server round-trips and 100% data privacy.</p>
+          <p>Executes locally in browser memory via Pyodide v0.26.4 with zero server round-trips, sub-millisecond execution, and 100% data privacy.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">02</div>
           <h3>Full Data Science Stack</h3>
-          <p>NumPy, Pandas, SciPy, Scikit-learn, Statsmodels, Matplotlib, Seaborn, and Plotly.js pre-loaded for instant execution.</p>
+          <p>NumPy, Pandas, SciPy, Scikit-learn, Statsmodels, Matplotlib, Seaborn, and Plotly.js pre-loaded for instant data analysis and interactive charts.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">03</div>
-          <h3>CORS-Bypassed Data Layer</h3>
-          <p>Live Yahoo Finance prices, options chains, news, financials + 930,000+ FRED macroeconomic series in one Python call.</p>
+          <h3>Parametric Mechanical CAD</h3>
+          <p>OpenSCAD WASM compiler with Manifold engine, ISO involute gears, metric threads, fasteners, and ball bearing libraries with PBR studio lighting.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">04</div>
-          <h3>Desmos Math &amp; Graphing</h3>
-          <p>Full 2D &amp; 3D Desmos Graphing Calculator integration for equations, calculus curves, and geometric modeling.</p>
+          <h3>Circuit Board &amp; PCB Studio</h3>
+          <p>Model IPC-7351B standard multi-layer PCBs with SMD passives (0201-2512), ICs (SOIC, QFP, QFN), headers, USB-C, traces, vias, and STL/OBJ export.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">05</div>
-          <h3>Parametric CAD Studio</h3>
-          <p>In-browser OpenSCAD WASM compiler &amp; Three.js 3D viewport for CSG boolean modeling, dynamic UI sliders, and STL export.</p>
+          <h3>In-Browser Vision Studio</h3>
+          <p>Hardware-accelerated WebGPU &amp; ONNX Runtime Web. Run real-time YOLOv8 object detection, OpenCV pipelines, and camera tracking with zero servers.</p>
           <div class="pixel-rule"></div>
         </article>
         <article class="capability-card">
           <div class="capability-number">06</div>
-          <h3>Surgical AI Assistant</h3>
-          <p>Context-aware AI coding assistant for automated refactoring, bug fixing, code explanations, and 1-click execution.</p>
+          <h3>Desmos 2D/3D Math Engine</h3>
+          <p>Full 2D &amp; 3D Desmos Graphing Calculator integration for equations, parametric curves, interactive dynamic sliders, and geometric proofs.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">07</div>
+          <h3>Live Financial &amp; Macro Data</h3>
+          <p>Serverless CORS-bypassed data layer delivering live Yahoo Finance equities, option chains, news, and 930,000+ FRED macroeconomic time series.</p>
+          <div class="pixel-rule"></div>
+        </article>
+        <article class="capability-card">
+          <div class="capability-number">08</div>
+          <h3>Triple Autonomous Repair AI</h3>
+          <p>Context-aware AI coding assistant with autonomous self-healing loops for Python, CAD OpenSCAD, and Desmos that inspect and fix errors live.</p>
           <div class="pixel-rule"></div>
         </article>
       </div>
@@ -166,23 +180,33 @@
       <div class="features-detail-grid">
         <div class="feature-detail-card">
           <div class="feature-tag">PARALLEL BOOTSTRAP</div>
-          <h4>Monaco + Pyodide Concurrent Warmup</h4>
-          <p>Monaco editor and Pyodide v0.26.4 WASM kernel initialize simultaneously. ServiceWorker caches all assets for near-instant repeat page loads.</p>
+          <h4>Monaco + Pyodide + OpenSCAD Warmup</h4>
+          <p>Monaco editor, Pyodide v0.26.4 WASM kernel, and OpenSCAD WASM initialize simultaneously with ServiceWorker caching for instant sub-second page loads.</p>
+        </div>
+        <div class="feature-detail-card">
+          <div class="feature-tag">MECHANICAL &amp; PCB CAD</div>
+          <h4>OpenSCAD WASM (Manifold) + Three.js PBR</h4>
+          <p>Zero-server CSG boolean geometry modeling with 5-point studio lighting, soft shadows, ACES filmic tone mapping, and instant 3D STL &amp; OBJ export.</p>
+        </div>
+        <div class="feature-detail-card">
+          <div class="feature-tag">WEBGPU VISION PIPELINE</div>
+          <h4>ONNX Runtime Web + YOLOv8 + OpenCV</h4>
+          <p>Client-side computer vision engine with WASM SIMD priority and WebGPU acceleration. Run real-time webcam tracking and neural detection in your browser.</p>
         </div>
         <div class="feature-detail-card">
           <div class="feature-tag">FINANCIAL PROXY</div>
-          <h4>Serverless Financial Data Ingestion</h4>
+          <h4>Serverless Market Data Ingestion</h4>
           <p>Bypasses browser CORS restrictions to deliver live stock ticks, option chains, sector benchmarks, and FRED economic indicators directly into Pandas.</p>
         </div>
         <div class="feature-detail-card">
-          <div class="feature-tag">VISUAL OUTPUT ENGINE</div>
-          <h4>PNG &amp; Vector Chart Renderer</h4>
-          <p>Renders Matplotlib and Seaborn plots directly as high-DPI inline PNGs, while Plotly graphs are rendered into interactive web vector objects.</p>
+          <div class="feature-tag">DESMOS MATH SYSTEM</div>
+          <h4>Dynamic 2D/3D Mathematical Projections</h4>
+          <p>Embed interactive equation solvers, calculus curves, dynamic variable sliders, and live mathematical proofs with bi-directional state synchronization.</p>
         </div>
         <div class="feature-detail-card">
-          <div class="feature-tag">3D CAD ENGINE</div>
-          <h4>OpenSCAD WASM CAD Studio</h4>
-          <p>Zero-server CSG boolean geometry modeling, Three.js hardware-accelerated 3D viewport, and 1-click 3D printing STL export.</p>
+          <div class="feature-tag">AUTONOMOUS REPAIR LOOPS</div>
+          <h4>Multi-Engine Self-Healing AI</h4>
+          <p>Specialized autonomous repair loops for Python syntax, OpenSCAD manifold validity, and Desmos graph equations that diagnose and fix issues automatically.</p>
         </div>
       </div>
     </section>
@@ -197,22 +221,32 @@
         <div class="terminal-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <strong>ZERO_COMPUTE_COST</strong>
-          <span>Python executes locally in browser memory.</span>
+          <span>Python, CAD, and Vision models run locally in browser memory.</span>
         </div>
         <div class="terminal-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           <strong>ZERO_INSTALLATION</strong>
-          <span>Open a tab. The full scientific stack is ready.</span>
+          <span>Open a tab. Full scientific, CAD, and vision runtimes are ready.</span>
         </div>
         <div class="terminal-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>LIVE_DATA_INTEGRATION</strong>
+          <strong>MECHANICAL_&amp;_PCB_CAD</strong>
+          <span>OpenSCAD WASM with ISO mechanical &amp; IPC-7351B PCB libraries.</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>WEBGPU_COMPUTER_VISION</strong>
+          <span>Real-time YOLOv8 detection &amp; OpenCV running on client GPU.</span>
+        </div>
+        <div class="terminal-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <strong>LIVE_MARKET_INTEGRATION</strong>
           <span>Instant live Yahoo Finance and FRED macroeconomic APIs.</span>
         </div>
         <div class="terminal-row">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <strong>100%_PRIVATE</strong>
-          <span>Your code and datasets never leave your browser context.</span>
+          <strong>100%_PRIVATE_SANDBOX</strong>
+          <span>Your code, camera feeds, and datasets never leave your browser context.</span>
         </div>
       </div>
 
