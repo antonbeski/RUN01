@@ -1078,14 +1078,16 @@
           <!-- Prompt input -->
           <div class="cad-prompt-wrap">
             <div class="cad-quick-prompts">
-              <button class="cad-quick-btn" data-prompt="Create a small wall-mounted phone holder with cable slot and rounded edges">Phone Stand</button>
-              <button class="cad-quick-btn" data-prompt="Design a parametric electronics enclosure with lid, screw posts, and ventilation slots">Enclosure</button>
-              <button class="cad-quick-btn" data-prompt="Create a bracket with two mounting holes, 3mm wall thickness, right angle">Bracket</button>
-              <button class="cad-quick-btn" data-prompt="Design a filament spool hub for 200mm spools with bearing seat">Spool Hub</button>
+              <button class="cad-quick-btn" data-prompt="Design a complete 5-speed manual car gearbox assembly including: cast aluminum housing (380×210×220mm), input shaft (25mm dia, 6206 bearing), output shaft (30mm dia, 6207 bearing), helical gears for all 5 speeds (module 2.5, face width 30mm, ratios 3.5/2.0/1.3/1.0/0.75), reverse gear, selector forks, gear shift rail, all M8 housing bolts, and oil drain plug.">⚙️ Car Gearbox</button>
+              <button class="cad-quick-btn" data-prompt="Create a single-stage helical gear reducer with ratio 5:1: input shaft 20mm dia with 6204 bearing, output shaft 30mm dia with 6206 bearing, driver gear module 2 20 teeth, driven gear module 2 100 teeth, both helical angle 20 degrees, cast iron housing with 8mm walls, 4 M10 mounting bolts, and oil level plug.">🔩 Gear Reducer</button>
+              <button class="cad-quick-btn" data-prompt="Design a precision bolted flange coupling: 40mm bore, 8 M12 hex bolts on 120mm bolt circle, flange thickness 22mm, overall diameter 200mm, keyway 12×8mm on shaft bore, mild steel, balanced for 3000 RPM.">🔗 Flange Coupling</button>
+              <button class="cad-quick-btn" data-prompt="Create a bearing housing block for a 6206 deep groove ball bearing: press-fit bore 62mm H7, housing wall 10mm, 4 M8 socket head cap screws on 90mm bolt circle, oil lubrication port M6, end cap with lip seal groove, gray cast iron.">🎯 Bearing Housing</button>
+              <button class="cad-quick-btn" data-prompt="Design a parametric concrete staircase with steel railing: 12 steps, each step 300mm tread × 170mm riser × 1200mm wide, 12mm steel rebar cage in concrete, 40×40mm square steel tube handrail on both sides at 900mm height with vertical balusters every 120mm, concrete base 200mm thick.">🏗️ Staircase</button>
+              <button class="cad-quick-btn" data-prompt="Design a 4-cylinder engine block: 80mm bore, 89mm stroke, 90mm cylinder spacing, cast iron block 400mm tall, water jacket 8mm walls, main bearing journals 60mm dia with 4 main bearing caps and M12 bolts, camshaft tunnel 35mm dia, oil galleries 10mm dia, deck surface with head bolt bosses M11×1.5.">🚗 Engine Block</button>
             </div>
             <div class="cad-textarea-row">
               <textarea class="cad-textarea" id="cadPromptInput"
-                placeholder="Describe the 3D object… e.g. 'Create a wall-mounted phone stand for a 6.7-inch phone, 5mm thick base, 12-degree viewing angle, two cable slots, rounded edges, and four mounting holes.'"></textarea>
+                placeholder="Describe any mechanical, architectural, or engineering design… e.g. 'Design a 5-speed manual car gearbox with helical gears, bearing housings, and shift forks' or 'Create a helical gear reducer ratio 5:1 with ISO 6206 bearings' or 'Design a concrete staircase with steel railing'"></textarea>
               <button class="cad-send-btn" id="btnCadGenerate" aria-label="Generate CAD" title="Generate CAD (Enter)">
                 <span class="cad-btn-icon-send">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -1122,6 +1124,7 @@
               <div class="cad-vp-sep"></div>
               <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadScad" title="Download .scad source">.scad</button>
               <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadStl" title="Download .stl mesh">.stl</button>
+              <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadObj" title="Download .obj mesh">.obj</button>
               <button class="cad-vp-btn cad-vp-download" id="btnCadDownloadJson" title="Download design spec JSON">.json</button>
             </div>
           </div>

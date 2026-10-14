@@ -6296,15 +6296,313 @@ window.ViewManager = (function() {
   let cadRenderer    = null;
   let cadControls    = null;
   let cadMesh        = null;
+  let cadPartMeshes  = [];     // per-part meshes for assembly color-coding
   let cadWireframe   = false;
   let cadAnimId      = null;
   let createOpenSCADFn = null; // named export from openscad-wasm (cached)
   let openscadLoading = false;
-  const OPENSCAD_CDN = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js';
+  let cadLibsInjected = false; // track whether mechanical libraries are loaded into WASM FS
+  // Use latest openscad-wasm with Manifold geometry engine support
+  const OPENSCAD_CDN_PRIMARY  = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.3.0/openscad.js';
+  const OPENSCAD_CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js';
+
+  // ── Mechanical Standard Libraries (bundled into WASM FS) ──────
+  // These are loaded once and injected into every OpenSCAD WASM instance
+  // so the AI can write: include </lib/gears.scad>; include </lib/threads.scad>;
+  const CAD_LIBRARIES = {};   // { '/lib/gears.scad': '...source...' }
+  const CAD_LIB_URLS = {
+    '/lib/gears.scad':   'https://raw.githubusercontent.com/openscad/MCAD/master/gears.scad',
+    '/lib/involute_gears.scad': 'https://raw.githubusercontent.com/chrisspen/gears/master/gears.scad',
+    '/lib/threads.scad': 'https://raw.githubusercontent.com/rcolyer/threads-scad/master/threads.scad',
+  };
+
+  // Pre-fetch mechanical libraries in background so they are ready when needed
+  (async function preloadCadLibraries() {
+    for (const [path, url] of Object.entries(CAD_LIB_URLS)) {
+      try {
+        const resp = await fetch(url);
+        if (resp.ok) {
+          CAD_LIBRARIES[path] = await resp.text();
+        }
+      } catch (_) { /* silently skip — inline fallbacks exist */ }
+    }
+    // Always ensure critical built-in gear/thread stubs exist as fallback
+    if (!CAD_LIBRARIES['/lib/gears.scad']) {
+      CAD_LIBRARIES['/lib/gears.scad'] = CAD_BUILTIN_GEARS;
+    }
+    if (!CAD_LIBRARIES['/lib/threads.scad']) {
+      CAD_LIBRARIES['/lib/threads.scad'] = CAD_BUILTIN_THREADS;
+    }
+    CAD_LIBRARIES['/lib/fasteners.scad'] = CAD_BUILTIN_FASTENERS;
+    CAD_LIBRARIES['/lib/bearings.scad']  = CAD_BUILTIN_BEARINGS;
+  })();
+
+  // ── Built-in mechanical library stubs (used as fallback / always available) ──
+  const CAD_BUILTIN_GEARS = `
+// Involute Gear Library — RUN01 CAD Studio Built-in
+// Based on OpenSCAD MCAD gears.scad (LGPL)
+function involute(base_radius, involute_angle) =
+  base_radius * [cos(involute_angle) + involute_angle * sin(involute_angle),
+                 sin(involute_angle) - involute_angle * cos(involute_angle)];
+
+function involute_intersect_angle(base_radius, radius) =
+  sqrt(pow(radius/base_radius,2) - 1) * 180/PI;
+
+module gear_tooth_2d(pitch_radius, base_radius, outer_radius, root_radius, half_thick_angle) {
+  pitch_to_base_angle  = involute_intersect_angle(base_radius, pitch_radius);
+  pitch_to_outer_angle = involute_intersect_angle(base_radius, min(outer_radius, base_radius * 1.001));
+  step = (pitch_to_outer_angle - pitch_to_base_angle) / 5;
+  polygon(concat(
+    [root_radius * [cos(-half_thick_angle - 0.001), sin(-half_thick_angle - 0.001)]],
+    [for(i=[0:5]) let(a=pitch_to_base_angle + i*step)
+      involute(base_radius, a) * [cos(-half_thick_angle - pitch_to_base_angle + a),
+                                   sin(-half_thick_angle - pitch_to_base_angle + a)]],
+    [for(i=[5:-1:0]) let(a=pitch_to_base_angle + i*step)
+      involute(base_radius, a) * [cos(half_thick_angle + pitch_to_base_angle - a),
+                                   sin(half_thick_angle + pitch_to_base_angle - a)]],
+    [root_radius * [cos(half_thick_angle + 0.001), sin(half_thick_angle + 0.001)]]
+  ));
+}
+
+// Main parametric involute gear module
+// m  = module (tooth size in mm, e.g. 1, 1.5, 2, 2.5, 3)
+// n  = number of teeth
+// h  = face width (thickness)
+// pa = pressure angle (standard = 20 degrees)
+// bore_d = bore diameter
+module gear(m=2, n=20, h=10, pa=20, bore_d=6, $fn=64) {
+  pitch_radius = m * n / 2;
+  base_radius  = pitch_radius * cos(pa);
+  outer_radius = pitch_radius + m;
+  root_radius  = pitch_radius - 1.25 * m;
+  half_thick   = 90 / n;
+  difference() {
+    union() {
+      cylinder(r=root_radius, h=h, $fn=$fn);
+      for(i=[0:n-1]) rotate([0,0,i*360/n])
+        linear_extrude(h) gear_tooth_2d(pitch_radius, base_radius, outer_radius, root_radius, half_thick);
+    }
+    if(bore_d > 0) translate([0,0,-0.5]) cylinder(d=bore_d, h=h+1, $fn=max(16,round($fn/2)));
+  }
+}
+
+// Helical gear (helix_angle in degrees, e.g. 15-30)
+module helical_gear(m=2, n=20, h=15, pa=20, helix_angle=20, bore_d=6, $fn=64) {
+  pitch_radius = m * n / 2;
+  base_radius  = pitch_radius * cos(pa);
+  outer_radius = pitch_radius + m;
+  root_radius  = pitch_radius - 1.25 * m;
+  half_thick   = 90 / n;
+  twist = tan(helix_angle) * h / pitch_radius * 180 / PI;
+  difference() {
+    union() {
+      cylinder(r=root_radius, h=h, $fn=$fn);
+      for(i=[0:n-1]) rotate([0,0,i*360/n])
+        linear_extrude(h, twist=twist) gear_tooth_2d(pitch_radius, base_radius, outer_radius, root_radius, half_thick);
+    }
+    if(bore_d > 0) translate([0,0,-0.5]) cylinder(d=bore_d, h=h+1, $fn=max(16,round($fn/2)));
+  }
+}
+
+// Rack (linear gear), for rack-and-pinion mechanisms
+// m=module, n=number_of_teeth, h=height, thickness=depth
+module rack(m=2, n=10, h=10, thickness=5) {
+  for(i=[0:n-1]) translate([i*PI*m, 0, 0])
+    linear_extrude(h)
+    polygon([[0,0],[PI*m,0],[PI*m - m*0.7, m*1.1],[m*0.7, m*1.1]]);
+  cube([n*PI*m, thickness, h]);
+}
+
+// Bevel gear (simplified, for 90-degree shafts)
+module bevel_gear(m=2, n=20, h=10, cone_angle=45, bore_d=6, $fn=48) {
+  pitch_radius = m * n / 2;
+  difference() {
+    cylinder(r1=pitch_radius + m, r2=0, h=pitch_radius * tan(cone_angle), $fn=$fn);
+    translate([0,0,-0.5]) cylinder(d=bore_d, h=pitch_radius * tan(cone_angle)+1, $fn=max(16,$fn/2));
+  }
+}
+`;
+
+  const CAD_BUILTIN_THREADS = `
+// Metric Thread Library — RUN01 CAD Studio Built-in
+// Generates ISO metric external and internal threads
+// pitch = thread pitch in mm (e.g. M6 = 1.0, M8 = 1.25, M10 = 1.5, M12 = 1.75, M16 = 2.0, M20 = 2.5)
+
+// Thread pitch table (standard coarse threads)
+function metric_thread_pitch(d) =
+  d <= 3  ? 0.5  :
+  d <= 4  ? 0.7  :
+  d <= 5  ? 0.8  :
+  d <= 6  ? 1.0  :
+  d <= 8  ? 1.25 :
+  d <= 10 ? 1.5  :
+  d <= 12 ? 1.75 :
+  d <= 16 ? 2.0  :
+  d <= 20 ? 2.5  :
+  d <= 24 ? 3.0  :
+  d <= 30 ? 3.5  :
+  d <= 36 ? 4.0  : 4.5;
+
+// External (male) metric thread
+// d = nominal diameter, h = length, pitch = thread pitch (0 = auto from standard)
+module metric_thread(d=6, h=20, pitch=0, $fn=32) {
+  p = pitch > 0 ? pitch : metric_thread_pitch(d);
+  r = d / 2;
+  turns = h / p;
+  union() {
+    cylinder(d=d - p*0.6495*2, h=h, $fn=$fn);
+    for(i=[0:floor(turns)]) {
+      translate([0, 0, i*p])
+      linear_extrude(p, twist=-360, slices=max(8, round($fn/4)))
+      polygon([[r - p*0.6495, 0], [r, p*0.3], [r, p*0.7], [r - p*0.6495, p]]);
+    }
+  }
+}
+
+// Internal (female) thread — use inside difference() to cut thread into a hole
+module metric_thread_hole(d=6, h=20, pitch=0, $fn=32) {
+  p = pitch > 0 ? pitch : metric_thread_pitch(d);
+  r = d / 2;
+  turns = h / p;
+  union() {
+    cylinder(d=d, h=h, $fn=$fn);
+    for(i=[0:floor(turns)]) {
+      translate([0, 0, i*p])
+      linear_extrude(p, twist=-360, slices=max(8, round($fn/4)))
+      polygon([[r, 0], [r + p*0.5, p*0.3], [r + p*0.5, p*0.7], [r, p]]);
+    }
+  }
+}
+`;
+
+  const CAD_BUILTIN_FASTENERS = `
+// Standard Fasteners Library — RUN01 CAD Studio Built-in
+// ISO metric fasteners: bolts, nuts, washers, screws
+include </lib/threads.scad>;
+
+// Hex bolt head dimensions (ISO 4014 / DIN 931)
+function hex_bolt_head_w(d) = d <= 6 ? d*1.7 : d <= 10 ? d*1.65 : d*1.6;
+function hex_bolt_head_h(d) = d <= 6 ? d*0.65 : d*0.64;
+
+// ISO Hex Bolt (M2 through M36)
+// d=nominal_diameter, l=length (under head), grade=8.8 typical
+module hex_bolt(d=8, l=30, $fn=24) {
+  w = hex_bolt_head_w(d);
+  hh = hex_bolt_head_h(d);
+  // Head
+  cylinder(d=w, h=hh, $fn=6);
+  // Shank with thread
+  translate([0,0,hh]) metric_thread(d=d, h=l);
+}
+
+// ISO Hex Nut (M2 through M36)
+module hex_nut(d=8, $fn=24) {
+  p = metric_thread_pitch(d);
+  w = hex_bolt_head_w(d);
+  h = d * 0.8;
+  difference() {
+    cylinder(d=w, h=h, $fn=6);
+    translate([0,0,-0.5]) metric_thread_hole(d=d, h=h+1, $fn=$fn);
+  }
+}
+
+// ISO Flat Washer
+module washer(d=8, $fn=32) {
+  od = d * 2.2;
+  h  = d * 0.15;
+  difference() {
+    cylinder(d=od, h=h, $fn=$fn);
+    translate([0,0,-0.5]) cylinder(d=d*1.1, h=h+1, $fn=$fn);
+  }
+}
+
+// Socket Head Cap Screw (ISO 4762 / DIN 912)
+module socket_head_screw(d=6, l=25, $fn=32) {
+  hh = d;
+  // Head
+  cylinder(d=d*1.5, h=hh, $fn=$fn);
+  // Allen key socket
+  translate([0,0,hh*0.3]) cylinder(d=d*0.6, h=hh*0.8, $fn=6);
+  // Shank
+  translate([0,0,hh]) metric_thread(d=d, h=l, $fn=$fn);
+}
+
+// Countersunk flat head screw (ISO 10642)
+module csk_screw(d=6, l=25, $fn=32) {
+  hh = d * 0.6;
+  cylinder(d1=d*2, d2=d, h=hh, $fn=$fn);
+  translate([0,0,hh]) metric_thread(d=d, h=l, $fn=$fn);
+}
+`;
+
+  const CAD_BUILTIN_BEARINGS = `
+// Rolling Element Bearings Library — RUN01 CAD Studio Built-in
+// Standard ISO 15 deep groove ball bearings (6000 series)
+
+// 6000 series dimensions [bore_d, outer_d, width, chamfer]
+function bearing_6000_dims(code) =
+  code == 6000 ? [10, 26, 8, 0.3] :
+  code == 6001 ? [12, 28, 8, 0.3] :
+  code == 6002 ? [15, 32, 9, 0.3] :
+  code == 6003 ? [17, 35, 10, 0.3] :
+  code == 6004 ? [20, 42, 12, 0.6] :
+  code == 6005 ? [25, 47, 12, 0.6] :
+  code == 6006 ? [30, 55, 13, 1.0] :
+  code == 6007 ? [35, 62, 14, 1.0] :
+  code == 6008 ? [40, 68, 15, 1.0] :
+  code == 6200 ? [10, 30, 9, 0.6] :
+  code == 6201 ? [12, 32, 10, 0.6] :
+  code == 6202 ? [15, 35, 11, 0.6] :
+  code == 6203 ? [17, 40, 12, 0.6] :
+  code == 6204 ? [20, 47, 14, 1.0] :
+  code == 6205 ? [25, 52, 15, 1.0] :
+  code == 6206 ? [30, 62, 16, 1.0] :
+  code == 6207 ? [35, 72, 17, 1.5] :
+  code == 6208 ? [40, 80, 18, 1.5] :
+  [20, 47, 14, 1.0]; // default 6204
+
+// Deep groove ball bearing
+// bearing_code: 6000, 6001 ... 6207, 6208
+module ball_bearing(bearing_code=6204, $fn=48) {
+  dims = bearing_6000_dims(bearing_code);
+  bore_d = dims[0]; outer_d = dims[1]; width = dims[2];
+  ball_d = (outer_d - bore_d) / 2 * 0.6;
+  race_r = (bore_d + outer_d) / 4;
+  difference() {
+    union() {
+      // Outer race
+      difference() {
+        cylinder(d=outer_d, h=width, $fn=$fn);
+        translate([0,0,-0.5]) cylinder(d=outer_d - (outer_d-bore_d)*0.25, h=width+1, $fn=$fn);
+      }
+      // Inner race
+      difference() {
+        cylinder(d=bore_d + (outer_d-bore_d)*0.25, h=width, $fn=$fn);
+        translate([0,0,-0.5]) cylinder(d=bore_d, h=width+1, $fn=$fn);
+      }
+      // Balls
+      translate([0,0,width/2])
+      for(i=[0:7]) rotate([0,0,i*45])
+        translate([race_r, 0, 0]) sphere(d=ball_d, $fn=12);
+    }
+    // Center bore
+    translate([0,0,-0.5]) cylinder(d=bore_d, h=width+1, $fn=$fn);
+  }
+}
+
+// Bearing housing (press-fit bore for standard bearing)
+module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
+  dims = bearing_6000_dims(bearing_code);
+  outer_d = dims[1]; width = dims[2];
+  difference() {
+    cylinder(d=outer_d + 2*wall, h=width + 2, $fn=$fn);
+    translate([0,0,-0.5]) cylinder(d=outer_d, h=width+3, $fn=$fn);
+  }
+}
+`;
 
   // ── OpenSCAD WASM Loading ─────────────────────────────────────
-  // openscad-wasm@0.0.4 ESM exports: { createOpenSCAD }  (NO default export).
-  // createOpenSCAD() → { renderToStl(code), getInstance() }
+  // Tries openscad-wasm@0.3.0 (Manifold engine) first, falls back to 0.0.4
   async function ensureCreateOpenSCAD() {
     if (createOpenSCADFn) return createOpenSCADFn;
     if (openscadLoading) {
@@ -6313,22 +6611,40 @@ window.ViewManager = (function() {
       throw new Error('OpenSCAD WASM failed to load');
     }
     openscadLoading = true;
-    setStatus('Loading OpenSCAD WASM…');
-    try {
-      const mod = await import(OPENSCAD_CDN);
-      const fn = mod.createOpenSCAD || mod.default?.createOpenSCAD || mod.default;
-      if (typeof fn !== 'function') {
-        const keys = mod && typeof mod === 'object' ? Object.keys(mod).join(',') : typeof mod;
-        throw new Error(`Unexpected openscad-wasm exports (${keys || 'none'}); expected createOpenSCAD`);
+    setStatus('Loading OpenSCAD WASM (Manifold engine)…');
+    const cdnList = [OPENSCAD_CDN_PRIMARY, OPENSCAD_CDN_FALLBACK];
+    let lastErr = null;
+    for (const cdn of cdnList) {
+      try {
+        const mod = await import(cdn);
+        const fn = mod.createOpenSCAD || mod.default?.createOpenSCAD || mod.default;
+        if (typeof fn !== 'function') {
+          const keys = mod && typeof mod === 'object' ? Object.keys(mod).join(',') : typeof mod;
+          throw new Error(`Unexpected openscad-wasm exports (${keys || 'none'})`);
+        }
+        createOpenSCADFn = fn;
+        openscadLoading = false;
+        setStatus(`OpenSCAD WASM ready (${cdn.includes('0.3') ? 'Manifold' : 'CGAL'} engine)`);
+        return createOpenSCADFn;
+      } catch (err) {
+        lastErr = err;
+        setStatus(`Trying fallback WASM…`);
       }
-      createOpenSCADFn = fn;
-      openscadLoading = false;
-      return createOpenSCADFn;
-    } catch (err) {
-      openscadLoading = false;
-      createOpenSCADFn = null;
-      throw new Error(`OpenSCAD WASM load failed: ${err.message}`);
     }
+    openscadLoading = false;
+    createOpenSCADFn = null;
+    throw new Error(`OpenSCAD WASM load failed: ${lastErr?.message}`);
+  }
+
+  // ── Inject mechanical libraries into WASM instance FS ─────────
+  function injectLibrariesIntoFS(osc) {
+    try {
+      // Ensure /lib directory exists
+      try { osc.FS.mkdir('/lib'); } catch (_) {}
+      for (const [path, source] of Object.entries(CAD_LIBRARIES)) {
+        try { osc.FS.writeFile(path, source); } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   // ── Compile OpenSCAD to STL ───────────────────────────────────
@@ -6336,18 +6652,21 @@ window.ViewManager = (function() {
     const createOpenSCAD = await ensureCreateOpenSCAD();
     let stderr = '';
 
-    // Path 1: low-level FS + callMain (handles Emscripten exit throws)
+    // Path 1: low-level FS + callMain with Manifold engine + library injection
     try {
       const api = await createOpenSCAD({
         print: () => {},
         printErr: (msg) => { stderr += String(msg) + '\n'; },
       });
-      const osc = api.getInstance();
+      const osc = api.getInstance ? api.getInstance() : api;
+      // Inject mechanical libraries into virtual FS
+      injectLibrariesIntoFS(osc);
       try { osc.FS.unlink('/input.scad'); } catch (_) {}
       try { osc.FS.unlink('/output.stl'); } catch (_) {}
       osc.FS.writeFile('/input.scad', scadCode);
 
       try {
+        // Try Manifold engine first (faster, better for complex geometry)
         osc.callMain(['/input.scad', '--enable=manifold', '-o', '/output.stl']);
       } catch (_) {
         // Emscripten often throws on process.exit — ignore if STL was written
@@ -6365,14 +6684,14 @@ window.ViewManager = (function() {
       stderr += (e && e.message ? e.message : String(e)) + '\n';
     }
 
-    // Path 2: fresh instance + high-level renderToStl (ASCII STL string)
+    // Path 2: fresh instance + fallback without manifold flag
     try {
       const api2 = await createOpenSCAD({
         print: () => {},
         printErr: (msg) => { stderr += String(msg) + '\n'; },
       });
-      // Wrap callMain exit throws the package itself does not catch
-      const osc2 = api2.getInstance();
+      const osc2 = api2.getInstance ? api2.getInstance() : api2;
+      injectLibrariesIntoFS(osc2);
       try { osc2.FS.unlink('/input.scad'); } catch (_) {}
       try { osc2.FS.unlink('/output.stl'); } catch (_) {}
       osc2.FS.writeFile('/input.scad', scadCode);
@@ -6454,27 +6773,70 @@ window.ViewManager = (function() {
     const THREE = window.THREE;
 
     cadScene    = new THREE.Scene();
-    cadScene.background = new THREE.Color(0x0d0d0d);
-    cadCamera   = new THREE.PerspectiveCamera(45, cadViewport.clientWidth / cadViewport.clientHeight, 0.1, 10000);
-    cadCamera.position.set(80, 80, 120);
-    cadRenderer = new THREE.WebGLRenderer({ antialias: true });
-    cadRenderer.setPixelRatio(window.devicePixelRatio);
+    cadScene.background = new THREE.Color(0x111318);
+    cadScene.fog = new THREE.FogExp2(0x111318, 0.003);
+
+    cadCamera   = new THREE.PerspectiveCamera(40, cadViewport.clientWidth / cadViewport.clientHeight, 0.1, 20000);
+    cadCamera.position.set(120, 90, 160);
+
+    cadRenderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    cadRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     cadRenderer.setSize(cadViewport.clientWidth, cadViewport.clientHeight);
+    cadRenderer.shadowMap.enabled = true;
+    cadRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    cadRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    cadRenderer.toneMappingExposure = 1.1;
     cadViewport.appendChild(cadRenderer.domElement);
 
-    // Grid
-    const grid = new THREE.GridHelper(200, 20, 0x222222, 0x181818);
+    // Ground grid + shadow receiver plane
+    const grid = new THREE.GridHelper(400, 40, 0x1a2030, 0x141820);
+    grid.position.y = -0.5;
     cadScene.add(grid);
 
-    // Lights
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    const floorGeo = new THREE.PlaneGeometry(600, 600);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 1.0, metalness: 0.0 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.6;
+    floor.receiveShadow = true;
+    cadScene.add(floor);
+
+    // ── 5-point studio lighting for realistic metal rendering ──
+    // Key light (main, warm white, casts shadows)
+    const keyLight = new THREE.DirectionalLight(0xfff5e8, 2.0);
+    keyLight.position.set(150, 200, 100);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width  = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far  = 1000;
+    keyLight.shadow.camera.left = keyLight.shadow.camera.bottom = -200;
+    keyLight.shadow.camera.right = keyLight.shadow.camera.top = 200;
+    keyLight.shadow.bias = -0.001;
+    cadScene.add(keyLight);
+
+    // Fill light (cool blue-white, opposite side)
+    const fillLight = new THREE.DirectionalLight(0xd0e8ff, 0.6);
+    fillLight.position.set(-120, 80, -80);
+    cadScene.add(fillLight);
+
+    // Rim / back light (creates edge highlight on metal)
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    rimLight.position.set(-60, 120, -180);
+    cadScene.add(rimLight);
+
+    // Top light (simulates workshop overhead)
+    const topLight = new THREE.DirectionalLight(0xe8f0ff, 0.5);
+    topLight.position.set(0, 300, 0);
+    cadScene.add(topLight);
+
+    // Ambient (global fill — keeps shadows from going pitch black)
+    const ambient = new THREE.AmbientLight(0x304060, 0.8);
     cadScene.add(ambient);
-    const dir1 = new THREE.DirectionalLight(0xffffff, 0.8);
-    dir1.position.set(1, 2, 1.5);
-    cadScene.add(dir1);
-    const dir2 = new THREE.DirectionalLight(0xffffff, 0.3);
-    dir2.position.set(-1, -1, -1);
-    cadScene.add(dir2);
+
+    // Hemisphere light (sky/ground gradient)
+    const hemi = new THREE.HemisphereLight(0x405070, 0x1a1a2e, 0.4);
+    cadScene.add(hemi);
 
     // Orbit controls (inline — no import needed, Three.js is loaded globally)
     cadControls = initOrbitControls(cadCamera, cadRenderer.domElement);
@@ -6551,19 +6913,52 @@ window.ViewManager = (function() {
   }
 
   // ── STL Parser + Three.js mesh rendering ─────────────────────
-  function loadSTLIntoViewport(stlBuffer) {
+  function loadSTLIntoViewport(stlBuffer, materialPreset) {
     if (!window.THREE || !cadScene) return;
     const THREE = window.THREE;
     const geometry = parseSTLBinary(stlBuffer);
 
-    // Remove old mesh
+    // Remove old meshes
     if (cadMesh) { cadScene.remove(cadMesh); cadMesh.geometry.dispose(); cadMesh.material.dispose(); cadMesh = null; }
+    cadPartMeshes.forEach(m => { cadScene.remove(m); m.geometry.dispose(); m.material.dispose(); });
+    cadPartMeshes = [];
 
-    const mat = new THREE.MeshStandardMaterial({ color: 0x7aa2f7, roughness: 0.5, metalness: 0.15, side: THREE.DoubleSide });
-    cadMesh = new THREE.Mesh(geometry, mat);
-
-    // Center and scale model
+    // Compute smooth normals for realistic rendering
+    geometry.computeVertexNormals();
     geometry.computeBoundingBox();
+
+    // PBR material presets based on design type
+    const matPresets = {
+      steel:    { color: 0x8a9bb0, roughness: 0.25, metalness: 0.90 },
+      aluminum: { color: 0xb8c8d8, roughness: 0.20, metalness: 0.85 },
+      iron:     { color: 0x6a7a8a, roughness: 0.45, metalness: 0.80 },
+      brass:    { color: 0xc8a855, roughness: 0.30, metalness: 0.88 },
+      rubber:   { color: 0x222222, roughness: 0.95, metalness: 0.00 },
+      plastic:  { color: 0x4a90d9, roughness: 0.60, metalness: 0.05 },
+      default:  { color: 0x7aa2f7, roughness: 0.35, metalness: 0.60 },
+    };
+
+    // Auto-detect material from spec type or use override
+    let preset = matPresets.default;
+    if (materialPreset && matPresets[materialPreset]) preset = matPresets[materialPreset];
+    else if (currentSpec) {
+      const t = (currentSpec.type || '').toLowerCase();
+      if (t.includes('mechanical') || t.includes('powertrain')) preset = matPresets.steel;
+      else if (t.includes('architectural') || t.includes('structural')) preset = matPresets.aluminum;
+    }
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: preset.color,
+      roughness: preset.roughness,
+      metalness: preset.metalness,
+      side: THREE.DoubleSide,
+      envMapIntensity: 1.2,
+    });
+    cadMesh = new THREE.Mesh(geometry, mat);
+    cadMesh.castShadow = true;
+    cadMesh.receiveShadow = true;
+
+    // Center and scale model to fit viewport
     const box = geometry.boundingBox;
     const center = new THREE.Vector3();
     box.getCenter(center);
@@ -6574,6 +6969,11 @@ window.ViewManager = (function() {
     cadMesh.scale.setScalar(100 / maxDim);
 
     cadScene.add(cadMesh);
+
+    // Show dimension overlay in status bar
+    const dimStr = `${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)} mm`;
+    const triCount = (geometry.attributes.position.count / 3).toFixed(0);
+    setStatus(`✅ ${(stlBuffer.length / 1024).toFixed(0)} KB STL · ${triCount} triangles · ${dimStr}`);
 
     // Hide placeholder
     if (cadViewportPlaceholder) cadViewportPlaceholder.style.display = 'none';
@@ -6663,25 +7063,35 @@ window.ViewManager = (function() {
       appendChatMsg('user', chatPrompt);
     }
 
-    const specSystemPrompt = `You are a parametric CAD specification generator.
-The user will describe a 3D object. You MUST respond with ONLY valid JSON, no markdown, no explanation, no code fences.
+    const specSystemPrompt = `You are a senior mechanical engineer and CAD specialist with 20+ years of experience in automotive, aerospace, and industrial design.
+When the user describes a 3D object or mechanical assembly, you MUST respond with ONLY valid JSON — no markdown, no explanation, no code fences.
+
 Use this exact schema:
 {
   "name": "snake_case_identifier",
   "title": "Human Readable Title",
+  "type": "mechanical|consumer|architectural|structural",
   "units": "mm",
   "parameters": {
     "param_name": <number>
   },
-  "features": ["feature1", "feature2"],
-  "constraints": ["constraint description"]
+  "parts": ["list of discrete parts in the assembly"],
+  "features": ["list of all geometric features"],
+  "materials": {"part_name": "material"},
+  "standards": ["ISO 286", "DIN 931"],
+  "constraints": ["geometric validity rules"],
+  "libraries": ["gears.scad", "threads.scad", "fasteners.scad", "bearings.scad"]
 }
-Rules:
-- All dimensions must be realistic for the described object (millimetres).
-- Use 4-12 parameters covering the key design dimensions.
-- features: list all geometric features (holes, slots, fillets, chamfers, supports etc).
-- constraints: list geometric validity rules.
-- Output ONLY the JSON object. No other text.`;
+
+MECHANICAL ENGINEERING RULES (mandatory):
+- Apply realistic ISO/ANSI dimensions. For gears: use standard modules (m=1, 1.5, 2, 2.5, 3, 4, 5). For threads: use standard pitches (M6×1.0, M8×1.25, M10×1.5, M12×1.75). For bearings: use 6000-series (6004, 6205, 6206, 6207, 6208).
+- Apply correct fits and tolerances: shaft-to-bore H7/g6 clearance fit (shaft = nominal - 0.01 to -0.029mm for M20), press fits for bearings (H7 hole = +0/+0.021mm for 20mm bore), interference fits for hubs.
+- For gears: center_distance = m*(n1+n2)/2, pitch_circle = m*n, addendum = 1*m, dedendum = 1.25*m.
+- For car gearboxes: input shaft 20-35mm dia, output shaft 25-40mm dia, gear module 2-3, face width 20-35mm, housing wall 8-12mm, typical ratios: 1st=3.5:1, 2nd=2.0:1, 3rd=1.3:1, 4th=1.0:1, 5th=0.75:1, reverse=3.8:1.
+- For bolted joints: use M6-M16 bolts for structural joints, bolt circle diameter 1.5-2.5× flange bore.
+- Use 8-20 parameters for complex assemblies; must cover all critical dimensions.
+- "libraries" field: list which of these built-in libs to use: gears.scad, threads.scad, fasteners.scad, bearings.scad.
+Output ONLY the JSON object. No other text.`;
 
     let specJson = null;
     try {
@@ -6703,21 +7113,32 @@ Rules:
     currentSpec = specJson;
     setStatus('⏳ Stage 2: Generating OpenSCAD code…');
 
-    const codeSystemPrompt = `You are a parametric OpenSCAD code generator.
-You receive a CAD design specification as JSON and must output ONLY executable OpenSCAD code.
-Rules (strictly enforced):
-- Output ONLY OpenSCAD code. No markdown fences, no explanation, no comments beyond inline parameter comments.
-- Start with parameter variable declarations using EXACTLY the parameter names and values from the JSON spec.
-- Use modules for logical grouping of features.
-- Call the main module at the end so the object renders.
-- All dimensions in millimetres.
-- Use difference(), union(), intersection(), cylinder(), cube(), sphere(), rotate_extrude(), linear_extrude() appropriately.
-- For holes: use negative cylinder() or cube() inside difference().
-- Prefer simple robust geometry over complex fillets (avoid minkowski unless essential).
-- No filesystem or network access. No echo statements.
-- The output must compile successfully in OpenSCAD.`;
+    const codeSystemPrompt = `You are a master OpenSCAD engineer specializing in complex mechanical assemblies, automotive components, architectural structures, and precision mechanisms.
 
-    const codeUserMsg = `Specification:\n${JSON.stringify(specJson, null, 2)}\n\nGenerate the OpenSCAD code now.`;
+You have access to these pre-loaded libraries (already in WASM virtual FS — use include to call them):
+  include </lib/gears.scad>;        // gear(m, n, h, pa, bore_d), helical_gear(), rack(), bevel_gear()
+  include </lib/threads.scad>;      // metric_thread(d, h), metric_thread_hole(d, h), metric_thread_pitch(d)
+  include </lib/fasteners.scad>;    // hex_bolt(d, l), hex_nut(d), washer(d), socket_head_screw(d, l), csk_screw(d, l)
+  include </lib/bearings.scad>;     // ball_bearing(bearing_code), bearing_housing(bearing_code, wall)
+
+MANDATORY CODE RULES:
+1. Output ONLY raw OpenSCAD code. No markdown fences, no prose. The first line must be code.
+2. Declare ALL parameters at the very top with realistic ISO/engineering values and comments.
+3. Structure as modules — one module per part/component. Call main assembly at the very bottom.
+4. ALWAYS use $fn=64 for precision shafts/bores, $fn=48 for housings, $fn=32 for small features.
+5. For gears: ALWAYS use the gear() module from /lib/gears.scad. Set m (module) to standard values: 1, 1.5, 2, 2.5, 3.
+6. For bolts/nuts/screws: ALWAYS use hex_bolt(), socket_head_screw() etc from /lib/fasteners.scad.
+7. For bearings: ALWAYS use ball_bearing(6204) etc from /lib/bearings.scad.
+8. For threads: ALWAYS use metric_thread() and metric_thread_hole() from /lib/threads.scad.
+9. CSG manifold rules: extend all boolean cutters by 0.1mm beyond surfaces (use -0.05 offset + length+0.1).
+10. Multi-part assemblies: add explode_factor=0 parameter. When explode_factor>0, translate parts outward for exploded view.
+11. Add // [MATERIAL: steel] // [MATERIAL: aluminum] // [MATERIAL: rubber] comments on each module for renderer.
+12. Realistic proportions are non-negotiable. A car gearbox housing is 300-400mm long, M20 bolt has 30mm head.
+13. For large assemblies (gearbox, engine, etc.): produce a complete working assembly with ALL parts — housing, shafts, gears, bearings, seals, fasteners. Do NOT simplify by omitting parts.
+14. NEVER produce hollow-geometry or non-manifold faces. Use difference() with 0.1mm extensions on all cutouts.
+15. Do NOT write: "Prefer simple geometry". Complex geometry is REQUIRED for accurate mechanical representation.`;
+
+    const codeUserMsg = `Mechanical Specification:\n${JSON.stringify(specJson, null, 2)}\n\nGenerate complete, production-quality OpenSCAD code for this assembly. Include all parts listed in the spec. Use library modules where applicable. Start with include statements for needed libraries, then parameters, then modules, then the final assembly call.`;
 
     let scadCode = '';
     try {
@@ -6955,7 +7376,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         signal: this.currentAbortController.signal,
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are an authoritative OpenSCAD WASM self-healing repair engineer in RUN01. Fix compile, syntax, undefined variable, or manifold errors with surgical precision to guarantee clean WASM rendering with 0 errors.' },
+            { role: 'system', content: 'You are an authoritative OpenSCAD WASM self-healing repair engineer in RUN01. Fix compile, syntax, undefined variable, or manifold errors with surgical precision to guarantee clean WASM rendering with 0 errors. The WASM virtual FS has these pre-loaded libraries available: /lib/gears.scad (gear, helical_gear, rack, bevel_gear), /lib/threads.scad (metric_thread, metric_thread_hole), /lib/fasteners.scad (hex_bolt, hex_nut, washer, socket_head_screw, csk_screw), /lib/bearings.scad (ball_bearing, bearing_housing). If errors are caused by missing modules, replace manual implementations with these library calls.' },
             { role: 'user', content: prompt }
           ],
           model: this.model,
@@ -7321,6 +7742,37 @@ If extensive structural rewriting is required, output the complete corrected \`\
     btnCadDownloadStl.addEventListener('click', () => {
       if (!currentStlData) { cadStatusBar.textContent = 'No STL — compile with ▶ Preview first.'; return; }
       downloadBinary(`${modelBaseName()}.stl`, currentStlData);
+    });
+  }
+
+  // ── OBJ Export — convert current Three.js mesh to Wavefront OBJ ──
+  const btnCadDownloadObj = document.getElementById('btnCadDownloadObj');
+  if (btnCadDownloadObj) {
+    btnCadDownloadObj.addEventListener('click', () => {
+      if (!cadMesh || !window.THREE) { setStatus('No mesh — compile with ▶ Preview first.'); return; }
+      const geo = cadMesh.geometry;
+      const pos = geo.attributes.position;
+      const nrm = geo.attributes.normal;
+      if (!pos) { setStatus('No geometry to export.'); return; }
+      let obj = `# RUN01 CAD Studio — OBJ Export\n# Model: ${modelBaseName()}\n# Triangles: ${pos.count / 3}\no ${modelBaseName()}\n`;
+      for (let i = 0; i < pos.count; i++) {
+        const scale = cadMesh.scale.x;
+        obj += `v ${(pos.getX(i) * scale + cadMesh.position.x).toFixed(4)} ${(pos.getY(i) * scale + cadMesh.position.y).toFixed(4)} ${(pos.getZ(i) * scale + cadMesh.position.z).toFixed(4)}\n`;
+      }
+      if (nrm) {
+        for (let i = 0; i < nrm.count; i++) {
+          obj += `vn ${nrm.getX(i).toFixed(4)} ${nrm.getY(i).toFixed(4)} ${nrm.getZ(i).toFixed(4)}\n`;
+        }
+        for (let i = 0; i < pos.count; i += 3) {
+          obj += `f ${i+1}//${i+1} ${i+2}//${i+2} ${i+3}//${i+3}\n`;
+        }
+      } else {
+        for (let i = 0; i < pos.count; i += 3) {
+          obj += `f ${i+1} ${i+2} ${i+3}\n`;
+        }
+      }
+      downloadText(`${modelBaseName()}.obj`, obj);
+      setStatus(`✅ Exported ${(obj.length / 1024).toFixed(0)} KB OBJ`);
     });
   }
 
