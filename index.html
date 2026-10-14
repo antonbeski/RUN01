@@ -21,12 +21,6 @@
   <link rel="preload"
         href="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"
         as="script" crossorigin />
-  <link rel="preload"
-        href="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
-        as="script" crossorigin />
-  <link rel="preload"
-        href="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
-        as="script" crossorigin />
 
   <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@100..900&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400;1,500&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Pixelify+Sans:wght@400..700&display=swap"
         rel="stylesheet" />
@@ -784,6 +778,7 @@
         <span class="init-pill" id="ip-cv2">OpenCV</span>
         <span class="init-pill" id="ip-yolo">YOLOv8</span>
       </div>
+      <button class="pixel-button pixel-button-ghost" id="btnSkipInitOverlay" style="margin-top:14px;font-size:11px;padding:6px 14px;display:none;cursor:pointer;" onclick="if(window.hideOverlay){window.hideOverlay();}">Open Editor</button>
     </div>
   </div>
 
@@ -1192,20 +1187,16 @@
 
   <!--  SCRIPTS  -->
   <!-- Three.js for 3D CAD Viewport -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin
-          onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin defer
+          onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';s.defer=true;document.head.appendChild(s);"></script>
   <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js"
-          crossorigin
-          onerror="var s=document.createElement('script');s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js" crossorigin></script>
+          crossorigin defer
+          onerror="var s=document.createElement('script');s.src='https://unpkg.com/plotly.js@2.35.2/dist/plotly.min.js';s.crossOrigin='anonymous';s.defer=true;document.head.appendChild(s);"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js" crossorigin defer></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" crossorigin defer></script>
-  <!-- marked.js  -  full Markdown parser for the AI chat renderer -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" crossorigin
-          onerror="var s=document.createElement('script');s.src='https://unpkg.com/marked@12.0.0/marked.min.js';s.crossOrigin='anonymous';document.head.appendChild(s);"></script>
-  <!-- ONNX Runtime Web  for Vision Studio YOLOv8 browser inference -->
-  <!-- ort.all.min.js bundles all backends statically (no dynamic .mjs imports) -->
-  <!-- This avoids "Failed to fetch ort-wasm-simd-threaded.mjs" on Vercel        -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.all.min.js" crossorigin></script>
+  <!-- marked.js - full Markdown parser for the AI chat renderer -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" crossorigin defer
+          onerror="var s=document.createElement('script');s.src='https://unpkg.com/marked@12.0.0/marked.min.js';s.crossOrigin='anonymous';s.defer=true;document.head.appendChild(s);"></script>
   <script src="./app.js" defer></script>
 
   <!-- Service Worker -->

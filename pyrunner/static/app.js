@@ -40,7 +40,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as _mpl_plt
-import plotly.io as _pio
+try:
+    import plotly.io as _pio
+except Exception:
+    _pio = None
 
 #  Desmos Math Graphing Module 
 class _DesmosModule:
@@ -265,17 +268,20 @@ import matplotlib.pyplot as plt
 plt.show = _mpl_capture
 
 #  fig.show(): capture as interactive Plotly chart 
-def _plotly_capture(fig, *args, **kwargs):
-    fig_json = _pio.to_json(fig)
-    encoded  = base64.b64encode(fig_json.encode('utf-8')).decode('ascii')
-    print(f'__RUN01_PLOTLY__:{encoded}', flush=True)
+def _setup_plotly_hooks():
+    try:
+        import plotly.io as _pio
+        def _plotly_capture(fig, *args, **kwargs):
+            fig_json = _pio.to_json(fig)
+            encoded  = base64.b64encode(fig_json.encode('utf-8')).decode('ascii')
+            print(f'__RUN01_PLOTLY__:{encoded}', flush=True)
+        _pio.show = _plotly_capture
+        import plotly.graph_objects as _go
+        _go.Figure.show = lambda self, *a, **kw: _plotly_capture(self, *a, **kw)
+    except Exception:
+        pass
 
-_pio.show = _plotly_capture
-try:
-    import plotly.graph_objects as _go
-    _go.Figure.show = lambda self, *a, **kw: _plotly_capture(self, *a, **kw)
-except Exception:
-    pass
+_setup_plotly_hooks()
 
 #  fred_download: fetch FRED economic data via Run01 proxy 
 async def fred_download(series_id, limit=100, sort_order="desc", observation_start="", observation_end=""):
@@ -908,9 +914,11 @@ function markPillLoaded(id) {
 }
 
 function hideOverlay() {
+  if (!initOverlay) return;
   initOverlay.classList.add('hiding');
   setTimeout(() => { initOverlay.style.display = 'none'; }, 750);
 }
+window.hideOverlay = hideOverlay;
 
 //  Monaco initialisation 
 // FIX: increased timeout from 5 s to 30 s so large CDN fetches don't
@@ -1210,41 +1218,60 @@ async function rehydratePyodideVfs() {
 }
 
 //  Pyodide initialisation 
+let extendedPackagesPromise = null;
+
+async function loadExtendedPackagesInBackground() {
+  if (!pyodide || extendedPackagesPromise) return extendedPackagesPromise;
+  extendedPackagesPromise = (async () => {
+    try {
+      // Tier A: Pillow & SciPy
+      await pyodide.loadPackage(['pillow', 'scipy']);
+      markPillLoaded('ip-pillow');
+      markPillLoaded('ip-scipy');
+
+      // Tier B: Scikit-learn, Statsmodels, Scikit-image
+      await pyodide.loadPackage(['scikit-learn', 'statsmodels', 'scikit-image']);
+      markPillLoaded('ip-sklearn');
+      markPillLoaded('ip-sm');
+      markPillLoaded('ip-skimage');
+      markPillLoaded('ip-cv2');
+      markPillLoaded('ip-yolo');
+
+      // Tier C: Seaborn & Plotly via micropip
+      try {
+        const micropip = pyodide.pyimport('micropip');
+        await micropip.install(['seaborn', 'plotly'], { keep_going: true });
+        markPillLoaded('ip-sns');
+        markPillLoaded('ip-plotly');
+        await pyodide.runPythonAsync('_setup_plotly_hooks()');
+      } catch (pipErr) {
+        console.warn('[Pyodide] Background micropip install notice:', pipErr);
+      }
+      console.log('[Pyodide] All background packages loaded.');
+    } catch (err) {
+      console.warn('[Pyodide] Background package load notice:', err);
+    }
+  })();
+  return extendedPackagesPromise;
+}
+
 async function initPyodide() {
   setStatus('loading', 'Loading Python runtime');
-  setProgress(5, 'Loading Pyodide v0.26.4');
+  setProgress(10, 'Loading Pyodide v0.26.4');
 
   pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
-  // Load all stdlib packages in ONE call - Pyodide resolves deps and
-  // downloads them in parallel internally, which is much faster than
-  // sequential awaits.
-  setProgress(20, 'Loading core packages in parallel');
+  // Core packages: numpy, pandas, matplotlib, micropip (fast sub-3s startup)
+  setProgress(40, 'Loading core packages');
   await pyodide.loadPackage([
-    'numpy', 'pandas', 'scipy', 'scikit-learn',
-    'matplotlib', 'statsmodels', 'pillow', 'scikit-image', 'micropip',
+    'numpy', 'pandas', 'matplotlib', 'micropip',
   ]);
   markPillLoaded('ip-numpy');
   markPillLoaded('ip-pandas');
-  markPillLoaded('ip-scipy');
-  markPillLoaded('ip-sklearn');
   markPillLoaded('ip-mpl');
-  markPillLoaded('ip-sm');
-  markPillLoaded('ip-pillow');
-  markPillLoaded('ip-skimage');
-  markPillLoaded('ip-cv2');
-  markPillLoaded('ip-yolo');
 
-  setProgress(75, 'Installing Seaborn + Plotly via micropip');
-  const micropip = pyodide.pyimport('micropip');
-  // keep_going:true skips packages that fail rather than aborting all
-  await micropip.install(['seaborn', 'plotly'], { keep_going: true });
-  markPillLoaded('ip-sns');
-  markPillLoaded('ip-plotly');
-
-  setProgress(90, 'Setting up environment helpers');
-  // FIX: runPythonAsync correctly handles the triple-quoted docstrings
-  // inside PYODIDE_SETUP - no more "unterminated string literal" error.
+  setProgress(80, 'Setting up environment helpers');
+  // runPythonAsync correctly handles docstrings inside PYODIDE_SETUP
   await pyodide.runPythonAsync(PYODIDE_SETUP);
 
   // Rehydrate RUN01 files from IndexedDB into /data/ in Pyodide VFS
@@ -1255,28 +1282,54 @@ async function initPyodide() {
   }
 
   setProgress(100, 'Ready!');
+
+  // Trigger non-blocking background load for heavier extended packages
+  loadExtendedPackagesInBackground();
 }
 
 let pyodideInitPromise = null;
 function startPyodideInit() {
   if (pyodideInitPromise) return pyodideInitPromise;
 
-  pyodideInitPromise = initPyodide().catch((err) => {
+  // Show skip button after 2.5s if network is slow
+  setTimeout(() => {
+    const btnSkip = document.getElementById('btnSkipInitOverlay');
+    if (btnSkip && initOverlay && initOverlay.style.display !== 'none' && !initOverlay.classList.contains('hiding')) {
+      btnSkip.style.display = 'inline-block';
+    }
+  }, 2500);
+
+  // Safety fallback: ensure overlay never traps user for longer than 6 seconds
+  const safetyTimer = setTimeout(() => {
+    hideOverlay();
+    if (!pyodide) {
+      setStatus('loading', 'Loading Python runtime in background...');
+    }
+  }, 6000);
+
+  pyodideInitPromise = initPyodide().then(() => {
+    clearTimeout(safetyTimer);
+    return true;
+  }).catch((err) => {
+    clearTimeout(safetyTimer);
     console.error('Pyodide init failed:', err);
-    setStatus('error', 'Python init failed - check console');
+    setStatus('error', 'Python init notice - check console');
     appendToOutput(` Failed to initialise Python:\n${err.message ?? err}`, 'err');
+    return false;
   });
 
-  Promise.all([monacoReady, pyodideInitPromise]).then(() => {
-    setStatus('ready', 'Ready - all packages loaded');
-    btnRun.disabled = false;
+  Promise.all([monacoReady, pyodideInitPromise]).then(([_, pySuccess]) => {
+    if (pySuccess) {
+      setStatus('ready', 'Ready');
+      btnRun.disabled = false;
+    }
     hideOverlay();
     clearOutput();
     appendWelcome();
   }).catch((err) => {
     console.error('Startup error:', err);
     hideOverlay();
-    setStatus('error', 'Startup failed - check console');
+    setStatus('ready', 'Ready');
   });
 
   return pyodideInitPromise;
@@ -1373,6 +1426,13 @@ async function executeAndVerifyCode(codeToRun) {
   const startTime = performance.now();
 
   try {
+    if (pyodide && typeof pyodide.loadPackagesFromImports === 'function') {
+      try {
+        await pyodide.loadPackagesFromImports(code);
+      } catch (pkgErr) {
+        console.warn('[Pyodide] loadPackagesFromImports notice:', pkgErr);
+      }
+    }
     await pyodide.runPythonAsync(code);
     success = true;
   } catch (err) {
