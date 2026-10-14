@@ -1335,16 +1335,24 @@ function startPyodideInit() {
   return pyodideInitPromise;
 }
 
-// Automatically start Pyodide if #ide is active, or defer to idle time
+// Automatically start Pyodide if #ide is active, or warm up quickly during idle time
 if (window.location.hash === '#ide') {
   startPyodideInit();
 } else {
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => { setTimeout(startPyodideInit, 1200); }, { timeout: 3000 });
+    window.requestIdleCallback(() => { setTimeout(startPyodideInit, 250); }, { timeout: 1500 });
   } else {
-    setTimeout(startPyodideInit, 1500);
+    setTimeout(startPyodideInit, 500);
   }
 }
+
+// Hover intent: pre-warm Pyodide the instant user moves towards any launch CTA
+document.addEventListener('pointerenter', (e) => {
+  const btn = e.target && e.target.closest && e.target.closest('.btn-launch-ide, #btnLandingLaunchIDE, #btnHeroLaunchIDE, #btnProofLaunchIDE, #btnFounderLaunchIDE');
+  if (btn && typeof startPyodideInit === 'function') {
+    startPyodideInit();
+  }
+}, { capture: true, passive: true });
 
 //  Language tabs 
 langTabsEl.addEventListener('click', () => { /* Python only */ });
