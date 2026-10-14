@@ -1,35 +1,35 @@
 /* ============================================================
    Run01 - app.js  (v2 - production-ready)
    Key improvements over v1:
-     • Monaco + Pyodide initialise IN PARALLEL via Promise.all
-     • Pyodide v0.26.4 (faster WASM JIT, better stdlib)
-     • Single micropip.install([...]) call (not a sequential loop)
-     • yfinance NOT installed in WASM (uses server proxy instead)
-     • Streaming stdout: each print() renders immediately
-     • Matplotlib plt.show() → PNG → rendered inline in output
-     • Plotly fig.show() → JSON → rendered with Plotly.js inline
-     • Language tabs: Python (Pyodide) / C++ / C# / Rust (Piston)
-     • Service Worker caches CDN assets for near-instant repeat loads
-     • Keyboard: Ctrl/Cmd+Enter=Run, Ctrl+L=Clear, Ctrl+R=Reset
+      Monaco + Pyodide initialise IN PARALLEL via Promise.all
+      Pyodide v0.26.4 (faster WASM JIT, better stdlib)
+      Single micropip.install([...]) call (not a sequential loop)
+      yfinance NOT installed in WASM (uses server proxy instead)
+      Streaming stdout: each print() renders immediately
+      Matplotlib plt.show()  PNG  rendered inline in output
+      Plotly fig.show()  JSON  rendered with Plotly.js inline
+      Language tabs: Python (Pyodide) / C++ / C# / Rust (Piston)
+      Service Worker caches CDN assets for near-instant repeat loads
+      Keyboard: Ctrl/Cmd+Enter=Run, Ctrl+L=Clear, Ctrl+R=Reset
    ============================================================ */
 
 'use strict';
 
-// ── Pyodide CDN ────────────────────────────────────────────
+//  Pyodide CDN 
 const PYODIDE_CDN = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
 
-// ── Per-language starter code ──────────────────────────────
+//  Per-language starter code 
 const STARTER_CODES = {
   python: '',
   desmos: ''
 };
 
-// ── Language metadata ──────────────────────────────────────
+//  Language metadata 
 const LANG_META = {
   python: { label: 'Python', file: 'main.py',  pill: 'PY',   pillClass: 'pill-py',  monaco: 'python' }
 };
 
-// ── Python helpers injected into Pyodide ───────────────────
+//  Python helpers injected into Pyodide 
 // IMPORTANT: use triple-quoted strings for all multi-line docstrings
 // so Python 3.12 doesn't throw "unterminated string literal".
 const PYODIDE_SETUP = `
@@ -42,7 +42,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as _mpl_plt
 import plotly.io as _pio
 
-# ── Desmos Math Graphing Module ──────────────────────────────
+#  Desmos Math Graphing Module 
 class _DesmosModule:
     def plot(self, *expressions, title="Desmos Math Graph"):
         import json, js
@@ -59,7 +59,7 @@ def show_desmos(*expressions, title="Desmos Math Graph"):
     desmos.plot(*expressions, title=title)
 
 
-# ── RUN01 Data Files (/data/) ──────────────────────────────
+#  RUN01 Data Files (/data/) 
 def list_data_files():
     """List all dataset files currently stored in the RUN01 /data/ directory."""
     import os
@@ -68,7 +68,7 @@ def list_data_files():
     return []
 
 
-# ── yf_download: fetch OHLCV via Run01 server proxy ────────
+#  yf_download: fetch OHLCV via Run01 server proxy 
 async def yf_download(ticker, period="1mo", interval="1d"):
     """Fetch stock OHLCV data via Run01 proxy (bypasses browser CORS).
 
@@ -89,8 +89,8 @@ async def yf_download(ticker, period="1mo", interval="1d"):
     df["Date"] = pd.to_datetime(df["Date"])
     return df.set_index("Date")
 
-# ── yf_info: fetch company profile metadata ──────────────────
-# ── yf_fetch: universally fetch any category from server proxy ────────
+#  yf_info: fetch company profile metadata 
+#  yf_fetch: universally fetch any category from server proxy 
 async def yf_fetch(ticker, category):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/{category}")
     data = await resp.json()
@@ -104,7 +104,7 @@ async def yf_fetch(ticker, category):
         return df
     return data
 
-# ── yf_info: fetch company profile metadata ──────────────────
+#  yf_info: fetch company profile metadata 
 async def yf_info(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/info")
     data = await resp.json()
@@ -112,7 +112,7 @@ async def yf_info(ticker):
         raise ValueError(data["error"])
     return data
 
-# ── yf_actions: fetch corporate actions timeline ──────────────
+#  yf_actions: fetch corporate actions timeline 
 async def yf_actions(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/actions")
     data = await resp.json()
@@ -124,7 +124,7 @@ async def yf_actions(ticker):
         df = df.set_index("Date")
     return df
 
-# ── yf_dividends: fetch dividend payments ───────────────────
+#  yf_dividends: fetch dividend payments 
 async def yf_dividends(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/dividends")
     data = await resp.json()
@@ -136,7 +136,7 @@ async def yf_dividends(ticker):
         df = df.set_index("Date")
     return df
 
-# ── yf_splits: fetch stock splits ───────────────────────────
+#  yf_splits: fetch stock splits 
 async def yf_splits(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/splits")
     data = await resp.json()
@@ -148,27 +148,27 @@ async def yf_splits(ticker):
         df = df.set_index("Date")
     return df
 
-# ── yf_financials: fetch income statement ───────────────────
+#  yf_financials: fetch income statement 
 async def yf_financials(ticker, category="financials"):
     return await yf_fetch(ticker, category)
 
-# ── yf_balance_sheet: fetch balance sheet ───────────────────
+#  yf_balance_sheet: fetch balance sheet 
 async def yf_balance_sheet(ticker, category="balance_sheet"):
     return await yf_fetch(ticker, category)
 
-# ── yf_cashflow: fetch cash flow statement ──────────────────
+#  yf_cashflow: fetch cash flow statement 
 async def yf_cashflow(ticker, category="cashflow"):
     return await yf_fetch(ticker, category)
 
-# ── yf_recommendations: fetch analyst consensus ─────────────
+#  yf_recommendations: fetch analyst consensus 
 async def yf_recommendations(ticker, category="recommendations"):
     return await yf_fetch(ticker, category)
 
-# ── yf_holders: fetch holders ───────────────────────────────
+#  yf_holders: fetch holders 
 async def yf_holders(ticker, category="institutional_holders"):
     return await yf_fetch(ticker, category)
 
-# ── yf_sector: fetch sector metrics ──────────────────────────
+#  yf_sector: fetch sector metrics 
 async def yf_sector(key="technology", category="overview"):
     resp = await pyodide.http.pyfetch(f"/api/yf/sector/{key}/{category}")
     data = await resp.json()
@@ -178,7 +178,7 @@ async def yf_sector(key="technology", category="overview"):
         return pd.DataFrame(data)
     return data
 
-# ── yf_industry: fetch industry metrics ──────────────────────
+#  yf_industry: fetch industry metrics 
 async def yf_industry(key="software-infrastructure", category="overview"):
     resp = await pyodide.http.pyfetch(f"/api/yf/industry/{key}/{category}")
     data = await resp.json()
@@ -188,7 +188,7 @@ async def yf_industry(key="software-infrastructure", category="overview"):
         return pd.DataFrame(data)
     return data
 
-# ── yf_market: fetch market status/summary ───────────────────
+#  yf_market: fetch market status/summary 
 async def yf_market(category="status", market_id="US"):
     resp = await pyodide.http.pyfetch(f"/api/yf/market/{market_id}/{category}")
     data = await resp.json()
@@ -198,7 +198,7 @@ async def yf_market(category="status", market_id="US"):
         return pd.DataFrame(data)
     return data
 
-# ── yf_tickers: fetch bulk tickers data ──────────────────────
+#  yf_tickers: fetch bulk tickers data 
 async def yf_tickers(symbols="AAPL MSFT GOOG"):
     resp = await pyodide.http.pyfetch(f"/api/yf/tickers?symbols={symbols}")
     data = await resp.json()
@@ -206,7 +206,7 @@ async def yf_tickers(symbols="AAPL MSFT GOOG"):
         raise ValueError(data["error"])
     return data
 
-# ── yf_search: search quotes and news ────────────────────────
+#  yf_search: search quotes and news 
 async def yf_search(query="apple"):
     resp = await pyodide.http.pyfetch(f"/api/yf/search?q={query}")
     data = await resp.json()
@@ -214,7 +214,7 @@ async def yf_search(query="apple"):
         raise ValueError(data["error"])
     return data
 
-# ── yf_lookup: symbol lookup ────────────────────────────────
+#  yf_lookup: symbol lookup 
 async def yf_lookup(query="apple"):
     resp = await pyodide.http.pyfetch(f"/api/yf/lookup?q={query}")
     data = await resp.json()
@@ -224,7 +224,7 @@ async def yf_lookup(query="apple"):
         return pd.DataFrame(data)
     return data
 
-# ── yf_options: fetch option chain expiry list ──────────────
+#  yf_options: fetch option chain expiry list 
 async def yf_options(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/options")
     data = await resp.json()
@@ -232,7 +232,7 @@ async def yf_options(ticker):
         raise ValueError(data["error"])
     return data
 
-# ── yf_option_chain: fetch option chain details ─────────────
+#  yf_option_chain: fetch option chain details 
 async def yf_option_chain(ticker, expiry):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/options/{expiry}")
     data = await resp.json()
@@ -242,7 +242,7 @@ async def yf_option_chain(ticker, expiry):
     puts_df = pd.DataFrame(data["puts"])
     return {"calls": calls_df, "puts": puts_df}
 
-# ── yf_news: fetch news items ──────────────────────────────
+#  yf_news: fetch news items 
 async def yf_news(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/news")
     data = await resp.json()
@@ -250,7 +250,7 @@ async def yf_news(ticker):
         raise ValueError(data["error"])
     return data
 
-# ── plt.show(): capture as inline PNG ──────────────────────
+#  plt.show(): capture as inline PNG 
 def _mpl_capture(*args, **kwargs):
     buf = io.BytesIO()
     _mpl_plt.savefig(buf, format='png', dpi=150, bbox_inches='tight',
@@ -264,7 +264,7 @@ def _mpl_capture(*args, **kwargs):
 import matplotlib.pyplot as plt
 plt.show = _mpl_capture
 
-# ── fig.show(): capture as interactive Plotly chart ────────
+#  fig.show(): capture as interactive Plotly chart 
 def _plotly_capture(fig, *args, **kwargs):
     fig_json = _pio.to_json(fig)
     encoded  = base64.b64encode(fig_json.encode('utf-8')).decode('ascii')
@@ -277,7 +277,7 @@ try:
 except Exception:
     pass
 
-# ── fred_download: fetch FRED economic data via Run01 proxy ─
+#  fred_download: fetch FRED economic data via Run01 proxy 
 async def fred_download(series_id, limit=100, sort_order="desc", observation_start="", observation_end=""):
     """Fetch FRED economic data via Run01 proxy.
 
@@ -310,14 +310,14 @@ async def fred_download(series_id, limit=100, sort_order="desc", observation_sta
         "df":        df,
     }
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# ── RUN01 PREBUILT COMPUTER VISION SUITE (OpenCV, YOLO, Pillow, Skimage) ──────
-# ═══════════════════════════════════════════════════════════════════════════════
+# 
+#  RUN01 PREBUILT COMPUTER VISION SUITE (OpenCV, YOLO, Pillow, Skimage) 
+# 
 import sys, types, io, base64
 import numpy as _np
 from PIL import Image as _PIL_Image, ImageDraw as _PIL_ImageDraw, ImageFilter as _PIL_ImageFilter
 
-# ── Patch PIL Image.show() to display inline in RUN01 output ─────────────────
+#  Patch PIL Image.show() to display inline in RUN01 output 
 def _pil_show_capture(self, title=None, **kwargs):
     buf = io.BytesIO()
     self.save(buf, format='PNG')
@@ -327,7 +327,7 @@ def _pil_show_capture(self, title=None, **kwargs):
 
 _PIL_Image.Image.show = _pil_show_capture
 
-# ── Server-side CV proxy runner ───────────────────────────────────────────────
+#  Server-side CV proxy runner 
 async def cv_run(code=None, *, timeout=30):
     """Execute Python CV code via RUN01 server-side CV proxy."""
     import js, pyodide.http
@@ -355,7 +355,7 @@ async def cv_run(code=None, *, timeout=30):
         raise RuntimeError(f"CV execution error: {res['error']}")
     return res
 
-# ── Prebuilt cv2 (OpenCV) Module ──────────────────────────────────────────────
+#  Prebuilt cv2 (OpenCV) Module 
 class _CV2Module(types.ModuleType):
     """In-browser OpenCV (cv2) engine powered by NumPy, Pillow, and SciPy."""
     COLOR_BGR2GRAY = 6; COLOR_RGB2GRAY = 7; COLOR_GRAY2BGR = 8; COLOR_GRAY2RGB = 8
@@ -541,7 +541,7 @@ _cv2_inst = _CV2Module()
 sys.modules['cv2'] = _cv2_inst
 cv2 = _cv2_inst
 
-# ── Prebuilt ultralytics Module (YOLO) ─────────────────────────────────────────
+#  Prebuilt ultralytics Module (YOLO) 
 class _YOLOBoxes:
     def __init__(self, data):
         self.data = _np.array(data, dtype=_np.float32) if len(data) else _np.zeros((0, 6), dtype=_np.float32)
@@ -682,19 +682,19 @@ sys.modules['supervision'] = _sv_inst
 
 `;
 
-// ── Data Source Example Codes ─────────────────────────────
+//  Data Source Example Codes 
 const DATA_SOURCE_CODES = {
   vision: `\\
-# ╔═══════════════════════════════════════════════════════════╗
-# ║        RUN01 Computer Vision Tour — OpenCV & YOLOv8       ║
-# ║  cv2 · YOLOv8 · Pillow · Canny · Contour · Detection      ║
-# ╚═══════════════════════════════════════════════════════════╝
+# 
+#         RUN01 Computer Vision Tour  OpenCV & YOLOv8       
+#   cv2  YOLOv8  Pillow  Canny  Contour  Detection      
+# 
 import cv2
 import numpy as np
 from PIL import Image, ImageFilter
 from ultralytics import YOLO
 
-print("▶  1. Testing OpenCV Drawing & Edge Detection…")
+print("  1. Testing OpenCV Drawing & Edge Detection")
 img = np.zeros((400, 600, 3), dtype=np.uint8)
 for y in range(400):
     img[y, :] = [int(40 + y*0.1), int(20 + y*0.1), int(10 + y*0.05)]
@@ -709,9 +709,9 @@ edges = cv2.Canny(gray, 50, 150)
 
 cv2.imshow("OpenCV Art Canvas", img)
 cv2.imshow("Canny Edges", edges)
-print("✓ OpenCV rendering complete!\\n")
+print("[DONE] OpenCV rendering complete!\\n")
 
-print("▶  2. Testing YOLOv8 AI Object Detection…")
+print("  2. Testing YOLOv8 AI Object Detection")
 model = YOLO('yolov8n.pt')
 test_url = "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=640"
 print(f"   Analyzing: {test_url}")
@@ -722,33 +722,33 @@ for r in results:
     for box in r.boxes:
         cls_name = r.names.get(int(box.cls[0]), "obj")
         conf = float(box.conf[0])
-        print(f"   • {cls_name.upper()} ({conf*100:.1f}%) at {box.xyxy[0].astype(int).tolist()}")
+        print(f"    {cls_name.upper()} ({conf*100:.1f}%) at {box.xyxy[0].astype(int).tolist()}")
     r.show()
 
-print("\\n✓ Computer Vision & YOLOv8 demo complete!")
+print("\\n[DONE] Computer Vision & YOLOv8 demo complete!")
 `,
 
 
 yfinance: `\
-# ╔═══════════════════════════════════════════════════════════╗
-# ║          Yahoo Finance - Full Data Tour                  ║
-# ║  OHLCV · Info · Financials · Options · Holders          ║
-# ╚═══════════════════════════════════════════════════════════╝
+# 
+#           Yahoo Finance - Full Data Tour                  
+#   OHLCV  Info  Financials  Options  Holders          
+# 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 ticker = "AAPL"
 
-# ── 1. OHLCV Price History ───────────────────────────────
-print(f"▶  Fetching {ticker} - 6 months of daily OHLCV…")
+#  1. OHLCV Price History 
+print(f"  Fetching {ticker} - 6 months of daily OHLCV")
 df = await yf_download(ticker, period="6mo", interval="1d")
 print(f"   {len(df)} sessions  |  columns: {list(df.columns)}")
 print(df.tail(5).to_string())
 print()
 
-# ── 2. Interactive Candlestick + Volume ──────────────────
-print("▶  Rendering interactive candlestick chart…")
+#  2. Interactive Candlestick + Volume 
+print("  Rendering interactive candlestick chart")
 dates = df.index.astype(str).tolist()
 fig = make_subplots(
     rows=2, cols=1, shared_xaxes=True,
@@ -778,58 +778,58 @@ fig.update_layout(
 fig.show()
 print()
 
-# ── 3. Returns Summary ──────────────────────────────────
+#  3. Returns Summary 
 import numpy as np
-print("▶  Returns Summary…")
+print("  Returns Summary")
 returns = df["Close"].pct_change().dropna()
 print(f"   Mean daily return : {returns.mean()*100:+.4f}%")
 print(f"   Daily volatility  : {returns.std()*100:.4f}%")
 print(f"   Annualised Sharpe : {(returns.mean()/returns.std())*np.sqrt(252):.3f}")
 print(f"   Max Drawdown      : {((df['Close']/df['Close'].cummax())-1).min()*100:.2f}%")
 print()
-print("✓ Done - try changing ticker to 'TSLA', 'MSFT', 'BTC-USD', 'GC=F'")
+print("[DONE] Done - try changing ticker to 'TSLA', 'MSFT', 'BTC-USD', 'GC=F'")
 `,
 
 fred: `\
-# ╔═══════════════════════════════════════════════════════════╗
-# ║   FRED - Federal Reserve Economic Data Tour              ║
-# ║   GDP · CPI · Fed Funds Rate · Unemployment             ║
-# ╚═══════════════════════════════════════════════════════════╝
+# 
+#    FRED - Federal Reserve Economic Data Tour              
+#    GDP  CPI  Fed Funds Rate  Unemployment             
+# 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# ── 1. GDP (Gross Domestic Product) ─────────────────────
-print("▶  Fetching GDP (quarterly, last 40 quarters)…")
+#  1. GDP (Gross Domestic Product) 
+print("  Fetching GDP (quarterly, last 40 quarters)")
 gdp = await fred_download("GDP", limit=40, sort_order="asc")
 print(f"   Series : {gdp['series_id']} - {gdp['title']}")
 print(f"   Units  : {gdp['units']}  |  Freq: {gdp['frequency']}")
 print(gdp['df'].tail(5).to_string())
 print()
 
-# ── 2. CPI - Consumer Price Index ───────────────────────
-print("▶  Fetching CPI (monthly, last 60 months)…")
+#  2. CPI - Consumer Price Index 
+print("  Fetching CPI (monthly, last 60 months)")
 cpi = await fred_download("CPIAUCSL", limit=60, sort_order="asc")
 print(f"   Series : {cpi['series_id']} - {cpi['title']}")
 print(cpi['df'].tail(5).to_string())
 print()
 
-# ── 3. Fed Funds Rate ───────────────────────────────────
-print("▶  Fetching Federal Funds Rate (monthly, last 60 months)…")
+#  3. Fed Funds Rate 
+print("  Fetching Federal Funds Rate (monthly, last 60 months)")
 ffr = await fred_download("FEDFUNDS", limit=60, sort_order="asc")
 print(f"   Series : {ffr['series_id']} - {ffr['title']}")
 print(ffr['df'].tail(5).to_string())
 print()
 
-# ── 4. Unemployment Rate ────────────────────────────────
-print("▶  Fetching Unemployment Rate (monthly, last 60 months)…")
+#  4. Unemployment Rate 
+print("  Fetching Unemployment Rate (monthly, last 60 months)")
 unrate = await fred_download("UNRATE", limit=60, sort_order="asc")
 print(f"   Series : {unrate['series_id']} - {unrate['title']}")
 print(unrate['df'].tail(5).to_string())
 print()
 
-# ── 5. Dashboard - 4-panel economic overview ────────────
-print("▶  Rendering economic dashboard…")
+#  5. Dashboard - 4-panel economic overview 
+print("  Rendering economic dashboard")
 fig = make_subplots(
     rows=2, cols=2,
     subplot_titles=['GDP', 'CPI', 'Fed Funds', 'Unemployment'],
@@ -862,19 +862,19 @@ for axis in ['xaxis','xaxis2','xaxis3','xaxis4','yaxis','yaxis2','yaxis3','yaxis
     fig.update_layout(**{axis: dict(gridcolor='#1a1a1a', showgrid=True)})
 fig.show()
 print()
-print("✓ Done - try series: 'M2SL' (Money Supply), 'T10Y2Y' (Yield Curve), 'DCOILWTICO' (Oil Price)")
+print("[DONE] Done - try series: 'M2SL' (Money Supply), 'T10Y2Y' (Yield Curve), 'DCOILWTICO' (Oil Price)")
 `,
 
 };
 
-// ── State ─────────────────────────────────────────────────
+//  State 
 let monacoEditor   = null;
 let pyodide        = null;
 let currentLang    = 'python';
 let isRunning      = false;
 let runCount       = 0;
 
-// ── DOM refs ──────────────────────────────────────────────
+//  DOM refs 
 const statusDot      = document.getElementById('statusDot');
 const statusLabel    = document.getElementById('statusLabel');
 const btnRun         = document.getElementById('btnRun');
@@ -891,7 +891,7 @@ const langTabsEl     = document.getElementById('langTabs');
 const langPillEl     = document.getElementById('langPill');
 const fileNameEl     = document.getElementById('fileName');
 
-// ── Helpers: status + progress ────────────────────────────
+//  Helpers: status + progress 
 function setStatus(state, label) {
   statusDot.className     = `status-dot ${state}`;
   statusLabel.textContent = label;
@@ -912,7 +912,7 @@ function hideOverlay() {
   setTimeout(() => { initOverlay.style.display = 'none'; }, 750);
 }
 
-// ── Monaco initialisation ─────────────────────────────────
+//  Monaco initialisation 
 // FIX: increased timeout from 5 s to 30 s so large CDN fetches don't
 // race-lose on slow connections; resolved after editor.main loads.
 const monacoReady = new Promise((resolve) => {
@@ -1046,7 +1046,7 @@ const monacoReady = new Promise((resolve) => {
   tryInit();
 });
 
-// ── RUN01 Virtual File System (/data/) ───────────────────────
+//  RUN01 Virtual File System (/data/) 
 const VFS_DB_NAME = 'run01_vfs';
 const VFS_STORE_NAME = 'data_files';
 
@@ -1209,17 +1209,17 @@ async function rehydratePyodideVfs() {
   }
 }
 
-// ── Pyodide initialisation ────────────────────────────────
+//  Pyodide initialisation 
 async function initPyodide() {
-  setStatus('loading', 'Loading Python runtime…');
-  setProgress(5, 'Loading Pyodide v0.26.4…');
+  setStatus('loading', 'Loading Python runtime');
+  setProgress(5, 'Loading Pyodide v0.26.4');
 
   pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
 
   // Load all stdlib packages in ONE call - Pyodide resolves deps and
   // downloads them in parallel internally, which is much faster than
   // sequential awaits.
-  setProgress(20, 'Loading core packages in parallel…');
+  setProgress(20, 'Loading core packages in parallel');
   await pyodide.loadPackage([
     'numpy', 'pandas', 'scipy', 'scikit-learn',
     'matplotlib', 'statsmodels', 'pillow', 'scikit-image', 'micropip',
@@ -1235,14 +1235,14 @@ async function initPyodide() {
   markPillLoaded('ip-cv2');
   markPillLoaded('ip-yolo');
 
-  setProgress(75, 'Installing Seaborn + Plotly via micropip…');
+  setProgress(75, 'Installing Seaborn + Plotly via micropip');
   const micropip = pyodide.pyimport('micropip');
   // keep_going:true skips packages that fail rather than aborting all
   await micropip.install(['seaborn', 'plotly'], { keep_going: true });
   markPillLoaded('ip-sns');
   markPillLoaded('ip-plotly');
 
-  setProgress(90, 'Setting up environment helpers…');
+  setProgress(90, 'Setting up environment helpers');
   // FIX: runPythonAsync correctly handles the triple-quoted docstrings
   // inside PYODIDE_SETUP - no more "unterminated string literal" error.
   await pyodide.runPythonAsync(PYODIDE_SETUP);
@@ -1293,17 +1293,17 @@ if (window.location.hash === '#ide') {
   }
 }
 
-// ── Language tabs ─────────────────────────────────────────
+//  Language tabs 
 langTabsEl.addEventListener('click', () => { /* Python only */ });
 
-// ── Trigger run ───────────────────────────────────────────
+//  Trigger run 
 function triggerRun() {
   if (isRunning) return;
   if (!pyodide)  return;
   return runPython();
 }
 
-// ── Execute and Verify Code (Structured Result Promise) ────────
+//  Execute and Verify Code (Structured Result Promise) 
 async function executeAndVerifyCode(codeToRun) {
   if (!pyodide && typeof pyodideInitPromise !== 'undefined' && pyodideInitPromise) {
     try {
@@ -1352,8 +1352,8 @@ async function executeAndVerifyCode(codeToRun) {
   isRunning = true;
   runCount++;
   if (btnRun) btnRun.disabled = true;
-  setStatus('running', 'Running…');
-  if (outputMeta) outputMeta.textContent = 'running…';
+  setStatus('running', 'Running');
+  if (outputMeta) outputMeta.textContent = 'running';
 
   const block = startOutputBlock();
   const stdoutLines = [];
@@ -1431,12 +1431,12 @@ async function executeAndVerifyCode(codeToRun) {
 }
 window.executeAndVerifyCode = executeAndVerifyCode;
 
-// ── Run: Python (Pyodide, client-side) ────────────────────
+//  Run: Python (Pyodide, client-side) 
 async function runPython() {
   return await executeAndVerifyCode();
 }
 
-// ── Output block management ───────────────────────────────
+//  Output block management 
 function startOutputBlock() {
   const startTime = performance.now();
   const blockEl   = document.createElement('div');
@@ -1483,13 +1483,13 @@ function finishOutputBlock(block, success) {
     block.linesEl.appendChild(empty);
   }
   block.badgeEl.className   = success ? 'out-success-badge' : 'out-error-badge';
-  block.badgeEl.textContent = success ? '✓ success' : '✗ error';
+  block.badgeEl.textContent = success ? '[DONE] success' : ' error';
   block.timeEl.textContent  = `${t}s`;
-  outputMeta.textContent    = `run #${runCount} · ${t}s`;
+  outputMeta.textContent    = `run #${runCount}  ${t}s`;
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// ── Output line processor ─────────────────────────────────
+//  Output line processor 
 function processOutput(text, isErr, block) {
   if (!text) return;
   const lines = text.split('\n');
@@ -1513,7 +1513,7 @@ function appendLine(text, cls, block) {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// ── Matplotlib inline image ───────────────────────────────
+//  Matplotlib inline image 
 function renderImage(b64, block) {
   const wrap = document.createElement('div');
   wrap.className = 'out-plot-wrap';
@@ -1529,7 +1529,7 @@ function renderImage(b64, block) {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// ── Plotly loader ─────────────────────────────────────────
+//  Plotly loader 
 // Polls until window.Plotly.newPlot is available (the UMD build sets it
 // synchronously, but the script tag is sync-before-defer so there can still
 // be a brief gap on slow connections). Falls back to injecting the full UMD
@@ -1567,7 +1567,7 @@ function getPlotly() {
   return waitForPlotly(8000).catch(() => loadPlotlyFallback());
 }
 
-// ── Plotly interactive chart ──────────────────────────────
+//  Plotly interactive chart 
 async function renderPlotly(encoded, block) {
   const wrap = document.createElement('div');
   wrap.className = 'out-plotly-wrap';
@@ -1576,7 +1576,7 @@ async function renderPlotly(encoded, block) {
 
   // Placeholder while library resolves
   if (!window.Plotly || typeof window.Plotly.newPlot !== 'function') {
-    wrap.innerHTML = '<span class="out-line sys" style="padding:12px;display:block">[ Loading chart… ]</span>';
+    wrap.innerHTML = '<span class="out-line sys" style="padding:12px;display:block">[ Loading chart ]</span>';
   }
 
   try {
@@ -1622,7 +1622,7 @@ async function renderPlotly(encoded, block) {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// ── Output helpers ────────────────────────────────────────
+//  Output helpers 
 function clearOutput() {
   outputEl.innerHTML     = '';
   runCount               = 0;
@@ -1633,9 +1633,9 @@ function appendWelcome() {
   outputEl.innerHTML = `
     <div class="output-welcome">
       <div class="welcome-prompt">
-        <span class="prompt-caret">❯</span>
-        Run01 ready - press <strong style="color:var(--white)">▶ Run</strong>
-        or <kbd class="welcome-kbd">⌘↵</kbd>
+        <span class="prompt-caret"></span>
+        Run01 ready - press <strong style="color:var(--white)"> Run</strong>
+        or <kbd class="welcome-kbd"></kbd>
         to execute.
       </div>
     </div>
@@ -1649,7 +1649,7 @@ function appendToOutput(text, cls) {
   outputEl.appendChild(span);
 }
 
-// ── Theme management ──────────────────────────────────────
+//  Theme management 
 const THEME_KEY = 'run01-theme';
 
 function getTheme() {
@@ -1671,7 +1671,7 @@ function toggleTheme() {
 // Apply saved theme immediately
 applyTheme(getTheme());
 
-// ── Download output as .txt ───────────────────────────────
+//  Download output as .txt 
 function downloadOutput() {
   const lines = outputEl.querySelectorAll('.out-line');
   if (lines.length === 0) return;
@@ -1693,7 +1693,7 @@ function downloadOutput() {
   URL.revokeObjectURL(url);
 }
 
-// ── Button handlers ───────────────────────────────────────
+//  Button handlers 
 btnRun.addEventListener('click', () => { if (!isRunning) triggerRun(); });
 
 btnDownload.addEventListener('click', downloadOutput);
@@ -1707,7 +1707,7 @@ btnReset.addEventListener('click', () => {
   setStatus('ready', 'Ready');
 });
 
-// ── Data Explorer bottom panel ──────────────────────────────
+//  Data Explorer bottom panel 
 const btnData         = document.getElementById('btnData');
 const dataDropdown    = document.getElementById('dataDropdown');
 const dsYFinance      = document.getElementById('dsYFinance');
@@ -1787,7 +1787,7 @@ dsFRED.addEventListener('click', () => {
   }
 
 
-// ── DATA INVENTORY STRUCTURES ─────────────────────────────────
+//  DATA INVENTORY STRUCTURES 
 const YF_TREE = {
   name: "DATA/YFINANCE",
   type: "root",
@@ -1937,7 +1937,7 @@ const YF_TREE = {
       type: "folder",
       children: [
         { name: "market_status.json", type: "file", category: "status", desc: ".status open/closed, session start/end, timezone" },
-        { name: "market_summary.json", type: "file", category: "summary", desc: ".summary snapshot of major indices (^GSPC,^DJI,^IXIC,^RUT,^VIX,…)" }
+        { name: "market_summary.json", type: "file", category: "summary", desc: ".summary snapshot of major indices (^GSPC,^DJI,^IXIC,^RUT,^VIX,)" }
       ]
     },
     {
@@ -2324,7 +2324,7 @@ const FRED_TREE = {
           name: "tags",
           type: "folder",
           children: [
-            { name: "all_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/tags every topical tag ('gdp','monthly','nsa','usa',…)" },
+            { name: "all_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/tags every topical tag ('gdp','monthly','nsa','usa',)" },
             { name: "related_tags.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/related_tags" },
             { name: "tags_matching_series.json", type: "file", category: "fred", series_id: "M1SL", desc: "fred/tags/series" }
           ]
@@ -2345,7 +2345,7 @@ const FRED_TREE = {
 };
 
 
-// ── SIDE PANEL LOGIC ──────────────────────────────────────────
+//  SIDE PANEL LOGIC 
 let activeSource = 'yf';
 
 function switchTab(source) {
@@ -2519,7 +2519,7 @@ function renderNode(node, depth = 0, searchQuery = '') {
 
 let selectedNode = null;
 
-// ── STATIC / NO-INPUT DATASET DOWNLOADS ───────────────────────────────
+//  STATIC / NO-INPUT DATASET DOWNLOADS 
 // Curated FRED macro series, FRED global metadata, and yfinance predefined
 // screens need no ticker/series lookup - fetch + download them directly
 // instead of just handing the user a code snippet.
@@ -2618,7 +2618,7 @@ function formatFileSize(bytes) {
 
 function generateAnalysisCode(filename, isCsv) {
   if (isCsv) {
-    return `# ── Analyze RUN01 Dataset: /data/${filename} ──────────────────
+    return `#  Analyze RUN01 Dataset: /data/${filename} 
 import pandas as pd
 
 file_path = "/data/${filename}"
@@ -2631,7 +2631,7 @@ print(df.dtypes)
 print("\\nFirst 10 rows:")
 print(df.head(10))`;
   } else {
-    return `# ── Analyze RUN01 Dataset: /data/${filename} ──────────────────
+    return `#  Analyze RUN01 Dataset: /data/${filename} 
 import json
 
 file_path = "/data/${filename}"
@@ -2668,9 +2668,9 @@ async function renderStaticDownloadStatus(staticInfo) {
   if (!el) return;
   const file = await getWebappFile(staticInfo.filename);
   if (file) {
-    el.innerHTML = `<span style="color: #22c55e;">✓ Synced in RUN01 (<code>/data/${staticInfo.filename}</code>)</span><br><span style="opacity:0.75; font-size:10px;">Latest: ${formatTimestamp(file.updatedAt)} • ${formatFileSize(file.size)}</span>`;
+    el.innerHTML = `<span style="color: #22c55e;">[DONE] Synced in RUN01 (<code>/data/${staticInfo.filename}</code>)</span><br><span style="opacity:0.75; font-size:10px;">Latest: ${formatTimestamp(file.updatedAt)}  ${formatFileSize(file.size)}</span>`;
   } else {
-    el.textContent = 'Not synced into RUN01 yet — will be stored directly in /data/';
+    el.textContent = 'Not synced into RUN01 yet  will be stored directly in /data/';
   }
 }
 
@@ -2682,7 +2682,7 @@ async function downloadStaticDataset(staticInfo, node, autoAnalyze = false) {
   if (analyzeBtn) analyzeBtn.disabled = true;
   if (syncBtn) syncBtn.disabled = true;
   const originalAnalyzeText = analyzeBtn ? analyzeBtn.innerHTML : '';
-  if (analyzeBtn) analyzeBtn.textContent = 'Syncing into RUN01…';
+  if (analyzeBtn) analyzeBtn.textContent = 'Syncing into RUN01';
 
   try {
     const resp = await fetch(staticInfo.url);
@@ -2710,7 +2710,7 @@ async function downloadStaticDataset(staticInfo, node, autoAnalyze = false) {
       openFileInEditor(staticInfo.filename, isCsv);
     }
   } catch (err) {
-    if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">❌ Sync failed: ${err.message ?? err}</span>`;
+    if (statusEl) statusEl.innerHTML = `<span style="color: #ef4444;">[ERROR] Sync failed: ${err.message ?? err}</span>`;
   } finally {
     if (analyzeBtn) {
       analyzeBtn.disabled = false;
@@ -2739,7 +2739,7 @@ async function renderStaticDatasetCard(node, staticInfo, iconText, iconClass, so
       <span class="dex-meta-tag api">${sourceName}</span>
       <span class="dex-meta-tag">Auto-Refreshes Latest</span>
     </div>
-    <div class="dex-static-info" id="dexStaticStatus">Checking RUN01 storage…</div>
+    <div class="dex-static-info" id="dexStaticStatus">Checking RUN01 storage</div>
 
     <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON USAGE IN CODE PANEL</div>
     <pre class="dex-code-preview"><code>${highlightedCode}</code></pre>
@@ -2792,7 +2792,7 @@ async function renderVfsTree(searchQuery = '') {
   rootEl.innerHTML = `
     <div class="dex-folder-header">
       <svg class="dex-folder-arrow open" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-      <span class="dex-folder-icon">📁</span>
+      <span class="dex-folder-icon"></span>
       <span class="dex-folder-name">DATA (${filtered.length} files)</span>
     </div>
     <div class="dex-folder-children"></div>
@@ -2809,7 +2809,7 @@ async function renderVfsTree(searchQuery = '') {
     const sizeStr = formatFileSize(file.size);
 
     fileEl.innerHTML = `
-      <span class="dex-file-icon">📄</span>
+      <span class="dex-file-icon"></span>
       <span class="dex-file-name" title="${file.filename}">${file.filename}</span>
       <span class="dex-file-badge">${badge}</span>
       <span style="font-size: 9px; color: var(--text-dim); margin-left: auto;">${sizeStr}</span>
@@ -2847,7 +2847,7 @@ function renderVfsPreviewCard(file) {
       <span class="dex-meta-tag api">${file.sourceName || 'RUN01 VFS'}</span>
     </div>
     <div class="dex-static-info">
-      ✓ Ready in RUN01 memory<br>
+      [DONE] Ready in RUN01 memory<br>
       <span style="opacity:0.75; font-size:10px;">Last refreshed: ${formatTimestamp(file.updatedAt)}</span>
     </div>
     <div style="font-size: 11px; margin-top: 14px; margin-bottom: 6px; color: var(--text-muted); font-weight: 500;">PYTHON ANALYSIS CODE</div>
@@ -2907,7 +2907,7 @@ function selectFileNode(node, element) {
       const period   = (node.params && node.params.period)   ? node.params.period   : '1mo';
       const interval = (node.params && node.params.interval) ? node.params.interval : '1d';
       pythonCode = `\
-# ── Fetch OHLCV price history ────────────────────────────────
+#  Fetch OHLCV price history 
 ticker   = "AAPL"
 period   = "${period}"
 interval = "${interval}"
@@ -2918,14 +2918,14 @@ print(df.tail(10))`;
 
     } else if (node.category === 'isin') {
       pythonCode = `\
-# ── Fetch ISIN for ticker ────────────────────────────────────
+#  Fetch ISIN for ticker 
 ticker = "AAPL"
 data = await yf_fetch(ticker, "isin")
 print(f"ISIN: {data}")`;
 
     } else if (node.category === 'option_chain') {
       pythonCode = `\
-# ── Fetch option chain for nearest expiry ───────────────────
+#  Fetch option chain for nearest expiry 
 ticker = "AAPL"
 
 dates = await yf_options(ticker)
@@ -2942,7 +2942,7 @@ if dates:
 
     } else if (node.category === 'options') {
       pythonCode = `\
-# ── Fetch available option expiry dates ─────────────────────
+#  Fetch available option expiry dates 
 ticker = "AAPL"
 
 dates = await yf_options(ticker)
@@ -2952,7 +2952,7 @@ for d in dates:
 
     } else if (node.category === 'info' || node.category === 'fast_info') {
       pythonCode = `\
-# ── Fetch company profile info ───────────────────────────────
+#  Fetch company profile info 
 ticker = "AAPL"
 
 data = await yf_fetch(ticker, "${node.category}")
@@ -2967,7 +2967,7 @@ for k in keys:
 
     } else if (node.category === 'news') {
       pythonCode = `\
-# ── Fetch latest news headlines ─────────────────────────────
+#  Fetch latest news headlines 
 ticker = "AAPL"
 
 news = await yf_news(ticker)
@@ -2978,7 +2978,7 @@ for item in news[:8]:
 
     } else if (node.category === 'dividends') {
       pythonCode = `\
-# ── Fetch dividend history ───────────────────────────────────
+#  Fetch dividend history 
 ticker = "AAPL"
 
 df = await yf_dividends(ticker)
@@ -2987,7 +2987,7 @@ print(df.tail(12))`;
 
     } else if (node.category === 'splits') {
       pythonCode = `\
-# ── Fetch stock split history ────────────────────────────────
+#  Fetch stock split history 
 ticker = "AAPL"
 
 df = await yf_splits(ticker)
@@ -2996,7 +2996,7 @@ print(df)`;
 
     } else if (node.category === 'actions') {
       pythonCode = `\
-# ── Fetch combined corporate actions (dividends + splits) ────
+#  Fetch combined corporate actions (dividends + splits) 
 ticker = "AAPL"
 
 df = await yf_actions(ticker)
@@ -3005,7 +3005,7 @@ print(df.tail(15))`;
 
     } else if (['financials', 'quarterly_financials', 'ttm_financials'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch income statement (${node.category}) ────────────────
+#  Fetch income statement (${node.category}) 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3017,7 +3017,7 @@ else:
 
     } else if (['balance_sheet', 'quarterly_balance_sheet'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch balance sheet (${node.category}) ────────────────────
+#  Fetch balance sheet (${node.category}) 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3029,7 +3029,7 @@ else:
 
     } else if (['cashflow', 'quarterly_cashflow', 'ttm_cashflow'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch cash flow statement (${node.category}) ──────────────
+#  Fetch cash flow statement (${node.category}) 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3041,7 +3041,7 @@ else:
 
     } else if (['recommendations', 'recommendations_summary'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch analyst recommendations (${node.category}) ──────────
+#  Fetch analyst recommendations (${node.category}) 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3053,7 +3053,7 @@ else:
 
     } else if (['institutional_holders', 'mutualfund_holders', 'major_holders', 'holders'].includes(node.category)) {
       pythonCode = `\
-# ── Fetch holders (${node.category}) ─────────────────────────
+#  Fetch holders (${node.category}) 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3065,7 +3065,7 @@ else:
 
     } else if (node.category === 'earnings_dates' || node.category === 'earnings_history' || node.category === 'calendar') {
       pythonCode = `\
-# ── Fetch earnings dates and estimates ───────────────────────
+#  Fetch earnings dates and estimates 
 ticker = "AAPL"
 
 data = await yf_fetch(ticker, "${node.category}")
@@ -3079,7 +3079,7 @@ elif isinstance(data, dict):
 
     } else if (node.category === 'sustainability') {
       pythonCode = `\
-# ── Fetch ESG sustainability scores ─────────────────────────
+#  Fetch ESG sustainability scores 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "sustainability")
@@ -3090,7 +3090,7 @@ else:
 
     } else if (node.category === 'sec_filings') {
       pythonCode = `\
-# ── Fetch SEC filings list (10-K / 10-Q / 8-K) ──────────────
+#  Fetch SEC filings list (10-K / 10-Q / 8-K) 
 ticker = "AAPL"
 
 filings = await yf_fetch(ticker, "sec_filings")
@@ -3102,7 +3102,7 @@ else:
 
     } else if (node.category === 'upgrades_downgrades') {
       pythonCode = `\
-# ── Fetch analyst upgrades/downgrades ───────────────────────
+#  Fetch analyst upgrades/downgrades 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "upgrades_downgrades")
@@ -3111,7 +3111,7 @@ print(df.head(15))`;
 
     } else if (node.category === 'insider_transactions' || node.category === 'insider_purchases' || node.category === 'insider_roster_holders') {
       pythonCode = `\
-# ── Fetch insider transactions ───────────────────────────────
+#  Fetch insider transactions 
 ticker = "AAPL"
 
 df = await yf_fetch(ticker, "${node.category}")
@@ -3123,7 +3123,7 @@ else:
 
     } else if (node.category.startsWith('funds_')) {
       pythonCode = `\
-# ── Fetch fund data (${node.name}) ───────────────────────────
+#  Fetch fund data (${node.name}) 
 ticker = "SPY"   # Fund / ETF symbol
 
 data = await yf_fetch(ticker, "${node.category}")
@@ -3138,7 +3138,7 @@ else:
     } else if (node.category.startsWith('sector_')) {
       const subCat = node.category.replace('sector_', '');
       pythonCode = `\
-# ── Fetch Sector metrics ─────────────────────────────────────
+#  Fetch Sector metrics 
 key = "technology"
 
 data = await yf_sector(key, "${subCat}")
@@ -3151,7 +3151,7 @@ else:
     } else if (node.category.startsWith('industry_')) {
       const subCat = node.category.replace('industry_', '');
       pythonCode = `\
-# ── Fetch Industry metrics ───────────────────────────────────
+#  Fetch Industry metrics 
 key = "software-infrastructure"
 
 data = await yf_industry(key, "${subCat}")
@@ -3163,7 +3163,7 @@ else:
 
     } else if (node.category === 'status' || node.category === 'summary') {
       pythonCode = `\
-# ── Fetch Market status / summary ───────────────────────────
+#  Fetch Market status / summary 
 data = await yf_market("${node.category}", "us_market")
 print(f"Market ${node.category}:")
 if hasattr(data, "head"):
@@ -3173,7 +3173,7 @@ else:
 
     } else if (node.category === 'tickers') {
       pythonCode = `\
-# ── Fetch bulk Tickers data ─────────────────────────────────
+#  Fetch bulk Tickers data 
 symbols = "AAPL MSFT GOOG"
 
 data = await yf_tickers(symbols)
@@ -3182,7 +3182,7 @@ for sym, info in data.items():
 
     } else if (node.category === 'search') {
       pythonCode = `\
-# ── Search Yahoo Finance ────────────────────────────────────
+#  Search Yahoo Finance 
 query = "apple"
 
 res = await yf_search(query)
@@ -3193,7 +3193,7 @@ for q in res.get("quotes", [])[:5]:
 
     } else if (node.category === 'lookup') {
       pythonCode = `\
-# ── Symbol Lookup ───────────────────────────────────────────
+#  Symbol Lookup 
 query = "apple"
 
 data = await yf_lookup(query)
@@ -3205,7 +3205,7 @@ else:
 
     } else if (node.category === 'batch_download') {
       pythonCode = `\
-# ── Batch download multiple tickers at once ──────────────────
+#  Batch download multiple tickers at once 
 import asyncio
 
 tickers = ["AAPL", "MSFT", "GOOG", "AMZN", "TSLA"]
@@ -3225,7 +3225,7 @@ print(close_df.tail(5))`;
 
     } else {
       pythonCode = `\
-# ── Fetch ${node.name} ─────────────────────────────────────
+#  Fetch ${node.name} 
 ticker = "AAPL"
 
 data = await yf_fetch(ticker, "${node.category}")
@@ -3245,7 +3245,7 @@ else:
     }
   } else {
     pythonCode = `\
-# ── Fetch macroeconomic time series from FRED ─────────────────
+#  Fetch macroeconomic time series from FRED 
 import pandas as pd
 
 series_id = "${node.series_id}"
@@ -3312,7 +3312,7 @@ function highlightSyntax(code) {
     .replace(/\b(\d+)\b/g, '<span class="dex-code-num">$1</span>');
 }
 
-// ── Fullscreen toggle ─────────────────────────────────────
+//  Fullscreen toggle 
 const workspaceEl = document.querySelector('.workspace');
 const fsEditorBtn = document.getElementById('fsEditorBtn');
 const fsOutputBtn = document.getElementById('fsOutputBtn');
@@ -3352,7 +3352,7 @@ if (fsAIBtn && paneAI) {
   fsAIBtn.addEventListener('click', () => toggleFullscreen(paneAI));
 }
 
-// ── Global keyboard shortcuts ─────────────────────────────
+//  Global keyboard shortcuts 
 document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return;
@@ -3360,7 +3360,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'r' || e.key === 'R') { e.preventDefault(); btnReset.click(); }
 });
 
-// ── Resize handle ─────────────────────────────────────────
+//  Resize handle 
 (function initResize() {
   const handle     = document.getElementById('resizeHandle');
   const workspace  = document.querySelector('.workspace');
@@ -3409,7 +3409,7 @@ document.addEventListener('keydown', (e) => {
   });
 })();
 
-// ── Horizontal resize handle (workspace | bottom data explorer) ──
+//  Horizontal resize handle (workspace | bottom data explorer) 
 (function initResizeH() {
   const handle = document.getElementById('resizeHandleH');
   const outer  = document.getElementById('workspaceOuter');
@@ -3455,7 +3455,7 @@ document.addEventListener('keydown', (e) => {
   });
 })();
 
-// ── Vertical resize handle for AI assistant pane ─────────────────
+//  Vertical resize handle for AI assistant pane 
 (function initResizeAI() {
   const handle     = document.getElementById('resizeHandleAI');
   const workspace  = document.querySelector('.workspace');
@@ -3493,7 +3493,7 @@ document.addEventListener('keydown', (e) => {
   });
 })();
 
-// ── AI Coding Assistant chat logic ───────────────────────────────
+//  AI Coding Assistant chat logic 
 (function initAIAssistant() {
   const btnAI = document.getElementById('btnAI');
   const closeAIBtn = document.getElementById('closeAIBtn');
@@ -3503,14 +3503,14 @@ document.addEventListener('keydown', (e) => {
   const aiMessages = document.getElementById('aiMessages');
   const aiTextarea = document.getElementById('aiTextarea');
   const aiSendBtn = document.getElementById('aiSendBtn');
-  // ── AI Working State & Abort Controller ────────────────────
+  //  AI Working State & Abort Controller 
   let activeAbortController = null;
 
   function setAIWorking(isWorking) {
     if (!aiSendBtn) return;
     if (isWorking) {
       aiSendBtn.classList.add('is-working');
-      aiSendBtn.title = 'AI is working… Click to stop';
+      aiSendBtn.title = 'AI is working Click to stop';
       aiSendBtn.setAttribute('aria-label', 'Stop AI');
     } else {
       aiSendBtn.classList.remove('is-working');
@@ -3530,7 +3530,7 @@ document.addEventListener('keydown', (e) => {
     setAIWorking(false);
   }
 
-  // ── Parse surgical edit blocks from markdown or raw text ────
+  //  Parse surgical edit blocks from markdown or raw text 
   function parseSurgicalEdits(text) {
     if (!text) return [];
     const edits = [];
@@ -3547,7 +3547,7 @@ document.addEventListener('keydown', (e) => {
   }
   window.parseSurgicalEdits = parseSurgicalEdits;
 
-  // ── Programmatically apply surgical edit to Monaco Editor ───
+  //  Programmatically apply surgical edit to Monaco Editor 
   function applySurgicalEditToMonaco(findText, replaceText) {
     if (!monacoEditor) return false;
     const model = monacoEditor.getModel();
@@ -3601,7 +3601,7 @@ document.addEventListener('keydown', (e) => {
     return false;
   }
 
-  // ── Autonomous AI Self-Healing Execution Loop Class ──────────
+  //  Autonomous AI Self-Healing Execution Loop Class 
   class AutonomousRepairLoop {
     constructor(options = {}) {
       this.maxIterations = options.maxIterations || 3;
@@ -3634,7 +3634,7 @@ document.addEventListener('keydown', (e) => {
 
       this.statusTextEl = document.createElement('span');
       this.statusTextEl.className = 'ai-loop-status-text';
-      this.statusTextEl.textContent = 'Active Control: Testing & verifying in Pyodide…';
+      this.statusTextEl.textContent = 'Active Control: Testing & verifying in Pyodide';
 
       left.appendChild(this.badgeEl);
       left.appendChild(this.statusTextEl);
@@ -3692,7 +3692,7 @@ document.addEventListener('keydown', (e) => {
       if (!this.stepsEl) return;
       const sum = document.createElement('div');
       sum.className = 'ai-loop-summary';
-      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      sum.innerHTML = `<span>[DONE]</span><span>${text}</span>`;
       this.stepsEl.appendChild(sum);
       if (this.chatContainer) {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
@@ -3835,21 +3835,21 @@ If extensive structural changes are required, output the complete corrected \`\`
       const initialApply = this.applyCodeOrEdit(initialAssistantResponse);
       if (initialApply.applied) {
         if (initialApply.type === 'surgical') {
-          this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to Monaco editor.`, 'active');
+          this.addStep('[FIX]', `Applied ${initialApply.count} surgical patch(es) to Monaco editor.`, 'active');
         } else {
-          this.addStep('📝', 'Injected initial Python program into Monaco editor.', 'active');
+          this.addStep('[CODE]', 'Injected initial Python program into Monaco editor.', 'active');
         }
       } else {
-        this.addStep('ℹ️', 'Reading active Monaco editor code for verification…', 'active');
+        this.addStep('[INFO]', 'Reading active Monaco editor code for verification', 'active');
       }
 
       // Loop execution and self-healing
       while (this.isActive && !this.isAborted) {
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Executing in Pyodide WASM…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Executing in Pyodide WASM`;
         }
 
-        this.addStep('⚡', `Executing in Pyodide WASM (Attempt #${this.currentIteration})…`, 'active');
+        this.addStep('[COMPILE]', `Executing in Pyodide WASM (Attempt #${this.currentIteration})`, 'active');
 
         // Small yield so Monaco editor finishes updating and UI renders
         await new Promise(r => setTimeout(r, 80));
@@ -3865,13 +3865,13 @@ If extensive structural changes are required, output the complete corrected \`\`
         // Clean execution with zero errors!
         if (result.success) {
           this.badgeEl.className = 'ai-loop-badge';
-          this.badgeEl.textContent = '✓ 0 ERRORS';
+          this.badgeEl.textContent = '[DONE] 0 ERRORS';
           if (this.statusTextEl) {
             this.statusTextEl.textContent = `Clean Execution (0 Errors in ${result.elapsed}s)`;
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
 
-          this.addStep('✓', `Run #${this.currentIteration} completed cleanly with 0 errors in ${result.elapsed}s.`, 'success');
+          this.addStep('[DONE]', `Run #${this.currentIteration} completed cleanly with 0 errors in ${result.elapsed}s.`, 'success');
           this.addSummary(`Autonomous Self-Healing Loop verified complete. Zero errors. Context fully preserved.`);
           this.cleanup();
           return;
@@ -3882,7 +3882,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         const errLine = result.errorLine;
         const lineText = errLine ? ` (Line ${errLine})` : '';
 
-        this.addStep('⚠️', `Error detected in Run #${this.currentIteration}: <strong>${errType}</strong>${lineText}`, 'warning', result.error || result.stderr);
+        this.addStep('[WARN]', `Error detected in Run #${this.currentIteration}: <strong>${errType}</strong>${lineText}`, 'warning', result.error || result.stderr);
 
         // Check if max iterations reached
         if (this.currentIteration >= this.maxIterations) {
@@ -3893,7 +3893,7 @@ If extensive structural changes are required, output the complete corrected \`\`
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
 
-          this.addStep('🛑', `Maximum repair attempts (${this.maxIterations}) reached. Editor contains latest state for manual inspection.`, 'warning');
+          this.addStep('[STOP]', `Maximum repair attempts (${this.maxIterations}) reached. Editor contains latest state for manual inspection.`, 'warning');
           this.cleanup();
           return;
         }
@@ -3902,10 +3902,10 @@ If extensive structural changes are required, output the complete corrected \`\`
         this.badgeEl.className = 'ai-loop-badge healing';
         this.badgeEl.textContent = 'HEALING';
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix`;
         }
 
-        this.addStep('🔧', `AI analyzing error and synthesizing surgical fix…`, 'active');
+        this.addStep('[FIX]', `AI analyzing error and synthesizing surgical fix`, 'active');
 
         let repairResponse = '';
         try {
@@ -3915,7 +3915,7 @@ If extensive structural changes are required, output the complete corrected \`\`
             this.cleanup();
             return;
           }
-          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.addStep('[ERROR]', `AI repair request failed: ${repairErr.message}`, 'warning');
           this.cleanup();
           return;
         }
@@ -3929,12 +3929,12 @@ If extensive structural changes are required, output the complete corrected \`\`
         const repairApply = this.applyCodeOrEdit(repairResponse);
         if (repairApply.applied) {
           if (repairApply.type === 'surgical') {
-            this.addStep('✓', `Applied surgical patch to target lines in Monaco editor.`, 'active');
+            this.addStep('[DONE]', `Applied surgical patch to target lines in Monaco editor.`, 'active');
           } else {
-            this.addStep('✓', `Updated Monaco editor with structurally repaired code.`, 'active');
+            this.addStep('[DONE]', `Updated Monaco editor with structurally repaired code.`, 'active');
           }
         } else {
-          this.addStep('⚠️', `Could not find exact lines to replace. Attempting full re-run…`, 'warning');
+          this.addStep('[WARN]', `Could not find exact lines to replace. Attempting full re-run`, 'warning');
         }
 
         this.currentIteration++;
@@ -3957,7 +3957,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         this.statusTextEl.textContent = 'Auto-Heal Stopped by User';
       }
       if (this.stopBtn) this.stopBtn.style.display = 'none';
-      this.addStep('🛑', 'Loop aborted by user.', 'warning');
+      this.addStep('[STOP]', 'Loop aborted by user.', 'warning');
       this.cleanup();
     }
 
@@ -4122,7 +4122,7 @@ If extensive structural changes are required, output the complete corrected \`\`
     const parts = text.split(/(```desmos[\s\S]*?```|```openscad[\s\S]*?```|```scad[\s\S]*?```|```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
     element.innerHTML = '';
     parts.forEach(part => {
-      // ── Surgical edit diff block ──────────────────────────────────
+      //  Surgical edit diff block 
       if (part.startsWith('<<<SURGICAL_EDIT>>>')) {
         const findMatch  = part.match(/<<<FIND>>>([\s\S]*?)<<<REPLACE>>>/);
         const replMatch  = part.match(/<<<REPLACE>>>([\s\S]*?)<<<END_EDIT>>>/);
@@ -4142,11 +4142,11 @@ If extensive structural changes are required, output the complete corrected \`\`
 
         const acceptBtn = document.createElement('button');
         acceptBtn.className = 'ai-diff-btn ai-diff-accept';
-        acceptBtn.textContent = '✓ Accept';
+        acceptBtn.textContent = '[DONE] Accept';
 
         const rejectBtn = document.createElement('button');
         rejectBtn.className = 'ai-diff-btn ai-diff-reject';
-        rejectBtn.textContent = '✕ Reject';
+        rejectBtn.textContent = ' Reject';
 
         diffActions.appendChild(acceptBtn);
         diffActions.appendChild(rejectBtn);
@@ -4159,7 +4159,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         findText.split('\n').forEach(l => {
           const row = document.createElement('div');
           row.className = 'ai-diff-line ai-diff-remove';
-          row.textContent = '− ' + l;
+          row.textContent = ' ' + l;
           diffBody.appendChild(row);
         });
         replText.split('\n').forEach(l => {
@@ -4198,7 +4198,7 @@ If extensive structural changes are required, output the complete corrected \`\`
             monacoEditor.deltaDecorations(pendingDecorations, []);
           }
           diffCard.classList.add('ai-diff-accepted');
-          acceptBtn.textContent = '✓ Applied';
+          acceptBtn.textContent = '[DONE] Applied';
           acceptBtn.disabled = true;
           rejectBtn.disabled = true;
 
@@ -4218,14 +4218,14 @@ If extensive structural changes are required, output the complete corrected \`\`
           if (monacoEditor) monacoEditor.deltaDecorations(pendingDecorations, []);
           diffCard.classList.add('ai-diff-rejected');
           acceptBtn.disabled = true;
-          rejectBtn.textContent = '✕ Rejected';
+          rejectBtn.textContent = ' Rejected';
           rejectBtn.disabled = true;
         });
 
         return;
       }
 
-      // ── OpenSCAD 3D CAD block — show as code, offer to open CAD studio ──
+      //  OpenSCAD 3D CAD block  show as code, offer to open CAD studio 
       if (part.startsWith('```openscad') || part.startsWith('```scad')) {
         const scadCode = part.replace(/^```(openscad|scad)\n?/, '').replace(/\n?```$/, '').trim();
         const card = document.createElement('div');
@@ -4235,7 +4235,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         header.className = 'cad-chat-header';
         header.innerHTML = `
           <span><span class="cad-badge">OPENSCAD WASM</span> Parametric 3D CAD Model</span>
-          <span style="color:#34d399; font-size:10.5px; font-weight:700;">✓ CSG GEOMETRY</span>
+          <span style="color:#34d399; font-size:10.5px; font-weight:700;">[DONE] CSG GEOMETRY</span>
         `;
 
         const pre = document.createElement('pre');
@@ -4249,7 +4249,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         openStudioBtn.className = 'ai-code-btn';
         openStudioBtn.style.color = '#34d399';
         openStudioBtn.style.fontWeight = 'bold';
-        openStudioBtn.textContent = '▶ Open in CAD Studio';
+        openStudioBtn.textContent = ' Open in CAD Studio';
         openStudioBtn.addEventListener('click', () => {
           if (window.btnCAD) window.btnCAD.click();
           if (window.cadSourceEditorEl) {
@@ -4278,7 +4278,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         return;
       }
 
-      // ── Desmos math graph & simulation block ───────────────────────
+      //  Desmos math graph & simulation block 
       if (part.startsWith('```desmos')) {
         const desmosCode = part.replace(/^```desmos\n?/, '').replace(/\n?```$/, '').trim();
         const container = document.createElement('div');
@@ -4330,7 +4330,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         return;
       }
 
-      // ── Python / generic code block ───────────────────────────────
+      //  Python / generic code block 
       if (part.startsWith('```')) {
         const isPython = part.startsWith('```python');
         const codeLines = part.replace(/^```(python)?\n/, '').replace(/\n```$/, '');
@@ -4390,7 +4390,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         container.appendChild(pre);
         element.appendChild(container);
       } else if (part.trim() !== '') {
-        // ── Self-contained Markdown renderer ─────────────────────────
+        //  Self-contained Markdown renderer 
         const mdWrapper = document.createElement('div');
         mdWrapper.className = 'ai-md-body';
         mdWrapper.innerHTML = parseMarkdown(part);
@@ -4399,8 +4399,8 @@ If extensive structural changes are required, output the complete corrected \`\`
     });
   }
 
-  // ── parseMarkdown ─────────────────────────────────────────────────
-  // Zero-dependency Markdown → HTML converter.
+  //  parseMarkdown 
+  // Zero-dependency Markdown  HTML converter.
   // Handles: headings, tables (GFM), bold, italic, inline code,
   //          blockquotes, unordered/ordered lists, horizontal rules, paragraphs.
   function parseMarkdown(md) {
@@ -4442,10 +4442,10 @@ If extensive structural changes are required, output the complete corrected \`\`
       const raw  = lines[i];
       const line = raw.trim();
 
-      // ── Blank line ─────────────────────────────────────────────────
+      //  Blank line 
       if (!line) { i++; continue; }
 
-      // ── ATX Heading: # through ###### ─────────────────────────────
+      //  ATX Heading: # through ###### 
       const hm = line.match(/^(#{1,6})\s+(.+)$/);
       if (hm) {
         const lv = hm[1].length;
@@ -4453,13 +4453,13 @@ If extensive structural changes are required, output the complete corrected \`\`
         i++; continue;
       }
 
-      // ── Horizontal rule: --- or *** or ___ ────────────────────────
+      //  Horizontal rule: --- or *** or ___ 
       if (/^(?:---+|\*\*\*+|___+)$/.test(line)) {
         out += '<hr>';
         i++; continue;
       }
 
-      // ── GFM Table: current line has | and next line is a separator ─
+      //  GFM Table: current line has | and next line is a separator 
       if (line.includes('|') && isSeparator(lines[i + 1] || '')) {
         const headers = parseRow(line);
         i += 2; // skip the separator row
@@ -4474,7 +4474,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         continue;
       }
 
-      // ── Blockquote: > ... ─────────────────────────────────────────
+      //  Blockquote: > ... 
       if (/^>\s/.test(line)) {
         out += '<blockquote>';
         while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
@@ -4485,7 +4485,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         continue;
       }
 
-      // ── Unordered list: - * + ────────────────────────────────────
+      //  Unordered list: - * + 
       if (/^[-*+]\s/.test(line)) {
         out += '<ul>';
         while (i < lines.length) {
@@ -4499,7 +4499,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         continue;
       }
 
-      // ── Ordered list: 1. 2. 3. ───────────────────────────────────
+      //  Ordered list: 1. 2. 3. 
       if (/^\d+\.\s/.test(line)) {
         out += '<ol>';
         while (i < lines.length) {
@@ -4513,7 +4513,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         continue;
       }
 
-      // ── Paragraph: gather consecutive non-block lines ─────────────
+      //  Paragraph: gather consecutive non-block lines 
       const paraChunks = [];
       while (i < lines.length) {
         const l = lines[i].trim();
@@ -4676,7 +4676,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         codeActionBar.classList.add('visible');
       }
 
-      // ── AUTONOMOUS HEALING LOOP (STRONG LOOP - PRIMARY ACROSS ALL PANELS) ───
+      //  AUTONOMOUS HEALING LOOP (STRONG LOOP - PRIMARY ACROSS ALL PANELS) 
       const hasCadCode = /```(?:openscad|scad)[\s\S]*?```/.test(fullAssistantText);
       const hasDesmosCode = /```desmos[\s\S]*?```/.test(fullAssistantText);
 
@@ -4701,7 +4701,7 @@ If extensive structural changes are required, output the complete corrected \`\`
     } catch (err) {
       if (indicator) indicator.remove();
       if (err.name === 'AbortError') {
-        appendMessage('assistant', '⚠️ Generation stopped by user.', true);
+        appendMessage('assistant', '[WARN] Generation stopped by user.', true);
       } else {
         appendMessage('assistant', `Failed to get response: ${err.message}`, true);
       }
@@ -4766,20 +4766,20 @@ If extensive structural changes are required, output the complete corrected \`\`
     });
   }
 
-  // ── Cycling placeholder suggestions in the textarea ──────────────────
+  //  Cycling placeholder suggestions in the textarea 
   const AI_PLACEHOLDERS = [
-    'Explain the current code…',
-    'Fix the error in the console output…',
-    'Optimize this for performance…',
-    'Add docstrings and comments…',
-    'Plot a candlestick chart for AAPL…',
-    'Write a moving-average crossover strategy…',
-    'Download FRED GDP data and plot it…',
-    'Refactor into functions…',
+    'Explain the current code',
+    'Fix the error in the console output',
+    'Optimize this for performance',
+    'Add docstrings and comments',
+    'Plot a candlestick chart for AAPL',
+    'Write a moving-average crossover strategy',
+    'Download FRED GDP data and plot it',
+    'Refactor into functions',
     'What does this code do?',
-    'Generate a scatter plot with regression line…',
-    'Debug why my DataFrame is empty…',
-    'Convert this to use async/await…',
+    'Generate a scatter plot with regression line',
+    'Debug why my DataFrame is empty',
+    'Convert this to use async/await',
   ];
 
   let _phIdx = 0;
@@ -4793,7 +4793,7 @@ If extensive structural changes are required, output the complete corrected \`\`
   setInterval(_rotatePlaceholder, 3000);
 })();
 
-// ── Global Liquid Metal Ripple Effect ─────────────────────────────
+//  Global Liquid Metal Ripple Effect 
 document.addEventListener('click', (e) => {
   const target = e.target.closest('.btn-liquid-metal, .btn-ai-action, .ai-code-btn, .btn-run, .btn-ai, .btn-ai-run-primary, .btn-ai-apply-primary, .ai-send-btn, .btn-ghost');
   if (!target) return;
@@ -4813,9 +4813,9 @@ document.addEventListener('click', (e) => {
   setTimeout(() => ripple.remove(), 600);
 });
 
-// ══════════════════════════════════════════════════════════════════
+// 
 // DESMOS GRAPHING CALCULATOR & MATH SIMULATION MODULE
-// ══════════════════════════════════════════════════════════════════
+// 
 let desmosMainCalculator = null;
 let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
 
@@ -4875,7 +4875,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     if (!btnDesmosGenerate) return;
     if (isWorking) {
       btnDesmosGenerate.classList.add('is-working');
-      btnDesmosGenerate.title = 'AI is working… Click to stop';
+      btnDesmosGenerate.title = 'AI is working Click to stop';
       btnDesmosGenerate.setAttribute('aria-label', 'Stop AI');
     } else {
       btnDesmosGenerate.classList.remove('is-working');
@@ -4956,13 +4956,13 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     if (!line) return '';
 
     // Convert Unicode Greek symbols to LaTeX commands
-    line = line.replace(/θ/g, '\\theta');
-    line = line.replace(/π/g, '\\pi');
-    line = line.replace(/α/g, '\\alpha');
-    line = line.replace(/β/g, '\\beta');
-    line = line.replace(/γ/g, '\\gamma');
-    line = line.replace(/ω/g, '\\omega');
-    line = line.replace(/λ/g, '\\lambda');
+    line = line.replace(//g, '\\theta');
+    line = line.replace(//g, '\\pi');
+    line = line.replace(//g, '\\alpha');
+    line = line.replace(//g, '\\beta');
+    line = line.replace(//g, '\\gamma');
+    line = line.replace(//g, '\\omega');
+    line = line.replace(//g, '\\lambda');
 
     // Replace Python power ** with LaTeX ^
     line = line.replace(/\*\*/g, '^');
@@ -5033,7 +5033,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   }
   window.verifyDesmosExpressions = verifyDesmosExpressions;
 
-  // ── Desmos Autonomous Repair Loop Class ───────────────────────
+  //  Desmos Autonomous Repair Loop Class 
   class DesmosAutonomousRepairLoop {
     constructor(options = {}) {
       this.maxIterations = options.maxIterations || 4;
@@ -5073,7 +5073,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
 
       this.statusTextEl = document.createElement('span');
       this.statusTextEl.className = 'ai-loop-status-text';
-      this.statusTextEl.textContent = 'Active Control: Verifying equations in Desmos…';
+      this.statusTextEl.textContent = 'Active Control: Verifying equations in Desmos';
 
       left.appendChild(this.badgeEl);
       left.appendChild(this.statusTextEl);
@@ -5131,7 +5131,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
       if (!this.stepsEl) return;
       const sum = document.createElement('div');
       sum.className = 'ai-loop-summary';
-      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      sum.innerHTML = `<span>[DONE]</span><span>${text}</span>`;
       this.stepsEl.appendChild(sum);
       if (this.chatContainer) {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
@@ -5191,7 +5191,7 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     async requestRepair(errors) {
       const expressions = this.calculator ? (this.calculator.getExpressions() || []) : [];
       const currentLines = expressions.map((e, idx) => `${idx + 1}. [${e.id}]: ${e.latex}`).join('\n');
-      const errorReport = errors.map(e => `• Expression #${e.index} [${e.id}]: \`${e.latex}\`\n  Error Type: ${e.errorType}\n  Details: ${e.errorMessage}`).join('\n');
+      const errorReport = errors.map(e => ` Expression #${e.index} [${e.id}]: \`${e.latex}\`\n  Error Type: ${e.errorType}\n  Details: ${e.errorMessage}`).join('\n');
 
       const prompt = `[IMMUTABLE USER GOAL]
 ${this.immutableUserGoal}
@@ -5282,26 +5282,26 @@ If extensive structural changes are required, output the complete corrected \`\`
               if (l) this.calculator.setExpression({ id: 'panel_expr_' + idx, latex: l });
             });
           }
-          this.addStep('📝', `Injected ${initialAssistantResponse.length} initial mathematical equation(s) into Desmos.`, 'active');
+          this.addStep('[CODE]', `Injected ${initialAssistantResponse.length} initial mathematical equation(s) into Desmos.`, 'active');
         } else if (typeof initialAssistantResponse === 'string') {
           const initialApply = this.applyCodeOrEdit(initialAssistantResponse);
           if (initialApply.applied) {
             if (initialApply.type === 'surgical') {
-              this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to Desmos expressions.`, 'active');
+              this.addStep('[FIX]', `Applied ${initialApply.count} surgical patch(es) to Desmos expressions.`, 'active');
             } else {
-              this.addStep('📝', `Loaded ${initialApply.count} Desmos equation(s) into calculator.`, 'active');
+              this.addStep('[CODE]', `Loaded ${initialApply.count} Desmos equation(s) into calculator.`, 'active');
             }
           } else {
-            this.addStep('ℹ️', 'Reading active Desmos expressions for verification…', 'active');
+            this.addStep('[INFO]', 'Reading active Desmos expressions for verification', 'active');
           }
         }
       }
 
       while (this.isActive && !this.isAborted) {
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Verifying in Desmos Graphing API…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Verifying in Desmos Graphing API`;
         }
-        this.addStep('⚡', `Evaluating equations in Desmos (Attempt #${this.currentIteration})…`, 'active');
+        this.addStep('[COMPILE]', `Evaluating equations in Desmos (Attempt #${this.currentIteration})`, 'active');
 
         const check = await verifyDesmosExpressions(this.calculator);
 
@@ -5312,20 +5312,20 @@ If extensive structural changes are required, output the complete corrected \`\`
 
         if (check.success) {
           this.badgeEl.className = 'ai-loop-badge';
-          this.badgeEl.textContent = '✓ 0 ERRORS';
+          this.badgeEl.textContent = '[DONE] 0 ERRORS';
           if (this.statusTextEl) {
             this.statusTextEl.textContent = `Clean Evaluation (0 Errors across ${check.totalCount} equations)`;
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
 
-          this.addStep('✓', `Run #${this.currentIteration} completed cleanly with 0 errors across all ${check.totalCount} equations.`, 'success');
+          this.addStep('[DONE]', `Run #${this.currentIteration} completed cleanly with 0 errors across all ${check.totalCount} equations.`, 'success');
           this.addSummary(`Autonomous Desmos Self-Healing verified complete. Zero errors. Context fully preserved.`);
           this.cleanup();
           return;
         }
 
         const firstErr = check.errors[0];
-        this.addStep('⚠️', `Error in Run #${this.currentIteration}: <strong>${firstErr.errorType}</strong> on Expr #${firstErr.index}: ${firstErr.errorMessage}`, 'warning', `Equation: ${firstErr.latex || '(empty)'}\nIssue: ${firstErr.errorMessage}`);
+        this.addStep('[WARN]', `Error in Run #${this.currentIteration}: <strong>${firstErr.errorType}</strong> on Expr #${firstErr.index}: ${firstErr.errorMessage}`, 'warning', `Equation: ${firstErr.latex || '(empty)'}\nIssue: ${firstErr.errorMessage}`);
 
         if (this.currentIteration >= this.maxIterations) {
           this.badgeEl.className = 'ai-loop-badge error';
@@ -5334,7 +5334,7 @@ If extensive structural changes are required, output the complete corrected \`\`
             this.statusTextEl.textContent = `Halted after ${this.maxIterations} attempts`;
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
-          this.addStep('🛑', `Maximum repair attempts reached. Desmos panel contains latest state.`, 'warning');
+          this.addStep('[STOP]', `Maximum repair attempts reached. Desmos panel contains latest state.`, 'warning');
           this.cleanup();
           return;
         }
@@ -5342,16 +5342,16 @@ If extensive structural changes are required, output the complete corrected \`\`
         this.badgeEl.className = 'ai-loop-badge healing';
         this.badgeEl.textContent = 'HEALING';
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix`;
         }
-        this.addStep('🔧', `AI analyzing error and synthesizing surgical LaTeX fix…`, 'active');
+        this.addStep('[FIX]', `AI analyzing error and synthesizing surgical LaTeX fix`, 'active');
 
         let repairResponse = '';
         try {
           repairResponse = await this.requestRepair(check.errors);
         } catch (repairErr) {
           if (this.isAborted) { this.cleanup(); return; }
-          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.addStep('[ERROR]', `AI repair request failed: ${repairErr.message}`, 'warning');
           this.cleanup();
           return;
         }
@@ -5361,12 +5361,12 @@ If extensive structural changes are required, output the complete corrected \`\`
         const repairApply = this.applyCodeOrEdit(repairResponse);
         if (repairApply.applied) {
           if (repairApply.type === 'surgical') {
-            this.addStep('✓', `Applied surgical LaTeX patch to expression.`, 'active');
+            this.addStep('[DONE]', `Applied surgical LaTeX patch to expression.`, 'active');
           } else {
-            this.addStep('✓', `Updated Desmos calculator with restructured equations.`, 'active');
+            this.addStep('[DONE]', `Updated Desmos calculator with restructured equations.`, 'active');
           }
         } else {
-          this.addStep('⚠️', `Retrying evaluation with current expressions…`, 'warning');
+          this.addStep('[WARN]', `Retrying evaluation with current expressions`, 'warning');
         }
 
         this.currentIteration++;
@@ -5389,7 +5389,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         this.statusTextEl.textContent = 'Desmos Auto-Heal Stopped by User';
       }
       if (this.stopBtn) this.stopBtn.style.display = 'none';
-      this.addStep('🛑', 'Desmos healing loop aborted by user.', 'warning');
+      this.addStep('[STOP]', 'Desmos healing loop aborted by user.', 'warning');
       this.cleanup();
     }
 
@@ -5485,9 +5485,9 @@ One equation per line. No markdown outside the block. No comments starting with 
       await loop.start(prompt, rawResponse);
     } catch (err) {
       if (err.name === 'AbortError') {
-        loop.addStep('🛑', 'Generation stopped by user.', 'warning');
+        loop.addStep('[STOP]', 'Generation stopped by user.', 'warning');
       } else {
-        loop.addStep('❌', `Generation failed: ${err.message}`, 'warning');
+        loop.addStep('[ERROR]', `Generation failed: ${err.message}`, 'warning');
       }
       loop.cleanup();
     }
@@ -5621,9 +5621,9 @@ One equation per line. No markdown outside the block. No comments starting with 
   };
 })();
 
-// ══════════════════════════════════════════════════════════════════
+// 
 // AUTHENTICATION & GMAIL OAUTH MODULE
-// ══════════════════════════════════════════════════════════════════
+// 
 (function initAuth() {
   const btnOpenAuth = document.getElementById('btnOpenAuth');
   const userMenuWrap = document.getElementById('userMenuWrap');
@@ -5650,7 +5650,7 @@ One equation per line. No markdown outside the block. No comments starting with 
   let googleClientId = '';
   let googleInitialized = false;
 
-  // ── LocalStorage helpers ─────────────────────────────────────────
+  //  LocalStorage helpers 
   function saveUserLocally(user) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
@@ -5668,7 +5668,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
   }
 
-  // ── Toggle user dropdown menu ────────────────────────────────────
+  //  Toggle user dropdown menu 
   if (btnUserMenu && userDropdown) {
     btnUserMenu.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -5679,7 +5679,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     });
   }
 
-  // ── Open / Close Auth Modal ──────────────────────────────────────
+  //  Open / Close Auth Modal 
   if (btnOpenAuth && authModalOverlay) {
     btnOpenAuth.addEventListener('click', () => {
       openAuthModal('signin');
@@ -5744,7 +5744,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     authAlert.textContent = '';
   }
 
-  // ── Set / clear UI auth state ────────────────────────────────────
+  //  Set / clear UI auth state 
   function setAuthState(user) {
     currentUser = user;
     if (user) {
@@ -5768,7 +5768,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     }
   }
 
-  // ── Instant restore from localStorage (no network, no flash) ─────
+  //  Instant restore from localStorage (no network, no flash) 
   // Show the user immediately from the local cache, then verify with
   // the server in the background.  If the server says "not authenticated"
   // (e.g. session cookie truly expired) we clear the cached user.
@@ -5777,7 +5777,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     setAuthState(cachedUser);
   }
 
-  // ── Check server session (background verification) ───────────────
+  //  Check server session (background verification) 
   async function checkSession() {
     try {
       const res = await fetch('/api/auth/me');
@@ -5794,7 +5794,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     }
   }
 
-  // ── Fetch Google Client ID from server ───────────────────────────
+  //  Fetch Google Client ID from server 
   async function fetchConfig() {
     try {
       const res = await fetch('/api/auth/config');
@@ -5808,7 +5808,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     }
   }
 
-  // ── Initialize Google Identity Services SDK ──────────────────────
+  //  Initialize Google Identity Services SDK 
   function initGoogleAuth() {
     if (!googleBtnContainer) return;
     if (googleInitialized && googleClientId) return; // Already done
@@ -5853,7 +5853,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     }
   }
 
-  // ── Handle Google credential response ───────────────────────────
+  //  Handle Google credential response 
   async function handleGoogleCredentialResponse(response) {
     try {
       hideAlert();
@@ -5875,7 +5875,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     }
   }
 
-  // ── Sign In Form Submit ──────────────────────────────────────────
+  //  Sign In Form Submit 
   if (formSignIn) {
     formSignIn.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -5885,7 +5885,7 @@ One equation per line. No markdown outside the block. No comments starting with 
       const btn = document.getElementById('btnSubmitSignIn');
 
       btn.disabled = true;
-      btn.textContent = 'Signing in…';
+      btn.textContent = 'Signing in';
 
       try {
         const res = await fetch('/api/auth/login', {
@@ -5910,7 +5910,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     });
   }
 
-  // ── Sign Up Form Submit ──────────────────────────────────────────
+  //  Sign Up Form Submit 
   if (formSignUp) {
     formSignUp.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -5921,7 +5921,7 @@ One equation per line. No markdown outside the block. No comments starting with 
       const btn = document.getElementById('btnSubmitSignUp');
 
       btn.disabled = true;
-      btn.textContent = 'Creating account…';
+      btn.textContent = 'Creating account';
 
       try {
         const res = await fetch('/api/auth/signup', {
@@ -5946,7 +5946,7 @@ One equation per line. No markdown outside the block. No comments starting with 
     });
   }
 
-  // ── Logout Click ─────────────────────────────────────────────────
+  //  Logout Click 
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {
       try {
@@ -5961,14 +5961,14 @@ One equation per line. No markdown outside the block. No comments starting with 
     });
   }
 
-  // ── Run initial checks ───────────────────────────────────────────
+  //  Run initial checks 
   checkSession();   // Background server verification
   fetchConfig();    // Load Google Client ID and trigger One Tap
 })();
 
-// ══════════════════════════════════════════════════════════════════
+// 
 // VIEW MANAGER: LANDING PAGE & IDE WORKSPACE TOGGLE
-// ══════════════════════════════════════════════════════════════════
+// 
 window.ViewManager = (function() {
   const landingView = document.getElementById('landingView');
   const ideView = document.getElementById('ideView');
@@ -6071,12 +6071,12 @@ window.ViewManager = (function() {
   };
 })();
 
-// ══════════════════════════════════════════════════════════════════
-// AI PARAMETRIC CAD STUDIO — OpenSCAD WASM + Three.js + IndexedDB
+// 
+// AI PARAMETRIC CAD STUDIO  OpenSCAD WASM + Three.js + IndexedDB
 // Zero server-side geometry. All computation runs in the browser.
-// ══════════════════════════════════════════════════════════════════
+// 
 (function initCADStudio() {
-  // ── DOM refs ──────────────────────────────────────────────────
+  //  DOM refs 
   const btnCAD            = document.getElementById('btnCAD');
   const cadModalOverlay   = document.getElementById('cadModalOverlay');
   const btnCloseCADModal  = document.getElementById('btnCloseCADModal');
@@ -6166,7 +6166,7 @@ window.ViewManager = (function() {
     if (!btnCadGenerate) return;
     if (isWorking) {
       btnCadGenerate.classList.add('is-working');
-      btnCadGenerate.title = 'AI is working… Click to stop';
+      btnCadGenerate.title = 'AI is working Click to stop';
       btnCadGenerate.setAttribute('aria-label', 'Stop CAD');
     } else {
       btnCadGenerate.classList.remove('is-working');
@@ -6287,7 +6287,7 @@ window.ViewManager = (function() {
   }
 
 
-  // ── Studio State ──────────────────────────────────────────────
+  //  Studio State 
   let currentSpec    = null;   // structured design spec JSON
   let currentScad    = '';     // OpenSCAD source code string
   let currentStlData = null;   // Uint8Array STL binary (if compiled)
@@ -6306,7 +6306,7 @@ window.ViewManager = (function() {
   const OPENSCAD_CDN_PRIMARY  = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.3.0/openscad.js';
   const OPENSCAD_CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js';
 
-  // ── Mechanical Standard Libraries (bundled into WASM FS) ──────
+  //  Mechanical Standard Libraries (bundled into WASM FS) 
   // These are loaded once and injected into every OpenSCAD WASM instance
   // so the AI can write: include </lib/gears.scad>; include </lib/threads.scad>;
   const CAD_LIBRARIES = {};   // { '/lib/gears.scad': '...source...' }
@@ -6324,7 +6324,7 @@ window.ViewManager = (function() {
         if (resp.ok) {
           CAD_LIBRARIES[path] = await resp.text();
         }
-      } catch (_) { /* silently skip — inline fallbacks exist */ }
+      } catch (_) { /* silently skip  inline fallbacks exist */ }
     }
     // Always ensure critical built-in gear/thread stubs exist as fallback
     if (!CAD_LIBRARIES['/lib/gears.scad']) {
@@ -6335,11 +6335,12 @@ window.ViewManager = (function() {
     }
     CAD_LIBRARIES['/lib/fasteners.scad'] = CAD_BUILTIN_FASTENERS;
     CAD_LIBRARIES['/lib/bearings.scad']  = CAD_BUILTIN_BEARINGS;
+    CAD_LIBRARIES['/lib/pcb.scad']       = CAD_BUILTIN_PCB;
   })();
 
-  // ── Built-in mechanical library stubs (used as fallback / always available) ──
+  //  Built-in mechanical library stubs (used as fallback / always available) 
   const CAD_BUILTIN_GEARS = `
-// Involute Gear Library — RUN01 CAD Studio Built-in
+// Involute Gear Library  RUN01 CAD Studio Built-in
 // Based on OpenSCAD MCAD gears.scad (LGPL)
 function involute(base_radius, involute_angle) =
   base_radius * [cos(involute_angle) + involute_angle * sin(involute_angle),
@@ -6424,7 +6425,7 @@ module bevel_gear(m=2, n=20, h=10, cone_angle=45, bore_d=6, $fn=48) {
 `;
 
   const CAD_BUILTIN_THREADS = `
-// Metric Thread Library — RUN01 CAD Studio Built-in
+// Metric Thread Library  RUN01 CAD Studio Built-in
 // Generates ISO metric external and internal threads
 // pitch = thread pitch in mm (e.g. M6 = 1.0, M8 = 1.25, M10 = 1.5, M12 = 1.75, M16 = 2.0, M20 = 2.5)
 
@@ -6459,7 +6460,7 @@ module metric_thread(d=6, h=20, pitch=0, $fn=32) {
   }
 }
 
-// Internal (female) thread — use inside difference() to cut thread into a hole
+// Internal (female) thread  use inside difference() to cut thread into a hole
 module metric_thread_hole(d=6, h=20, pitch=0, $fn=32) {
   p = pitch > 0 ? pitch : metric_thread_pitch(d);
   r = d / 2;
@@ -6476,7 +6477,7 @@ module metric_thread_hole(d=6, h=20, pitch=0, $fn=32) {
 `;
 
   const CAD_BUILTIN_FASTENERS = `
-// Standard Fasteners Library — RUN01 CAD Studio Built-in
+// Standard Fasteners Library  RUN01 CAD Studio Built-in
 // ISO metric fasteners: bolts, nuts, washers, screws
 include </lib/threads.scad>;
 
@@ -6536,7 +6537,7 @@ module csk_screw(d=6, l=25, $fn=32) {
 `;
 
   const CAD_BUILTIN_BEARINGS = `
-// Rolling Element Bearings Library — RUN01 CAD Studio Built-in
+// Rolling Element Bearings Library  RUN01 CAD Studio Built-in
 // Standard ISO 15 deep groove ball bearings (6000 series)
 
 // 6000 series dimensions [bore_d, outer_d, width, chamfer]
@@ -6601,7 +6602,398 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
 }
 `;
 
-  // ── OpenSCAD WASM Loading ─────────────────────────────────────
+  // PCB Design Library -- RUN01 CAD Studio Built-in
+  // Accurate IPC-7351B component footprints and PCB stackup
+  const CAD_BUILTIN_PCB = `
+// PCB Design Library -- RUN01 CAD Studio
+// Standards: IPC-7351B footprints, IPC-2221 board specs, IEC 60063 component values
+// All dimensions in millimeters
+
+// ============================================================
+// PCB BOARD OUTLINE
+// ============================================================
+
+// Standard FR4 PCB board with copper layers and soldermask
+// w=width, d=depth, copper_oz=copper weight (1oz=35um), corner_r=fillet radius
+module pcb_board(w=100, d=80, copper_oz=1, corner_r=2, $fn=24) {
+  fr4_h    = 1.6;
+  copper_h = copper_oz * 0.035;
+  sm_h     = 0.025;
+  color([0.08, 0.35, 0.12])
+  hull() {
+    for(px=[corner_r, w-corner_r], py=[corner_r, d-corner_r])
+      translate([px, py, 0]) cylinder(r=corner_r, h=fr4_h, $fn=$fn);
+  }
+  color([0.80, 0.55, 0.20])
+  translate([0, 0, fr4_h])
+  hull() {
+    for(px=[corner_r, w-corner_r], py=[corner_r, d-corner_r])
+      translate([px, py, 0]) cylinder(r=corner_r, h=copper_h, $fn=$fn);
+  }
+  color([0.80, 0.55, 0.20])
+  translate([0, 0, -copper_h])
+  hull() {
+    for(px=[corner_r, w-corner_r], py=[corner_r, d-corner_r])
+      translate([px, py, 0]) cylinder(r=corner_r, h=copper_h, $fn=$fn);
+  }
+  color([0.05, 0.28, 0.10, 0.85])
+  translate([0, 0, fr4_h + copper_h])
+  hull() {
+    for(px=[corner_r, w-corner_r], py=[corner_r, d-corner_r])
+      translate([px, py, 0]) cylinder(r=corner_r, h=sm_h, $fn=$fn);
+  }
+}
+
+// PCB mounting hole (M3 non-plated)
+module pcb_mounting_hole(d=3.2, copper_ring=0.5, $fn=32) {
+  fr4_h = 1.6;
+  translate([0, 0, -0.05]) cylinder(d=d, h=fr4_h+0.1, $fn=$fn);
+  if(copper_ring > 0) {
+    color([0.80, 0.55, 0.20])
+    difference() {
+      translate([0,0,fr4_h]) cylinder(d=d + 2*copper_ring, h=0.035, $fn=$fn);
+      translate([0,0,fr4_h-0.05]) cylinder(d=d, h=0.1, $fn=$fn);
+    }
+  }
+}
+
+// Place 4-corner mounting holes
+module pcb_mounting_holes(w, d, margin=3.5, hole_d=3.2) {
+  for(px=[margin, w-margin], py=[margin, d-margin])
+    translate([px, py, 0]) pcb_mounting_hole(d=hole_d);
+}
+
+// ============================================================
+// PCB TRACES AND VIAS
+// ============================================================
+
+// Straight PCB trace
+// w=trace_width: 0.1mm min, 0.15mm fine, 0.25mm signal, 0.5-2mm power
+module pcb_trace(l=10, w=0.25, layer=1) {
+  z = layer > 0 ? 1.6 : -0.035;
+  color([0.80, 0.55, 0.20])
+  translate([0, -w/2, z]) cube([l, w, 0.035]);
+}
+
+// Via -- plated through-hole connecting layers
+// drill_d: 0.2mm micro-via, 0.3mm standard, 0.5mm+ large
+module pcb_via(drill_d=0.3, annular=0.15, $fn=16) {
+  fr4_h = 1.6;
+  copper_d = drill_d + 2*annular;
+  color([0.80, 0.55, 0.20]) {
+    translate([0,0,-0.035]) cylinder(d=drill_d, h=fr4_h+0.07, $fn=$fn);
+    translate([0,0,fr4_h]) cylinder(d=copper_d, h=0.035, $fn=$fn);
+    translate([0,0,-0.035]) cylinder(d=copper_d, h=0.035, $fn=$fn);
+  }
+}
+
+// Copper pour zone
+module pcb_copper_pour(w=10, d=10, layer=1) {
+  z = layer > 0 ? 1.6 : -0.035;
+  color([0.80, 0.55, 0.20, 0.7])
+  translate([0, 0, z]) cube([w, d, 0.035]);
+}
+
+// ============================================================
+// SMD PADS
+// ============================================================
+
+module smd_pad(pw=1.5, pd=1.8, layer=1) {
+  z = layer > 0 ? 1.6 : -0.035;
+  color([0.90, 0.70, 0.25])
+  translate([-pw/2, -pd/2, z]) cube([pw, pd, 0.035]);
+}
+
+module smd_pad_soldered(pw=1.5, pd=1.8, solder_h=0.12) {
+  smd_pad(pw, pd);
+  color([0.80, 0.80, 0.82])
+  translate([-pw/2, -pd/2, 1.635]) cube([pw, pd, solder_h]);
+}
+
+module pth_pad(drill_d=0.8, pad_d=1.6, $fn=24) {
+  fr4_h = 1.6;
+  translate([0,0,-0.05]) cylinder(d=drill_d, h=fr4_h+0.1, $fn=$fn);
+  color([0.90, 0.70, 0.25]) {
+    difference() {
+      translate([0,0,fr4_h]) cylinder(d=pad_d, h=0.035, $fn=$fn);
+      translate([0,0,fr4_h-0.05]) cylinder(d=drill_d, h=0.1, $fn=$fn);
+    }
+    difference() {
+      translate([0,0,-0.035]) cylinder(d=pad_d, h=0.035, $fn=$fn);
+      translate([0,0,-0.06]) cylinder(d=drill_d, h=0.1, $fn=$fn);
+    }
+  }
+}
+
+// ============================================================
+// SMD PASSIVE COMPONENTS (IEC 60063 / EIA case codes)
+// ============================================================
+
+// Case code dimensions [length, width, height]
+function smd_dims(code) =
+  code == "0201" ? [0.60, 0.30, 0.23] :
+  code == "0402" ? [1.00, 0.50, 0.35] :
+  code == "0603" ? [1.60, 0.80, 0.45] :
+  code == "0805" ? [2.00, 1.25, 0.50] :
+  code == "1206" ? [3.20, 1.60, 0.55] :
+  code == "1210" ? [3.20, 2.50, 0.55] :
+  code == "2512" ? [6.30, 3.20, 0.55] :
+  [1.60, 0.80, 0.45];
+
+// SMD resistor with body, end caps, pads
+module smd_resistor(case_code="0603") {
+  dims = smd_dims(case_code);
+  l=dims[0]; w=dims[1]; h=dims[2];
+  pw = l*0.3; pd = w*0.9;
+  color([0.85, 0.85, 0.80]) translate([-l/2,-w/2,1.6]) cube([l,w,h]);
+  color([0.80, 0.80, 0.82]) {
+    translate([-l/2,-w/2,1.6]) cube([pw,w,h]);
+    translate([l/2-pw,-w/2,1.6]) cube([pw,w,h]);
+  }
+  smd_pad_soldered(pw=pw*0.9, pd=pd);
+  translate([l-pw,0,0]) smd_pad_soldered(pw=pw*0.9, pd=pd);
+  color([0.3,0.3,0.3]) translate([-l*0.1,-w/2+0.05,1.6+h-0.02]) cube([l*0.2,w-0.1,0.02]);
+}
+
+// SMD MLCC capacitor
+module smd_capacitor(case_code="0603") {
+  dims = smd_dims(case_code);
+  l=dims[0]; w=dims[1]; h=dims[2]*0.9;
+  pw = l*0.3; pd = w*0.9;
+  color([0.92,0.88,0.75]) translate([-l/2,-w/2,1.6]) cube([l,w,h]);
+  color([0.80,0.80,0.82]) {
+    translate([-l/2,-w/2,1.6]) cube([pw,w,h]);
+    translate([l/2-pw,-w/2,1.6]) cube([pw,w,h]);
+  }
+  smd_pad_soldered(pw=pw*0.9, pd=pd);
+  translate([l-pw,0,0]) smd_pad_soldered(pw=pw*0.9, pd=pd);
+}
+
+// SMD electrolytic capacitor
+module smd_elco(d=6.3, h=7.7, pitch=2.2) {
+  color([0.50,0.50,0.55]) translate([0,0,1.6]) cylinder(d=d,h=h,$fn=32);
+  color([0.95,0.95,0.95]) translate([-d/2-0.1,-d/2,1.6]) cube([d*0.25,d,h*0.8]);
+  smd_pad_soldered(pw=1.5,pd=1.5);
+  translate([pitch,0,0]) smd_pad_soldered(pw=1.5,pd=1.5);
+}
+
+// SMD diode SOD-123
+module smd_diode_sod123() {
+  color([0.15,0.15,0.15]) translate([-1.8,-0.85,1.6]) cube([2.8,1.7,1.2]);
+  color([0.80,0.80,0.82]) translate([0.8,-0.85,1.6]) cube([0.5,1.7,1.2]);
+  smd_pad_soldered(pw=0.9,pd=1.4);
+  translate([2.7,0,0]) smd_pad_soldered(pw=0.9,pd=1.4);
+}
+
+// SMD LED (0805)
+module smd_led(color_rgb=[0.2,0.8,0.2]) {
+  color([0.85,0.85,0.80]) translate([-1.0,-0.625,1.6]) cube([2.0,1.25,0.8]);
+  color(color_rgb,0.7) translate([-0.6,-0.55,2.35]) cube([1.2,1.1,0.1]);
+  smd_pad_soldered(pw=0.7,pd=1.0);
+  translate([1.8,0,0]) smd_pad_soldered(pw=0.7,pd=1.0);
+}
+
+// ============================================================
+// SMD IC PACKAGES
+// ============================================================
+
+// SOT-23 (3-pin transistor / LDO)
+module sot23() {
+  color([0.15,0.15,0.15]) translate([-1.45,-0.65,1.6]) cube([2.9,1.3,1.0]);
+  color([0.80,0.80,0.82]) {
+    translate([-0.95,0.65,1.6]) cube([0.5,0.5,0.04]);
+    translate([0.45,0.65,1.6])  cube([0.5,0.5,0.04]);
+    translate([0,-1.15,1.6])    cube([0.5,0.5,0.04]);
+  }
+  translate([-0.95,0.9,0]) smd_pad_soldered(pw=0.6,pd=1.2);
+  translate([0.45,0.9,0])  smd_pad_soldered(pw=0.6,pd=1.2);
+  translate([0,-1.4,0])    smd_pad_soldered(pw=0.6,pd=1.2);
+}
+
+// SOIC-8 (8-pin, 1.27mm pitch)
+module soic8(pitch=1.27, body_w=3.9) {
+  body_l=pitch*4-0.5; body_h=1.75;
+  pw=0.6; pd=1.8; ow=body_w+2.0;
+  color([0.12,0.12,0.12]) translate([-body_l/2,-body_w/2,1.6]) cube([body_l,body_w,body_h]);
+  color([0.90,0.90,0.90]) translate([-body_l/2+0.3,-body_w/2+0.3,1.6+body_h]) cylinder(d=0.4,h=0.05,$fn=8);
+  color([0.80,0.80,0.82])
+  for(i=[0:3]) {
+    translate([-pitch*1.5+i*pitch,-ow/2,1.6]) cube([0.4,1.1,0.18]);
+    translate([-pitch*1.5+i*pitch, body_w/2,1.6]) cube([0.4,1.1,0.18]);
+  }
+  for(i=[0:3]) {
+    translate([-pitch*1.5+i*pitch,-body_w/2-1.2,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-pitch*1.5+i*pitch, body_w/2+1.2,0]) smd_pad_soldered(pw=pw,pd=pd);
+  }
+}
+
+// SOIC-16
+module soic16(pitch=1.27, body_w=3.9) {
+  body_l=pitch*8-0.5; body_h=1.75; pw=0.6; pd=1.8; ow=body_w+2.0;
+  color([0.12,0.12,0.12]) translate([-body_l/2,-body_w/2,1.6]) cube([body_l,body_w,body_h]);
+  color([0.90,0.90,0.90]) translate([-body_l/2+0.3,-body_w/2+0.3,1.6+body_h]) cylinder(d=0.4,h=0.05,$fn=8);
+  color([0.80,0.80,0.82])
+  for(i=[0:7]) {
+    translate([-pitch*3.5+i*pitch,-ow/2,1.6]) cube([0.4,1.1,0.18]);
+    translate([-pitch*3.5+i*pitch, body_w/2,1.6]) cube([0.4,1.1,0.18]);
+  }
+  for(i=[0:7]) {
+    translate([-pitch*3.5+i*pitch,-body_w/2-1.2,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-pitch*3.5+i*pitch, body_w/2+1.2,0]) smd_pad_soldered(pw=pw,pd=pd);
+  }
+}
+
+// QFP (Quad Flat Package): n_pins total, body_size in mm, pitch in mm
+module qfp(n_pins=44, body_size=10, pitch=0.8, body_h=1.4) {
+  pps = n_pins/4; span=(pps-1)*pitch;
+  pw=pitch*0.55; pd=1.5; ow=body_size+2.0;
+  color([0.12,0.12,0.12]) translate([-body_size/2,-body_size/2,1.6]) cube([body_size,body_size,body_h]);
+  color([0.90,0.90,0.90]) translate([-body_size/2+0.4,-body_size/2+0.4,1.6+body_h]) cylinder(d=0.5,h=0.05,$fn=8);
+  color([0.80,0.80,0.82])
+  for(i=[0:pps-1]) {
+    translate([-span/2+i*pitch,-ow/2,1.6]) cube([pitch*0.6,1.0,0.15]);
+    translate([-span/2+i*pitch, body_size/2,1.6]) cube([pitch*0.6,1.0,0.15]);
+    translate([-ow/2,-span/2+i*pitch,1.6]) cube([1.0,pitch*0.6,0.15]);
+    translate([body_size/2,-span/2+i*pitch,1.6]) cube([1.0,pitch*0.6,0.15]);
+  }
+  for(i=[0:pps-1]) {
+    translate([-span/2+i*pitch,-body_size/2-1.5,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-span/2+i*pitch, body_size/2+1.5,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-body_size/2-1.5,-span/2+i*pitch,0]) smd_pad_soldered(pw=pd,pd=pw);
+    translate([ body_size/2+1.5,-span/2+i*pitch,0]) smd_pad_soldered(pw=pd,pd=pw);
+  }
+}
+
+// QFN (Quad Flat No-lead)
+module qfn(n_pins=16, body_size=4, pitch=0.65, body_h=0.9) {
+  pps=n_pins/4; span=(pps-1)*pitch; pw=pitch*0.5; pd=0.7; ep=body_size-0.8;
+  color([0.12,0.12,0.12]) translate([-body_size/2,-body_size/2,1.6]) cube([body_size,body_size,body_h]);
+  color([0.90,0.70,0.25]) translate([-ep/2,-ep/2,1.6]) cube([ep,ep,0.035]);
+  for(i=[0:pps-1]) {
+    translate([-span/2+i*pitch,-body_size/2-0.35,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-span/2+i*pitch, body_size/2+0.35,0]) smd_pad_soldered(pw=pw,pd=pd);
+    translate([-body_size/2-0.35,-span/2+i*pitch,0]) smd_pad_soldered(pw=pd,pd=pw);
+    translate([ body_size/2+0.35,-span/2+i*pitch,0]) smd_pad_soldered(pw=pd,pd=pw);
+  }
+}
+
+// ============================================================
+// THROUGH-HOLE ICs
+// ============================================================
+
+// DIP IC: n_pins total, pitch=2.54, row_spacing=7.62 standard
+module dip_ic(n_pins=8, row_spacing=7.62, pitch=2.54, body_h=4.0) {
+  pps=n_pins/2; body_l=(pps-1)*pitch; body_w=row_spacing-1.5;
+  color([0.12,0.12,0.12]) translate([-body_l/2,-body_w/2,1.6]) cube([body_l,body_w,body_h]);
+  color([0.80,0.80,0.82])
+  for(i=[0:pps-1]) {
+    translate([-body_l/2+i*pitch,-row_spacing/2,-3.0]) cylinder(d=0.5,h=4.6,$fn=8);
+    translate([-body_l/2+i*pitch, row_spacing/2,-3.0]) cylinder(d=0.5,h=4.6,$fn=8);
+  }
+  for(i=[0:pps-1]) {
+    translate([-body_l/2+i*pitch,-row_spacing/2,0]) pth_pad(drill_d=0.8,pad_d=1.7);
+    translate([-body_l/2+i*pitch, row_spacing/2,0]) pth_pad(drill_d=0.8,pad_d=1.7);
+  }
+}
+
+// ============================================================
+// CONNECTORS
+// ============================================================
+
+// Pin header (2.54mm pitch)
+module pin_header(n=8, rows=1, $fn=8) {
+  pitch=2.54; bw=n*pitch-0.1; bd=rows*pitch;
+  color([0.12,0.12,0.12]) translate([-bw/2,-bd/2,1.6]) cube([bw,bd,2.5]);
+  color([0.80,0.80,0.82])
+  for(i=[0:n-1], r=[0:rows-1])
+    translate([-bw/2+0.5*pitch+i*pitch,-bd/2+0.5*pitch+r*pitch,-3.0]) cube([0.6,0.6,9.0]);
+  for(i=[0:n-1], r=[0:rows-1])
+    translate([-bw/2+0.5*pitch+i*pitch,-bd/2+0.5*pitch+r*pitch,0]) pth_pad(drill_d=1.0,pad_d=1.8);
+}
+
+// USB Type-C receptacle (SMD)
+module usb_type_c() {
+  color([0.75,0.75,0.78]) translate([-4.47,-3.675,1.6]) cube([8.94,7.35,3.26]);
+  color([0.10,0.10,0.12]) translate([-4.57,-3.2,2.1]) cube([1.5,6.4,2.4]);
+  for(y=[-2.89,2.89]) {
+    translate([-3.5,y,0]) smd_pad_soldered(pw=2.6,pd=1.2);
+    translate([ 2.5,y,0]) smd_pad_soldered(pw=2.6,pd=1.2);
+  }
+}
+
+// USB Micro-B receptacle
+module usb_micro_b() {
+  color([0.75,0.75,0.78]) translate([-4.0,-3.75,1.6]) cube([7.2,7.5,2.5]);
+  color([0.10,0.10,0.12]) translate([-4.1,-1.5,1.9]) cube([1.2,3.0,1.8]);
+  for(i=[-2:2]) translate([i*0.65,-3.75,0]) smd_pad_soldered(pw=0.5,pd=1.5);
+  for(x=[-3.5,2.5]) translate([x,0,0]) smd_pad_soldered(pw=1.4,pd=2.4);
+}
+
+// RJ45 ethernet
+module rj45() {
+  color([0.15,0.15,0.18]) translate([-8,-6.75,1.6]) cube([16,13.5,13.5]);
+  color([0.08,0.08,0.10]) translate([-6,-6.76,2.6]) cube([12,1,10]);
+  for(i=[0:7]) translate([-4.45+i*1.27,-6.0,0]) pth_pad(drill_d=1.0);
+  for(x=[-7.5,7.5]) translate([x,0,0]) pth_pad(drill_d=1.5,pad_d=2.5);
+}
+
+// ============================================================
+// CRYSTALS AND OSCILLATORS
+// ============================================================
+
+// SMD crystal (2-pad)
+module smd_crystal(case_code="3225") {
+  dims = case_code=="5032"?[5.0,3.2,1.1]:case_code=="2016"?[2.0,1.6,0.6]:[3.2,2.5,0.8];
+  l=dims[0]; w=dims[1]; h=dims[2];
+  color([0.75,0.75,0.78]) translate([-l/2,-w/2,1.6]) cube([l,w,h]);
+  smd_pad_soldered(pw=l*0.4,pd=w*0.9);
+  translate([l/2,0,0]) smd_pad_soldered(pw=l*0.4,pd=w*0.9);
+}
+
+// SMD oscillator (4-pad)
+module smd_oscillator() {
+  color([0.85,0.82,0.78]) translate([-1.6,-1.25,1.6]) cube([3.2,2.5,1.0]);
+  for(cx=[-0.8,0.8], cy=[-0.625,0.625]) translate([cx,cy,0]) smd_pad_soldered(pw=0.8,pd=0.8);
+}
+
+// ============================================================
+// POWER COMPONENTS
+// ============================================================
+
+// SMD inductor (shielded)
+module smd_inductor(case_code="0805") {
+  dims=smd_dims(case_code); l=dims[0]; w=dims[1]; h=dims[2]+0.5;
+  color([0.18,0.18,0.20]) translate([-l/2,-w/2,1.6]) cube([l,w,h]);
+  smd_pad_soldered(pw=l*0.35,pd=w*0.9);
+  translate([l/2,0,0]) smd_pad_soldered(pw=l*0.35,pd=w*0.9);
+}
+
+// TO-220 through-hole regulator
+module to220() {
+  color([0.12,0.12,0.12]) translate([-5,-3.2,1.6]) cube([10,4.4,4.5]);
+  color([0.75,0.75,0.78]) translate([-5,-3.2,6.1]) cube([10,4.4,0.8]);
+  color([0.80,0.80,0.82])
+  for(i=[-1,0,1]) translate([i*2.54,0,-3]) cylinder(d=0.7,h=4.6,$fn=8);
+  for(i=[-1,0,1]) translate([i*2.54,0,0]) pth_pad(drill_d=1.0,pad_d=1.8);
+}
+
+// ============================================================
+// FIDUCIALS AND SILK
+// ============================================================
+
+// Silkscreen label placeholder
+module silk_label(w=3, h=1.2) {
+  color([0.95,0.95,0.95,0.9]) translate([0,0,1.636]) cube([w,h,0.01]);
+}
+
+// Pick-and-place fiducial marker
+module fiducial(d=1.0, $fn=24) {
+  color([0.90,0.70,0.25]) translate([0,0,1.6]) cylinder(d=d,h=0.035,$fn=$fn);
+  color([0.08,0.35,0.12,0.5]) translate([0,0,1.635]) cylinder(d=d*2,h=0.025,$fn=$fn);
+}
+`;
+
+  //  OpenSCAD WASM Loading 
   // Tries openscad-wasm@0.3.0 (Manifold engine) first, falls back to 0.0.4
   async function ensureCreateOpenSCAD() {
     if (createOpenSCADFn) return createOpenSCADFn;
@@ -6611,7 +7003,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
       throw new Error('OpenSCAD WASM failed to load');
     }
     openscadLoading = true;
-    setStatus('Loading OpenSCAD WASM (Manifold engine)…');
+    setStatus('Loading OpenSCAD WASM (Manifold engine)');
     const cdnList = [OPENSCAD_CDN_PRIMARY, OPENSCAD_CDN_FALLBACK];
     let lastErr = null;
     for (const cdn of cdnList) {
@@ -6628,7 +7020,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
         return createOpenSCADFn;
       } catch (err) {
         lastErr = err;
-        setStatus(`Trying fallback WASM…`);
+        setStatus(`Trying fallback WASM`);
       }
     }
     openscadLoading = false;
@@ -6636,7 +7028,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     throw new Error(`OpenSCAD WASM load failed: ${lastErr?.message}`);
   }
 
-  // ── Inject mechanical libraries into WASM instance FS ─────────
+  //  Inject mechanical libraries into WASM instance FS 
   function injectLibrariesIntoFS(osc) {
     try {
       // Ensure /lib directory exists
@@ -6647,7 +7039,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     } catch (_) {}
   }
 
-  // ── Compile OpenSCAD to STL ───────────────────────────────────
+  //  Compile OpenSCAD to STL 
   async function compileScadToSTL(scadCode) {
     const createOpenSCAD = await ensureCreateOpenSCAD();
     let stderr = '';
@@ -6669,7 +7061,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
         // Try Manifold engine first (faster, better for complex geometry)
         osc.callMain(['/input.scad', '--enable=manifold', '-o', '/output.stl']);
       } catch (_) {
-        // Emscripten often throws on process.exit — ignore if STL was written
+        // Emscripten often throws on process.exit  ignore if STL was written
       }
 
       for (const path of ['/output.stl', 'output.stl']) {
@@ -6719,7 +7111,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     throw new Error('OpenSCAD compile failed:\n' + (stderr.trim() || 'Empty or invalid STL output'));
   }
 
-  // ── Modal open / close ────────────────────────────────────────
+  //  Modal open / close 
   function openCADModal() {
     cadModalOverlay.classList.remove('hidden');
     initThreeViewport();
@@ -6736,7 +7128,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     if (e.target === cadModalOverlay) closeCADModal();
   });
 
-  // ── Quick-prompt buttons ──────────────────────────────────────
+  //  Quick-prompt buttons 
   document.querySelectorAll('.cad-quick-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       cadPromptInput.value = btn.dataset.prompt || '';
@@ -6765,10 +7157,10 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     });
   }
 
-  // ── Three.js Viewport ─────────────────────────────────────────
+  //  Three.js Viewport 
   function initThreeViewport() {
     if (cadRenderer) return; // already initialized
-    if (!window.THREE) { cadStatusBar.textContent = 'Three.js not loaded — refresh and try again.'; return; }
+    if (!window.THREE) { cadStatusBar.textContent = 'Three.js not loaded  refresh and try again.'; return; }
 
     const THREE = window.THREE;
 
@@ -6801,7 +7193,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     floor.receiveShadow = true;
     cadScene.add(floor);
 
-    // ── 5-point studio lighting for realistic metal rendering ──
+    //  5-point studio lighting for realistic metal rendering 
     // Key light (main, warm white, casts shadows)
     const keyLight = new THREE.DirectionalLight(0xfff5e8, 2.0);
     keyLight.position.set(150, 200, 100);
@@ -6830,7 +7222,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     topLight.position.set(0, 300, 0);
     cadScene.add(topLight);
 
-    // Ambient (global fill — keeps shadows from going pitch black)
+    // Ambient (global fill  keeps shadows from going pitch black)
     const ambient = new THREE.AmbientLight(0x304060, 0.8);
     cadScene.add(ambient);
 
@@ -6838,7 +7230,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     const hemi = new THREE.HemisphereLight(0x405070, 0x1a1a2e, 0.4);
     cadScene.add(hemi);
 
-    // Orbit controls (inline — no import needed, Three.js is loaded globally)
+    // Orbit controls (inline  no import needed, Three.js is loaded globally)
     cadControls = initOrbitControls(cadCamera, cadRenderer.domElement);
 
     // Animate
@@ -6912,7 +7304,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     return { update: () => {}, reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); } };
   }
 
-  // ── STL Parser + Three.js mesh rendering ─────────────────────
+  //  STL Parser + Three.js mesh rendering 
   function loadSTLIntoViewport(stlBuffer, materialPreset) {
     if (!window.THREE || !cadScene) return;
     const THREE = window.THREE;
@@ -6971,9 +7363,9 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     cadScene.add(cadMesh);
 
     // Show dimension overlay in status bar
-    const dimStr = `${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)} mm`;
+    const dimStr = `${size.x.toFixed(1)}  ${size.y.toFixed(1)}  ${size.z.toFixed(1)} mm`;
     const triCount = (geometry.attributes.position.count / 3).toFixed(0);
-    setStatus(`✅ ${(stlBuffer.length / 1024).toFixed(0)} KB STL · ${triCount} triangles · ${dimStr}`);
+    setStatus(`[OK] ${(stlBuffer.length / 1024).toFixed(0)} KB STL  ${triCount} triangles  ${dimStr}`);
 
     // Hide placeholder
     if (cadViewportPlaceholder) cadViewportPlaceholder.style.display = 'none';
@@ -7048,7 +7440,7 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     return geometry;
   }
 
-  // ── AI Two-Stage CAD Generation ───────────────────────────────
+  //  AI Two-Stage CAD Generation 
   async function generateCAD(revisionInstruction) {
     const prompt = (typeof revisionInstruction === 'string' && revisionInstruction.trim())
       ? revisionInstruction.trim()
@@ -7056,21 +7448,21 @@ module bearing_housing(bearing_code=6204, wall=5, $fn=48) {
     if (!prompt) { cadPromptInput.focus(); return; }
 
     btnCadGenerate.disabled = true;
-    setStatus('⏳ Stage 1: Generating CAD specification…');
+    setStatus('Stage 1: Generating CAD specification');
     // Only echo the short user-facing prompt in chat (not the full revision context blob)
     const chatPrompt = cadPromptInput.value.trim() || prompt.split('\n').pop() || prompt;
     if (!revisionInstruction || typeof revisionInstruction !== 'string' || revisionInstruction === chatPrompt) {
       appendChatMsg('user', chatPrompt);
     }
 
-    const specSystemPrompt = `You are a senior mechanical engineer and CAD specialist with 20+ years of experience in automotive, aerospace, and industrial design.
-When the user describes a 3D object or mechanical assembly, you MUST respond with ONLY valid JSON — no markdown, no explanation, no code fences.
+    const specSystemPrompt = `You are a senior mechanical and electronics engineer and CAD specialist with 20+ years of experience in automotive, aerospace, industrial design, and PCB/mechatronics engineering.
+When the user describes a 3D object, mechanical assembly, or circuit board, you MUST respond with ONLY valid JSON  no markdown, no explanation, no code fences.
 
 Use this exact schema:
 {
   "name": "snake_case_identifier",
   "title": "Human Readable Title",
-  "type": "mechanical|consumer|architectural|structural",
+  "type": "mechanical|consumer|architectural|structural|pcb",
   "units": "mm",
   "parameters": {
     "param_name": <number>
@@ -7078,19 +7470,20 @@ Use this exact schema:
   "parts": ["list of discrete parts in the assembly"],
   "features": ["list of all geometric features"],
   "materials": {"part_name": "material"},
-  "standards": ["ISO 286", "DIN 931"],
+  "standards": ["ISO 286", "DIN 931", "IPC-7351B"],
   "constraints": ["geometric validity rules"],
-  "libraries": ["gears.scad", "threads.scad", "fasteners.scad", "bearings.scad"]
+  "libraries": ["gears.scad", "threads.scad", "fasteners.scad", "bearings.scad", "pcb.scad"]
 }
 
-MECHANICAL ENGINEERING RULES (mandatory):
-- Apply realistic ISO/ANSI dimensions. For gears: use standard modules (m=1, 1.5, 2, 2.5, 3, 4, 5). For threads: use standard pitches (M6×1.0, M8×1.25, M10×1.5, M12×1.75). For bearings: use 6000-series (6004, 6205, 6206, 6207, 6208).
+ENGINEERING RULES (mandatory):
+- Apply realistic ISO/ANSI/IPC dimensions. For gears: use standard modules (m=1, 1.5, 2, 2.5, 3, 4, 5). For threads: use standard pitches (M6x1.0, M8x1.25, M10x1.5, M12x1.75). For bearings: use 6000-series (6004, 6205, 6206, 6207, 6208).
+- For PCBs / circuit boards: standard FR4 thickness (1.6mm standard, 0.8mm thin). Standard boards: Arduino Uno (68.58x53.34mm), Raspberry Pi HAT (65x56mm), Eurocard (100x160mm) or custom. Traces: 0.25mm signal, 0.5-2mm power/ground. Component footprints follow IPC-7351B (0402, 0603, 0805, 1206, SOT-23, SOIC-8/16, QFP, QFN). Connectors: USB-C, 2.54mm pin headers. Place M2.5/M3 mounting holes at corners.
 - Apply correct fits and tolerances: shaft-to-bore H7/g6 clearance fit (shaft = nominal - 0.01 to -0.029mm for M20), press fits for bearings (H7 hole = +0/+0.021mm for 20mm bore), interference fits for hubs.
 - For gears: center_distance = m*(n1+n2)/2, pitch_circle = m*n, addendum = 1*m, dedendum = 1.25*m.
 - For car gearboxes: input shaft 20-35mm dia, output shaft 25-40mm dia, gear module 2-3, face width 20-35mm, housing wall 8-12mm, typical ratios: 1st=3.5:1, 2nd=2.0:1, 3rd=1.3:1, 4th=1.0:1, 5th=0.75:1, reverse=3.8:1.
-- For bolted joints: use M6-M16 bolts for structural joints, bolt circle diameter 1.5-2.5× flange bore.
+- For bolted joints: use M6-M16 bolts for structural joints, bolt circle diameter 1.5-2.5 flange bore.
 - Use 8-20 parameters for complex assemblies; must cover all critical dimensions.
-- "libraries" field: list which of these built-in libs to use: gears.scad, threads.scad, fasteners.scad, bearings.scad.
+- "libraries" field: list which of these built-in libs to use: gears.scad, threads.scad, fasteners.scad, bearings.scad, pcb.scad.
 Output ONLY the JSON object. No other text.`;
 
     let specJson = null;
@@ -7105,38 +7498,40 @@ Output ONLY the JSON object. No other text.`;
       specJson = JSON.parse(jsonMatch[0]);
     } catch (err) {
       setStatus(`Stage 1 failed: ${err.message}`);
-      appendChatMsg('assistant', `❌ Could not generate design specification: ${err.message}`, true);
+      appendChatMsg('assistant', `[ERROR] Could not generate design specification: ${err.message}`, true);
       btnCadGenerate.disabled = false;
       return;
     }
 
     currentSpec = specJson;
-    setStatus('⏳ Stage 2: Generating OpenSCAD code…');
+    setStatus('Stage 2: Generating OpenSCAD code');
 
-    const codeSystemPrompt = `You are a master OpenSCAD engineer specializing in complex mechanical assemblies, automotive components, architectural structures, and precision mechanisms.
+    const codeSystemPrompt = `You are a master OpenSCAD engineer specializing in complex mechanical assemblies, automotive components, architectural structures, precision mechanisms, and circuit board (PCB) designs.
 
-You have access to these pre-loaded libraries (already in WASM virtual FS — use include to call them):
+You have access to these pre-loaded libraries (already in WASM virtual FS  use include to call them):
   include </lib/gears.scad>;        // gear(m, n, h, pa, bore_d), helical_gear(), rack(), bevel_gear()
   include </lib/threads.scad>;      // metric_thread(d, h), metric_thread_hole(d, h), metric_thread_pitch(d)
   include </lib/fasteners.scad>;    // hex_bolt(d, l), hex_nut(d), washer(d), socket_head_screw(d, l), csk_screw(d, l)
   include </lib/bearings.scad>;     // ball_bearing(bearing_code), bearing_housing(bearing_code, wall)
+  include </lib/pcb.scad>;          // pcb_board(), pcb_trace(), pcb_via(), smd_resistor(), smd_capacitor(), smd_elco(), smd_diode_sod123(), smd_led(), sot23(), soic8(), soic16(), qfp(), qfn(), dip_ic(), pin_header(), usb_type_c(), usb_micro_b(), rj45(), to220(), smd_crystal(), smd_inductor(), fiducial(), silk_label()
 
 MANDATORY CODE RULES:
 1. Output ONLY raw OpenSCAD code. No markdown fences, no prose. The first line must be code.
 2. Declare ALL parameters at the very top with realistic ISO/engineering values and comments.
-3. Structure as modules — one module per part/component. Call main assembly at the very bottom.
+3. Structure as modules  one module per part/component. Call main assembly at the very bottom.
 4. ALWAYS use $fn=64 for precision shafts/bores, $fn=48 for housings, $fn=32 for small features.
 5. For gears: ALWAYS use the gear() module from /lib/gears.scad. Set m (module) to standard values: 1, 1.5, 2, 2.5, 3.
 6. For bolts/nuts/screws: ALWAYS use hex_bolt(), socket_head_screw() etc from /lib/fasteners.scad.
 7. For bearings: ALWAYS use ball_bearing(6204) etc from /lib/bearings.scad.
 8. For threads: ALWAYS use metric_thread() and metric_thread_hole() from /lib/threads.scad.
-9. CSG manifold rules: extend all boolean cutters by 0.1mm beyond surfaces (use -0.05 offset + length+0.1).
-10. Multi-part assemblies: add explode_factor=0 parameter. When explode_factor>0, translate parts outward for exploded view.
-11. Add // [MATERIAL: steel] // [MATERIAL: aluminum] // [MATERIAL: rubber] comments on each module for renderer.
-12. Realistic proportions are non-negotiable. A car gearbox housing is 300-400mm long, M20 bolt has 30mm head.
-13. For large assemblies (gearbox, engine, etc.): produce a complete working assembly with ALL parts — housing, shafts, gears, bearings, seals, fasteners. Do NOT simplify by omitting parts.
-14. NEVER produce hollow-geometry or non-manifold faces. Use difference() with 0.1mm extensions on all cutouts.
-15. Do NOT write: "Prefer simple geometry". Complex geometry is REQUIRED for accurate mechanical representation.`;
+9. For PCBs / circuit boards: ALWAYS use include </lib/pcb.scad>;. Start with pcb_board(length, width, thickness). Place components using smd_resistor(), smd_capacitor(), soic8(), qfp(), qfn(), dip_ic(), pin_header(), usb_type_c() etc. Position all components and traces on the top surface (z=thickness). Route signals using pcb_trace() and pcb_via(). Include M2.5/M3 mounting holes and fiducials for pick-and-place.
+10. CSG manifold rules: extend all boolean cutters by 0.1mm beyond surfaces (use -0.05 offset + length+0.1).
+11. Multi-part assemblies: add explode_factor=0 parameter. When explode_factor>0, translate parts outward for exploded view.
+12. Add // [MATERIAL: steel] // [MATERIAL: aluminum] // [MATERIAL: rubber] // [MATERIAL: pcb_fr4] comments on each module for renderer.
+13. Realistic proportions are non-negotiable. A car gearbox housing is 300-400mm long, M20 bolt has 30mm head.
+14. For large assemblies (gearbox, engine, etc.): produce a complete working assembly with ALL parts  housing, shafts, gears, bearings, seals, fasteners. Do NOT simplify by omitting parts.
+15. NEVER produce hollow-geometry or non-manifold faces. Use difference() with 0.1mm extensions on all cutouts.
+16. Do NOT write: "Prefer simple geometry". Complex geometry is REQUIRED for accurate mechanical and electronic representation.`;
 
     const codeUserMsg = `Mechanical Specification:\n${JSON.stringify(specJson, null, 2)}\n\nGenerate complete, production-quality OpenSCAD code for this assembly. Include all parts listed in the spec. Use library modules where applicable. Start with include statements for needed libraries, then parameters, then modules, then the final assembly call.`;
 
@@ -7151,7 +7546,7 @@ MANDATORY CODE RULES:
       if (!scadCode) throw new Error('AI produced empty code');
     } catch (err) {
       setStatus(`Stage 2 failed: ${err.message}`);
-      appendChatMsg('assistant', `❌ Could not generate OpenSCAD code: ${err.message}`, true);
+      appendChatMsg('assistant', `[ERROR] Could not generate OpenSCAD code: ${err.message}`, true);
       btnCadGenerate.disabled = false;
       return;
     }
@@ -7161,12 +7556,12 @@ MANDATORY CODE RULES:
 
     const paramsSummary = Object.entries(specJson.parameters || {})
       .map(([k, v]) => `${k}: ${v} ${specJson.units || 'mm'}`)
-      .join(' · ');
+      .join('  ');
     appendChatMsg('assistant',
-      `✅ **${specJson.title || specJson.name}** generated.\n\n` +
+      `[OK] **${specJson.title || specJson.name}** generated.\n\n` +
       `**Parameters:** ${paramsSummary}\n\n` +
       `**Features:** ${(specJson.features || []).join(', ')}\n\n` +
-      `Rendering 3D preview…`
+      `Rendering 3D preview`
     );
 
     renderParamControls(specJson.parameters || {}, specJson.units || 'mm');
@@ -7184,7 +7579,7 @@ MANDATORY CODE RULES:
     cadPromptInput.value = '';
   }
 
-  // ── Autonomous CAD Self-Healing Loop Class ────────────────────
+  //  Autonomous CAD Self-Healing Loop Class 
   class CADAutonomousRepairLoop {
     constructor(options = {}) {
       this.maxIterations = options.maxIterations || 4;
@@ -7218,7 +7613,7 @@ MANDATORY CODE RULES:
 
       this.statusTextEl = document.createElement('span');
       this.statusTextEl.className = 'ai-loop-status-text';
-      this.statusTextEl.textContent = 'Active Control: Compiling OpenSCAD WASM…';
+      this.statusTextEl.textContent = 'Active Control: Compiling OpenSCAD WASM';
 
       left.appendChild(this.badgeEl);
       left.appendChild(this.statusTextEl);
@@ -7276,7 +7671,7 @@ MANDATORY CODE RULES:
       if (!this.stepsEl) return;
       const sum = document.createElement('div');
       sum.className = 'ai-loop-summary';
-      sum.innerHTML = `<span>✓</span><span>${text}</span>`;
+      sum.innerHTML = `<span>[DONE]</span><span>${text}</span>`;
       this.stepsEl.appendChild(sum);
       if (this.chatContainer) {
         this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
@@ -7376,7 +7771,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         signal: this.currentAbortController.signal,
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: 'You are an authoritative OpenSCAD WASM self-healing repair engineer in RUN01. Fix compile, syntax, undefined variable, or manifold errors with surgical precision to guarantee clean WASM rendering with 0 errors. The WASM virtual FS has these pre-loaded libraries available: /lib/gears.scad (gear, helical_gear, rack, bevel_gear), /lib/threads.scad (metric_thread, metric_thread_hole), /lib/fasteners.scad (hex_bolt, hex_nut, washer, socket_head_screw, csk_screw), /lib/bearings.scad (ball_bearing, bearing_housing). If errors are caused by missing modules, replace manual implementations with these library calls.' },
+            { role: 'system', content: 'You are an authoritative OpenSCAD WASM self-healing repair engineer in RUN01. Fix compile, syntax, undefined variable, or manifold errors with surgical precision to guarantee clean WASM rendering with 0 errors. The WASM virtual FS has these pre-loaded libraries available: /lib/gears.scad (gear, helical_gear, rack, bevel_gear), /lib/threads.scad (metric_thread, metric_thread_hole), /lib/fasteners.scad (hex_bolt, hex_nut, washer, socket_head_screw, csk_screw), /lib/bearings.scad (ball_bearing, bearing_housing), /lib/pcb.scad (pcb_board, pcb_trace, pcb_via, smd_resistor, smd_capacitor, soic8, soic16, qfp, qfn, dip_ic, pin_header, usb_type_c, to220, fiducial). If errors are caused by missing modules, replace manual implementations with these library calls.' },
             { role: 'user', content: prompt }
           ],
           model: this.model,
@@ -7432,21 +7827,21 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const initialApply = this.applyCodeOrEdit(initialCode);
         if (initialApply.applied) {
           if (initialApply.type === 'surgical') {
-            this.addStep('🔧', `Applied ${initialApply.count} surgical patch(es) to OpenSCAD source.`, 'active');
+            this.addStep('[FIX]', `Applied ${initialApply.count} surgical patch(es) to OpenSCAD source.`, 'active');
           } else {
-            this.addStep('📝', 'Injected OpenSCAD 3D model source code into editor.', 'active');
+            this.addStep('[CODE]', 'Injected OpenSCAD 3D model source code into editor.', 'active');
           }
         } else {
-          this.addStep('ℹ️', 'Reading active OpenSCAD editor source for verification…', 'active');
+          this.addStep('[INFO]', 'Reading active OpenSCAD editor source for verification', 'active');
         }
       }
 
       while (this.isActive && !this.isAborted) {
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Compiling with OpenSCAD WASM…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration}/${this.maxIterations}: Compiling with OpenSCAD WASM`;
         }
-        setStatus(`⏳ Compiling with OpenSCAD WASM… (Attempt #${this.currentIteration})`);
-        this.addStep('⚡', `Compiling in OpenSCAD WASM (Attempt #${this.currentIteration})…`, 'active');
+        setStatus(`Compiling with OpenSCAD WASM (Attempt #${this.currentIteration})`);
+        this.addStep('[COMPILE]', `Compiling in OpenSCAD WASM (Attempt #${this.currentIteration})`, 'active');
 
         let stlData = null;
         let compileError = null;
@@ -7467,15 +7862,15 @@ If extensive structural rewriting is required, output the complete corrected \`\
         if (stlData && !compileError) {
           loadSTLIntoViewport(stlData);
           const sizeKb = (stlData.length / 1024).toFixed(0);
-          setStatus(`✅ Rendered ${sizeKb} KB STL (0 Errors)`);
+          setStatus(`[OK] Rendered ${sizeKb} KB STL (0 Errors)`);
           this.badgeEl.className = 'ai-loop-badge';
-          this.badgeEl.textContent = '✓ 0 ERRORS';
+          this.badgeEl.textContent = '[DONE] 0 ERRORS';
           if (this.statusTextEl) {
             this.statusTextEl.textContent = `Clean OpenSCAD WASM Compile (0 Errors in ${sizeKb} KB STL)`;
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
 
-          this.addStep('✓', `WASM compilation successful with 0 errors. ${sizeKb} KB STL generated.`, 'success');
+          this.addStep('[DONE]', `WASM compilation successful with 0 errors. ${sizeKb} KB STL generated.`, 'success');
           this.addSummary(`CAD Studio autonomous self-healing complete. 0 errors.`);
           this.cleanup();
           return;
@@ -7485,7 +7880,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const parsedErr = parseOpenSCADError(compileError ? compileError.message : 'Unknown compile error', codeToCompile);
         const lineText = parsedErr.errorLine ? ` (Line ${parsedErr.errorLine})` : '';
 
-        this.addStep('⚠️', `Compile error in Run #${this.currentIteration}: <strong>${parsedErr.errorType}</strong>${lineText}`, 'warning', parsedErr.snippet || parsedErr.cleanMessage);
+        this.addStep('[WARN]', `Compile error in Run #${this.currentIteration}: <strong>${parsedErr.errorType}</strong>${lineText}`, 'warning', parsedErr.snippet || parsedErr.cleanMessage);
         showCompileError(parsedErr.cleanMessage || compileError.message);
 
         if (this.currentIteration >= this.maxIterations) {
@@ -7495,7 +7890,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
             this.statusTextEl.textContent = `Halted after ${this.maxIterations} attempts`;
           }
           if (this.stopBtn) this.stopBtn.style.display = 'none';
-          this.addStep('🛑', `Maximum repair attempts reached. Editor contains latest code for manual adjustment.`, 'warning');
+          this.addStep('[STOP]', `Maximum repair attempts reached. Editor contains latest code for manual adjustment.`, 'warning');
           this.cleanup();
           return;
         }
@@ -7504,16 +7899,16 @@ If extensive structural rewriting is required, output the complete corrected \`\
         this.badgeEl.className = 'ai-loop-badge healing';
         this.badgeEl.textContent = 'HEALING';
         if (this.statusTextEl) {
-          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix…`;
+          this.statusTextEl.textContent = `Attempt ${this.currentIteration + 1}/${this.maxIterations}: Synthesizing surgical fix`;
         }
-        this.addStep('🔧', `AI analyzing OpenSCAD error and synthesizing surgical fix…`, 'active');
+        this.addStep('[FIX]', `AI analyzing OpenSCAD error and synthesizing surgical fix`, 'active');
 
         let repairResponse = '';
         try {
           repairResponse = await this.requestRepair(parsedErr);
         } catch (repairErr) {
           if (this.isAborted) { this.cleanup(); return; }
-          this.addStep('❌', `AI repair request failed: ${repairErr.message}`, 'warning');
+          this.addStep('[ERROR]', `AI repair request failed: ${repairErr.message}`, 'warning');
           this.cleanup();
           return;
         }
@@ -7523,12 +7918,12 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const repairApply = this.applyCodeOrEdit(repairResponse);
         if (repairApply.applied) {
           if (repairApply.type === 'surgical') {
-            this.addStep('✓', `Applied surgical patch to OpenSCAD source editor.`, 'active');
+            this.addStep('[DONE]', `Applied surgical patch to OpenSCAD source editor.`, 'active');
           } else {
-            this.addStep('✓', `Updated OpenSCAD editor with restructured model geometry.`, 'active');
+            this.addStep('[DONE]', `Updated OpenSCAD editor with restructured model geometry.`, 'active');
           }
         } else {
-          this.addStep('⚠️', `Retrying compilation with current source…`, 'warning');
+          this.addStep('[WARN]', `Retrying compilation with current source`, 'warning');
         }
 
         this.currentIteration++;
@@ -7551,7 +7946,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         this.statusTextEl.textContent = 'CAD Auto-Heal Stopped by User';
       }
       if (this.stopBtn) this.stopBtn.style.display = 'none';
-      this.addStep('🛑', 'CAD healing loop aborted by user.', 'warning');
+      this.addStep('[STOP]', 'CAD healing loop aborted by user.', 'warning');
       this.cleanup();
     }
 
@@ -7573,7 +7968,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
       </div>`;
   }
 
-  // ── Parameter Controls ────────────────────────────────────────
+  //  Parameter Controls 
   function renderParamControls(params, units) {
     if (!cadParamsGrid) return;
     cadParamsGrid.innerHTML = '';
@@ -7641,19 +8036,19 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
-  // ── Preview from source editor ────────────────────────────────
+  //  Preview from source editor 
   if (btnCadRunSource) {
     btnCadRunSource.addEventListener('click', async () => {
       const code = cadSourceEditor.value.trim();
       if (!code) return;
       currentScad = code;
-      setStatus('⏳ Compiling with OpenSCAD WASM…');
+      setStatus('Compiling with OpenSCAD WASM');
       try {
         const stlData = await compileScadToSTL(code);
         loadSTLIntoViewport(stlData);
-        setStatus(`✅ Compiled cleanly — ${(stlData.length / 1024).toFixed(0)} KB STL (0 Errors)`);
+        setStatus(`[OK] Compiled cleanly  ${(stlData.length / 1024).toFixed(0)} KB STL (0 Errors)`);
       } catch (err) {
-        setStatus('⚠️ Compile error — engaging AI auto-healing loop…');
+        setStatus('[WARN] Compile error  engaging AI auto-healing loop');
         if (activeCADLoop && activeCADLoop.isActive) {
           activeCADLoop.abort();
         }
@@ -7683,7 +8078,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   };
 
 
-  // ── Viewport controls ─────────────────────────────────────────
+  //  Viewport controls 
   if (btnCadWireframe) {
     btnCadWireframe.addEventListener('click', () => {
       if (!cadMesh || !window.THREE) return;
@@ -7699,7 +8094,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
-  // ── Copy source ───────────────────────────────────────────────
+  //  Copy source 
   if (btnCadCopySource) {
     btnCadCopySource.addEventListener('click', () => {
       navigator.clipboard.writeText(cadSourceEditor.value || '').then(() => {
@@ -7709,7 +8104,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
-  // ── File downloads ────────────────────────────────────────────
+  //  File downloads 
   function downloadText(filename, text) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
@@ -7733,28 +8128,28 @@ If extensive structural rewriting is required, output the complete corrected \`\
   if (btnCadDownloadScad) {
     btnCadDownloadScad.addEventListener('click', () => {
       const code = cadSourceEditor.value || currentScad;
-      if (!code) { cadStatusBar.textContent = 'No source to download — generate a model first.'; return; }
+      if (!code) { cadStatusBar.textContent = 'No source to download  generate a model first.'; return; }
       downloadText(`${modelBaseName()}.scad`, code);
     });
   }
 
   if (btnCadDownloadStl) {
     btnCadDownloadStl.addEventListener('click', () => {
-      if (!currentStlData) { cadStatusBar.textContent = 'No STL — compile with ▶ Preview first.'; return; }
+      if (!currentStlData) { cadStatusBar.textContent = 'No STL  compile with Preview first.'; return; }
       downloadBinary(`${modelBaseName()}.stl`, currentStlData);
     });
   }
 
-  // ── OBJ Export — convert current Three.js mesh to Wavefront OBJ ──
+  //  OBJ Export  convert current Three.js mesh to Wavefront OBJ 
   const btnCadDownloadObj = document.getElementById('btnCadDownloadObj');
   if (btnCadDownloadObj) {
     btnCadDownloadObj.addEventListener('click', () => {
-      if (!cadMesh || !window.THREE) { setStatus('No mesh — compile with ▶ Preview first.'); return; }
+      if (!cadMesh || !window.THREE) { setStatus('No mesh  compile with Preview first.'); return; }
       const geo = cadMesh.geometry;
       const pos = geo.attributes.position;
       const nrm = geo.attributes.normal;
       if (!pos) { setStatus('No geometry to export.'); return; }
-      let obj = `# RUN01 CAD Studio — OBJ Export\n# Model: ${modelBaseName()}\n# Triangles: ${pos.count / 3}\no ${modelBaseName()}\n`;
+      let obj = `# RUN01 CAD Studio  OBJ Export\n# Model: ${modelBaseName()}\n# Triangles: ${pos.count / 3}\no ${modelBaseName()}\n`;
       for (let i = 0; i < pos.count; i++) {
         const scale = cadMesh.scale.x;
         obj += `v ${(pos.getX(i) * scale + cadMesh.position.x).toFixed(4)} ${(pos.getY(i) * scale + cadMesh.position.y).toFixed(4)} ${(pos.getZ(i) * scale + cadMesh.position.z).toFixed(4)}\n`;
@@ -7772,18 +8167,18 @@ If extensive structural rewriting is required, output the complete corrected \`\
         }
       }
       downloadText(`${modelBaseName()}.obj`, obj);
-      setStatus(`✅ Exported ${(obj.length / 1024).toFixed(0)} KB OBJ`);
+      setStatus(`[OK] Exported ${(obj.length / 1024).toFixed(0)} KB OBJ`);
     });
   }
 
   if (btnCadDownloadJson) {
     btnCadDownloadJson.addEventListener('click', () => {
-      if (!currentSpec) { cadStatusBar.textContent = 'No design spec — generate a model first.'; return; }
+      if (!currentSpec) { cadStatusBar.textContent = 'No design spec  generate a model first.'; return; }
       downloadText(`${modelBaseName()}.json`, JSON.stringify(currentSpec, null, 2));
     });
   }
 
-  // ── IndexedDB Project Storage ─────────────────────────────────
+  //  IndexedDB Project Storage 
   const DB_NAME = 'run01_cad_projects';
   const DB_VER  = 1;
   const STORE   = 'projects';
@@ -7799,7 +8194,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   if (btnCadSaveProject) {
     btnCadSaveProject.addEventListener('click', async () => {
-      if (!currentSpec && !currentScad) { cadStatusBar.textContent = 'Nothing to save — generate a model first.'; return; }
+      if (!currentSpec && !currentScad) { cadStatusBar.textContent = 'Nothing to save  generate a model first.'; return; }
       const name = currentSpec?.title || currentSpec?.name || 'Untitled';
       const project = {
         id:           `proj_${Date.now()}`,
@@ -7814,9 +8209,9 @@ If extensive structural rewriting is required, output the complete corrected \`\
         const db = await openDB();
         const tx = db.transaction(STORE, 'readwrite');
         tx.objectStore(STORE).put(project);
-        cadStatusBar.textContent = `✅ Saved "${name}" to browser storage`;
+        cadStatusBar.textContent = `[OK] Saved "${name}" to browser storage`;
       } catch (err) {
-        cadStatusBar.textContent = `❌ Save failed: ${err.message}`;
+        cadStatusBar.textContent = `[ERROR] Save failed: ${err.message}`;
       }
     });
   }
@@ -7849,10 +8244,10 @@ If extensive structural rewriting is required, output the complete corrected \`\
         if (currentSpec && currentSpec.parameters) {
           renderParamControls(currentSpec.parameters, currentSpec.units || 'mm');
         }
-        cadStatusBar.textContent = `Opened "${project.name}" — click ▶ Preview to compile`;
-        appendChatMsg('assistant', `📂 Opened project: **${project.name}**\n\nSource loaded into editor. Click **▶ Preview** to compile.`);
+        cadStatusBar.textContent = `Opened "${project.name}"  click Preview to compile`;
+        appendChatMsg('assistant', `[OPEN] Opened project: **${project.name}**\n\nSource loaded into editor. Click **Preview** to compile.`);
       } catch (err) {
-        cadStatusBar.textContent = `❌ Open failed: ${err.message}`;
+        cadStatusBar.textContent = `[ERROR] Open failed: ${err.message}`;
       }
     });
   }
@@ -7865,11 +8260,11 @@ If extensive structural rewriting is required, output the complete corrected \`\
       if (cadMesh && cadScene) { cadScene.remove(cadMesh); cadMesh.geometry.dispose(); cadMesh.material.dispose(); cadMesh = null; }
       if (cadViewportPlaceholder) { cadViewportPlaceholder.style.display = 'flex'; cadViewportPlaceholder.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><p>3D model will appear here</p>`; }
       cadChatMessages.innerHTML = `<div class="cad-chat-msg cad-chat-system"><div class="cad-chat-bubble"><strong>AI CAD Studio</strong><br>New project. Describe the 3D object you want to create.</div></div>`;
-      cadStatusBar.textContent = 'Ready — enter a description and click Generate';
+      cadStatusBar.textContent = 'Ready  enter a description and click Generate';
     });
   }
 
-  // ── Follow-up revision support ────────────────────────────────
+  //  Follow-up revision support 
   // Users can type follow-up instructions like "Make it 20mm wider"
   // Re-run full two-stage generation with existing design as context.
   async function generateCADWithRevision() {
@@ -7900,7 +8295,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     }
   });
 
-  // ── Chat helpers ──────────────────────────────────────────────
+  //  Chat helpers 
   function appendChatMsg(role, text, isError = false) {
     if (!cadChatMessages) return;
     const msg = document.createElement('div');
@@ -7923,14 +8318,14 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
 })();
 
-// ══════════════════════════════════════════════════════════════════════════════
-// VISION STUDIO — Video Computer Vision Panel
-// Browser-first: ONNX Runtime Web (YOLOv8) — zero server cost
-// ══════════════════════════════════════════════════════════════════════════════
+// 
+// VISION STUDIO  Video Computer Vision Panel
+// Browser-first: ONNX Runtime Web (YOLOv8)  zero server cost
+// 
 (function initVisionStudio() {
   'use strict';
 
-  // ── Palette definitions ──────────────────────────────────────────────────────
+  //  Palette definitions 
   const PALETTES = {
     default: ['#9B5CF6','#F97316','#EC4899','#10B981','#3B82F6','#EAB308','#EF4444','#06B6D4','#8B5CF6','#84CC16','#F59E0B','#14B8A6'],
     neon:    ['#FF00FF','#00FFFF','#00FF00','#FFFF00','#FF6600','#FF0099','#00FF99','#9900FF','#0099FF','#FF9900','#FF0033','#33FF00'],
@@ -7958,7 +8353,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     pose:    { nano: 'https://huggingface.co/onnx-community/yolov8n-pose/resolve/main/yolov8n-pose.onnx', small: 'https://huggingface.co/onnx-community/yolov8s-pose/resolve/main/yolov8s-pose.onnx', medium: 'https://huggingface.co/onnx-community/yolov8m-pose/resolve/main/yolov8m-pose.onnx' },
   };
 
-  // ── State ────────────────────────────────────────────────────────────────────
+  //  State 
   let videoUrl = null;
   let cameraStream = null;
   let isCameraActive = false;
@@ -7977,7 +8372,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
   let isProcessing = false;
   let isPlaying = false;
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────────
+  //  DOM refs 
   const overlay       = document.getElementById('visionModalOverlay');
   const btnOpen       = document.getElementById('btnVision');
   const btnClose      = document.getElementById('btnCloseVisionModal');
@@ -8030,7 +8425,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   if (!overlay || !btnOpen) return; // panel not in DOM
 
-  // ── Open / Close ─────────────────────────────────────────────────────────────
+  //  Open / Close 
   function openVisionModal() { overlay.classList.remove('hidden'); }
   function closeVisionModal() {
     overlay.classList.add('hidden');
@@ -8058,11 +8453,11 @@ If extensive structural rewriting is required, output the complete corrected \`\
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeVisionModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeVisionModal(); });
 
-  // ── Slider labels ────────────────────────────────────────────────────────────
+  //  Slider labels 
   if (confSlider) confSlider.addEventListener('input', () => { if (confLabel) confLabel.textContent = confSlider.value + '%'; });
   if (strideSlider) strideSlider.addEventListener('input', () => { if (strideLabel) strideLabel.textContent = 'every ' + strideSlider.value + 'f'; });
 
-  // ── Model size pills ──────────────────────────────────────────────────────────
+  //  Model size pills 
   document.querySelectorAll('.vision-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.vision-pill').forEach(b => b.classList.remove('vision-pill-active'));
@@ -8072,7 +8467,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   });
 
-  // ── Palette pills ─────────────────────────────────────────────────────────────
+  //  Palette pills 
   document.querySelectorAll('.vision-palette-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.vision-palette-btn').forEach(b => b.classList.remove('vision-palette-btn-active'));
@@ -8082,7 +8477,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   });
 
-  // ── Video upload ─────────────────────────────────────────────────────────────
+  //  Video upload 
   uploadZone.addEventListener('click', () => fileInput.click());
   uploadZone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
   uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('vision-upload-zone--active'); });
@@ -8108,10 +8503,10 @@ If extensive structural rewriting is required, output the complete corrected \`\
       totalFrames = Math.floor(videoEl.duration * videoMeta.fps);
 
       // Update info bar
-      fileNameEl.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+      fileNameEl.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '' : file.name;
       const mb = (file.size / (1024 * 1024)).toFixed(1);
       const dur = formatTime(videoEl.duration);
-      fileDimsEl.textContent = videoMeta.w + '×' + videoMeta.h + ' · ' + dur + ' · ' + mb + ' MB';
+      fileDimsEl.textContent = videoMeta.w + '' + videoMeta.h + '  ' + dur + '  ' + mb + ' MB';
 
       uploadZone.classList.add('hidden');
       uploadInfo.classList.remove('hidden');
@@ -8150,7 +8545,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
         if (videoUrl) { URL.revokeObjectURL(videoUrl); videoUrl = null; }
         videoEl.src = '';
-        setStatus('loading', 'Requesting camera access…');
+        setStatus('loading', 'Requesting camera access');
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
@@ -8172,7 +8567,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
         uploadZone.classList.add('hidden');
         uploadInfo.classList.remove('hidden');
         fileNameEl.textContent = 'Live Camera Feed';
-        fileDimsEl.textContent = (videoEl.videoWidth || 1280) + '×' + (videoEl.videoHeight || 720) + ' · LIVE';
+        fileDimsEl.textContent = (videoEl.videoWidth || 1280) + '' + (videoEl.videoHeight || 720) + '  LIVE';
         emptyState.classList.add('hidden');
         playerWrap.classList.remove('hidden');
         scrubber.classList.add('hidden');
@@ -8211,7 +8606,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     setStatus('ready', 'READY');
   });
 
-  // ── Playback ─────────────────────────────────────────────────────────────────
+  //  Playback 
   if (btnPlay) btnPlay.addEventListener('click', togglePlay);
   function togglePlay() {
     if (!videoEl.src) return;
@@ -8232,7 +8627,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
-  // ── Scrubber ─────────────────────────────────────────────────────────────────
+  //  Scrubber 
   if (scrubRange) scrubRange.addEventListener('input', () => {
     const frame = parseInt(scrubRange.value);
     videoEl.currentTime = frame / videoMeta.fps;
@@ -8288,10 +8683,10 @@ If extensive structural rewriting is required, output the complete corrected \`\
     return m + ':' + sec;
   }
 
-  // ── ONNX Inference ───────────────────────────────────────────────────────────
+  //  ONNX Inference 
   async function ensureSession() {
     if (ortSession) return ortSession;
-    setStatus('loading', 'Loading ONNX model…');
+    setStatus('loading', 'Loading ONNX model');
     
     // Primary same-origin local model, with fallback CDN URLs
     const modelUrls = [
@@ -8303,7 +8698,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     if (!window.ort) {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        // Use ort.all.min.js — bundles all WASM backends without dynamic .mjs imports
+        // Use ort.all.min.js  bundles all WASM backends without dynamic .mjs imports
         s.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.all.min.js';
         s.crossOrigin = 'anonymous';
         s.onload = resolve;
@@ -8314,8 +8709,8 @@ If extensive structural rewriting is required, output the complete corrected \`\
     const ort = window.ort;
     if (!ort) throw new Error('ONNX Runtime Web library unavailable');
 
-    // ── CRITICAL FIX: point wasmPaths to the CDN matching the loaded ort.min.js ──
-    // The /ort/ local path does not exist on Vercel — it caused:
+    //  CRITICAL FIX: point wasmPaths to the CDN matching the loaded ort.min.js 
+    // The /ort/ local path does not exist on Vercel  it caused:
     // "Failed to fetch dynamically imported module: .../ort-wasm-simd-threaded.mjs"
     const ORT_CDN_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/';
     ort.env.wasm.wasmPaths = ORT_CDN_BASE;
@@ -8342,7 +8737,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     }
 
     if (!modelBuffer) {
-      setStatus('loading', 'Downloading YOLOv8 nano model (~12 MB, cached after first load)…');
+      setStatus('loading', 'Downloading YOLOv8 nano model (~12 MB, cached after first load)');
       let lastFetchErr = null;
       for (const url of modelUrls) {
         try {
@@ -8368,7 +8763,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
       }
     }
 
-    setStatus('loading', 'Initialising inference engine…');
+    setStatus('loading', 'Initialising inference engine');
 
     // WASM (SIMD) is the primary engine: complete operator coverage for YOLOv8 (including
     // Softmax on axis=1 in DFL layer which WebGPU rejects).
@@ -8542,7 +8937,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     }));
   }
 
-  // ── Global YOLO Inference Bridge for Python ──────────────────────────────────
+  //  Global YOLO Inference Bridge for Python 
   window.runVisionInferenceOnImage = async function(imageSource, conf = 0.25) {
     const session = await ensureSession();
     let img;
@@ -8600,7 +8995,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     return JSON.stringify({ detections, width: srcW, height: srcH });
   };
 
-  // ── Run button ───────────────────────────────────────────────────────────────
+  //  Run button 
   if (btnRun) btnRun.addEventListener('click', async () => {
     if (isProcessing) { stopProcessing(); return; }
     if (!videoEl.src && !cameraStream) { alert('Please upload a video or click "USE LIVE CAMERA" first.'); return; }
@@ -8682,7 +9077,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     isProcessing = true;
     abortController = new AbortController();
     btnRun.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> STOP';
-    setStatus('processing', 'Starting AI engine…');
+    setStatus('processing', 'Starting AI engine');
     if (statusPanel) statusPanel.style.display = '';
 
     try {
@@ -8793,7 +9188,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
 
   function yieldToUI() { return new Promise(r => setTimeout(r, 0)); }
 
-  // ── Annotation rendering ─────────────────────────────────────────────────────
+  //  Annotation rendering 
   function getColor(classId, trackId) {
     const pal = PALETTES[selectedPalette] || PALETTES.default;
     const idx = (trackId !== undefined ? trackId : classId) % pal.length;
@@ -8926,7 +9321,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     scrubberProcessed && (scrubberProcessed.style.width = pct + '%');
   }
 
-  // ── Detections sidebar ────────────────────────────────────────────────────────
+  //  Detections sidebar 
   function updateDetectionsList(result) {
     const res = result || allResults.find(r => r.frameIndex === currentFrame);
     const dets = res ? res.detections : [];
@@ -8943,14 +9338,14 @@ If extensive structural rewriting is required, output the complete corrected \`\
         <span class="vision-det-color" style="background:${color}"></span>
         <div class="vision-det-info">
           <span class="vision-det-class">${det.className}${det.trackId !== undefined ? ' <span style="color:rgba(155,92,246,.7)">#'+det.trackId+'</span>' : ''}</span>
-          <span class="vision-det-bbox">${Math.round(bx)},${Math.round(by)} ${Math.round(bw)}×${Math.round(bh)}</span>
+          <span class="vision-det-bbox">${Math.round(bx)},${Math.round(by)} ${Math.round(bw)}${Math.round(bh)}</span>
         </div>
         <span class="vision-det-conf" style="color:${color}">${Math.round(det.confidence*100)}</span>
       </li>`;
     }).join('');
   }
 
-  // ── Status helpers ────────────────────────────────────────────────────────────
+  //  Status helpers 
   function setStatus(state, text) {
     statusText.textContent = text;
     statusBadge.textContent = text;
@@ -8977,7 +9372,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     statusPanel.style.display = 'none';
   }
 
-  // ── Export ───────────────────────────────────────────────────────────────────
+  //  Export 
   if (btnExport) btnExport.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -8985,7 +9380,7 @@ If extensive structural rewriting is required, output the complete corrected \`\
     URL.revokeObjectURL(url);
   });
 
-  // ── Canvas resize observer ────────────────────────────────────────────────────
+  //  Canvas resize observer 
   if (videoEl && canvas) {
     const ro = new ResizeObserver(() => {
       const rect = videoEl.getBoundingClientRect();

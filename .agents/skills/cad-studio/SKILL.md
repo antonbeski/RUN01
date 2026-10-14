@@ -1,19 +1,19 @@
 ---
 name: cad-studio
-description: Authoritative guide for generating professional mechanical, automotive, architectural, and industrial CAD designs using OpenSCAD WASM with built-in gears, threads, fasteners and bearings libraries. Produces ISO-standard assemblies including car gearboxes, engine blocks, reducers, structural frameworks, and precision mechanisms rendered with PBR materials in the RUN01 CAD Studio.
-argument-hint: "[mechanical-assembly-description] [parameters]"
+description: Authoritative guide for generating professional mechanical, automotive, architectural, industrial CAD and PCB circuit board designs using OpenSCAD WASM with built-in gears, threads, fasteners, bearings, and PCB libraries. Produces ISO-standard assemblies including car gearboxes, engine blocks, reducers, structural frameworks, and IPC-7351B compliant circuit boards rendered with PBR materials in the RUN01 CAD Studio.
+argument-hint: "[mechanical-assembly-or-pcb-description] [parameters]"
 metadata:
   author: run01
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
-# AI Parametric CAD Studio Skill — Mechanical Engineering Edition
+# AI Parametric CAD Studio Skill — Mechanical & PCB Engineering Edition
 
-This skill instructs the AI on generating professional-grade, mechanically accurate OpenSCAD 3D models and assemblies in RUN01. The in-browser CAD Studio compiles OpenSCAD via WebAssembly (Manifold engine), renders with PBR Three.js (studio lighting, shadows), and exports STL/OBJ/JSON.
+This skill instructs the AI on generating professional-grade, mechanically accurate OpenSCAD 3D models, assemblies, and circuit boards in RUN01. The in-browser CAD Studio compiles OpenSCAD via WebAssembly (Manifold engine), renders with PBR Three.js (studio lighting, shadows), and exports STL/OBJ/JSON.
 
 ---
 
-## 1. Built-in Mechanical Libraries (Always Available in WASM FS)
+## 1. Built-in Mechanical & PCB Libraries (Always Available in WASM FS)
 
 The following libraries are pre-loaded into every OpenSCAD WASM instance. **Always use them — never re-implement their functionality from scratch.**
 
@@ -22,6 +22,7 @@ include </lib/gears.scad>;      // gear(), helical_gear(), rack(), bevel_gear()
 include </lib/threads.scad>;    // metric_thread(), metric_thread_hole(), metric_thread_pitch()
 include </lib/fasteners.scad>;  // hex_bolt(), hex_nut(), washer(), socket_head_screw(), csk_screw()
 include </lib/bearings.scad>;   // ball_bearing(bearing_code), bearing_housing(bearing_code, wall)
+include </lib/pcb.scad>;        // pcb_board(), pcb_trace(), pcb_via(), smd_resistor(), soic8(), qfp(), etc.
 ```
 
 ### Library API Reference
@@ -344,3 +345,109 @@ When fixing errors in existing code:
 | I-beam (W200×100) | 200mm tall, 100mm wide |
 | Door hinge (heavy) | 100×75mm, 3mm thick |
 | Concrete stair step | 300mm tread, 170mm riser |
+
+---
+
+## 8. PCB Circuit Board Design Library (`/lib/pcb.scad`)
+
+The `/lib/pcb.scad` library provides IPC-7351B standard footprints and realistic 3D component models for electronics and mechatronics modeling in RUN01.
+
+### Module API Reference
+
+```openscad
+include </lib/pcb.scad>;
+
+// 1. Board & Mechanical
+pcb_board(length=80, width=50, thickness=1.6, corner_r=3, color="green"); // green, blue, black, red, white, purple
+pcb_mounting_hole(x=5, y=5, d=3.2, pad_d=6.0, th=1.6);
+pcb_mounting_holes(l=80, w=50, margin=4, d=3.2, pad_d=6.0, th=1.6);
+
+// 2. Copper & Routing
+pcb_trace(x1=10, y1=10, x2=30, y2=10, width=0.5, th=1.6);
+pcb_via(x=20, y=20, drill=0.3, pad=0.7, th=1.6);
+pcb_copper_pour(x=5, y=5, w=30, h=20, th=1.6);
+
+// 3. SMD Passives (IPC-7351B standard dimensions)
+smd_resistor(pkg="0805");   // "0201", "0402", "0603", "0805", "1206", "1210", "2010", "2512"
+smd_capacitor(pkg="0805");  // Ceramic chip capacitor (brown body, nickel-tin terminations)
+smd_elco(d=6.3, h=7.7);     // SMD aluminum electrolytic capacitor with base and polarity mark
+smd_diode_sod123();         // SOD-123 small-signal diode with cathode band
+smd_led(pkg="0805", col=[0.1, 0.9, 0.2]); // Chip LED with emissive lens
+smd_inductor(w=5, l=5, h=3); // Shielded power inductor
+smd_crystal(pkg="3225");    // 4-pad SMD crystal resonator
+to220(heatsink=true);       // Voltage regulator / power MOSFET with tab and heatsink
+
+// 4. Integrated Circuits
+sot23();                    // 3-pin transistor / voltage supervisor
+soic8(pitch=1.27);          // 8-pin SOIC (Op-amps, EEPROMs, 555 timers)
+soic16(pitch=1.27);         // 16-pin SOIC (Logic ICs, RS232 transceivers)
+qfp(pins=32, body=7, pitch=0.8);  // QFP / TQFP microcontroller (e.g. ATmega328P)
+qfn(pins=32, body=5, pitch=0.5);  // QFN leadless package with thermal pad
+dip_ic(pins=8, pitch=2.54, row_spacing=7.62); // Through-hole DIP IC
+
+// 5. Connectors & Through-Hole
+pin_header(pins=8, rows=1, pitch=2.54); // Standard 2.54mm male breakaway pin header
+usb_type_c();               // USB-C receptacle with shield pins and tongue
+usb_micro_b();              // Micro-USB receptacle
+rj45();                     // RJ45 Ethernet jack with integrated magnetics
+
+// 6. Silkscreen & Manufacturing
+fiducial(d=1.0);            // Copper circle with solder mask relief for optical alignment
+silk_label(txt="RUN01", size=3, th=1.6);
+```
+
+### Pattern D: Microcontroller Development Board
+```openscad
+include </lib/pcb.scad>;
+
+// Board parameters
+board_l = 68.58;
+board_w = 53.34;
+th = 1.6;
+
+module arduino_uno_board() {
+  // 1. Substrate with corner radii and mounting holes
+  difference() {
+    pcb_board(length=board_l, width=board_w, thickness=th, corner_r=3, color="blue");
+    // Mounting holes
+    translate([14.0, 2.5, -0.05]) cylinder(d=3.2, h=th+0.1, $fn=24);
+    translate([15.2, 50.8, -0.05]) cylinder(d=3.2, h=th+0.1, $fn=24);
+    translate([66.0, 7.6, -0.05]) cylinder(d=3.2, h=th+0.1, $fn=24);
+    translate([66.0, 35.5, -0.05]) cylinder(d=3.2, h=th+0.1, $fn=24);
+  }
+
+  // 2. Main MCU (ATmega328P QFP-32)
+  translate([45, 27, th])
+    qfp(pins=32, body=7, pitch=0.8);
+
+  // 3. USB Type-C Connector
+  translate([0, 32, th])
+    usb_type_c();
+
+  // 4. 16MHz Crystal Resonator
+  translate([35, 20, th])
+    smd_crystal(pkg="5032");
+
+  // 5. 5V Voltage Regulator (TO-220)
+  translate([8, 12, th])
+    to220(heatsink=false);
+
+  // 6. Decoupling Capacitors & Passives
+  translate([40, 35, th]) smd_capacitor(pkg="0805");
+  translate([52, 35, th]) smd_capacitor(pkg="0805");
+  translate([38, 15, th]) smd_resistor(pkg="0805");
+
+  // 7. Connectors: Headers
+  translate([27, 2.54, th]) pin_header(pins=8, rows=1);
+  translate([48, 2.54, th]) pin_header(pins=8, rows=1);
+  translate([40, 50.8, th]) pin_header(pins=10, rows=1);
+
+  // 8. Fiducials & Status LEDs
+  translate([5, 5, 0]) fiducial(d=1.0);
+  translate([board_l-5, board_w-5, 0]) fiducial(d=1.0);
+  translate([25, 45, th]) smd_led(pkg="0805", col=[0.2, 0.9, 0.2]);
+}
+
+arduino_uno_board();
+```
+
