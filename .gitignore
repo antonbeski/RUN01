@@ -36,3 +36,11 @@ Thumbs.db
 !.agents/skills/data-explorer/
 !.agents/skills/python-data-science/
 temp_skill/
+
+# CAD Model Binaries (>100MB exceeds GitHub limits)
+*.STEP
+*.step
+*.stp
+*.STP
+*.IGS
+*.igs

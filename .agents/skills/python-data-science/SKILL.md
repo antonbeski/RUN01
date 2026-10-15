@@ -110,3 +110,25 @@ When operating inside RUN01's autonomous self-healing loop or fixing an existing
 3. **Deterministic Full Scripts & Zero-Error Execution Guarantee**:
    - If generating an entirely new program or if the architecture requires a full rebuild, provide a single, complete, immediately runnable ` ```python ` block guaranteed to execute cleanly with zero errors.
 
+---
+
+## 6. Model-Specific Token Budget & Anti-Empty Code Rules
+
+To guarantee clean, non-empty, and non-truncated code generation across all AI models:
+
+1. **Anti-Empty Code Policy**:
+   - Never output an empty code fence (````python\n``` ````) or an incomplete code block.
+   - Every snippet must include imports, data definition or loading, logic execution, and display (`plt.show()` / `fig.show()` / `print()`).
+   - Never use placeholder comments (`# TODO`, `# rest of code here`) or ellipsis (`...`).
+
+2. **Model Token Budget Optimization**:
+   - **High-Capacity Models (32K tokens)**:
+     - *Models*: `deepseek-ai/deepseek-v4.1-flash`, `moonshotai/kimi-k2`, `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`
+     - *Guideline*: Generate comprehensive end-to-end workflows with full parameter tuning, type annotations, edge case handling, and dual tabular/graphical output.
+   - **Balanced Models (16K tokens)**:
+     - *Models*: `deepseek-ai/deepseek-r1`, `meta/llama-4-maverick-17b`, `meta/llama-3.3-70b-instruct`, `qwen/qwen3-32b`, `openai/gpt-oss-20b`
+     - *Guideline*: Generate clean, self-contained, and modular scripts with concise algorithmic documentation.
+   - **High-Speed Compact Models (4K–8K tokens)**:
+     - *Models*: `microsoft/phi-4-mini-instruct`, `llama-3.1-8b-instant`, `meta-llama/llama-4-scout-17b`, `groq/compound-mini`
+     - *Guideline*: Maximize code density. Strip conversational intros and outros. Spend 95%+ of completion tokens directly inside the Python code fence so the program never cuts off mid-statement.
+

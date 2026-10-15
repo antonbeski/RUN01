@@ -320,14 +320,31 @@ bolted_housing();
 
 ---
 
-## 6. Self-Healing Loop Guidance
+## 6. Autonomous AI Self-Healing Execution Loop (OpenSCAD WASM Strong Loop)
 
-When fixing errors in existing code:
-1. Check if missing module errors can be solved by **replacing manual implementations with library calls** (`gear()`, `ball_bearing()`, `hex_bolt()` etc.)
-2. For manifold errors: add `0.1mm` extension to all `difference()` cutters
-3. For recursion/complexity errors: reduce `$fn` per component (shaft bore `$fn=32` instead of `$fn=64`)
-4. For memory errors on large assemblies: split into separate `module` calls instead of inlining geometry
-5. Never remove user-defined parameters or change dimensions without explicit error requiring it
+When operating inside RUN01's autonomous CAD self-healing loop or fixing an existing 3D model or circuit board:
+1. **Targeted Surgical Edits**:
+   - For syntax corrections, manifold fixes, or parameter repairs in existing OpenSCAD designs, output a precise surgical edit block:
+     ```text
+     <<<SURGICAL_EDIT>>>
+     <<<FIND>>>
+     exact lines currently failing in the user's OpenSCAD editor
+     <<<REPLACE>>>
+     corrected, manifold-valid OpenSCAD replacement lines
+     <<<END_EDIT>>>
+     ```
+   - The `<<<FIND>>>` block must match exact characters and indentation.
+2. **Immutable Context & Dimension Preservation**:
+   - Never remove unrelated structural components, mounting holes, or custom engineering parameters.
+   - Fix the root mechanical or compiler error directly:
+     - Check if missing module errors can be solved by replacing manual implementations with library calls (`gear()`, `ball_bearing()`, `hex_bolt()`, etc.).
+     - For manifold errors: add `0.1mm` extension to all `difference()` cutters (`translate([..., -0.05]) cylinder(..., h=... + 0.1)`).
+     - For recursion/complexity errors: reduce `$fn` per component (e.g. shaft bore `$fn=32` instead of `$fn=64`).
+     - For memory errors on large assemblies: split into separate `module` calls instead of inlining geometry.
+     - Never remove user-defined parameters or change dimensions without explicit error requiring it.
+3. **Zero-Error Execution Guarantee**:
+   - The OpenSCAD WASM engine must compile and render the assembly cleanly with **0 compiler errors**.
+   - If extensive rebuild is needed, output a single, complete, immediately compilable ` ```openscad ` block.
 
 ---
 
@@ -450,4 +467,21 @@ module arduino_uno_board() {
 
 arduino_uno_board();
 ```
+
+---
+
+## 7. Model-Specific Token Budget & Anti-Empty CAD Assembly Rules
+
+1. **Anti-Empty Assembly Policy**:
+   - Never output an empty or truncated OpenSCAD module. Every CSG operation (`union()`, `difference()`, `intersection()`) must have all child geometry properly closed.
+   - Always include the top-level assembly call at the end of the script (e.g. `gearbox_assembly();` or `main_board();`).
+   - Never use placeholder comments (`// TODO: add remaining components`) — always instantiate real geometric primitives.
+
+2. **Model Token Budget Optimization**:
+   - **High-Capacity Models (`deepseek-ai/deepseek-v4.1-flash`, `moonshotai/kimi-k2`, `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)**:
+     - Leverage the full 32K token budget for complex multi-part mechanical assemblies: multi-stage reduction gearboxes, full engine assemblies with pistons/crankshafts, parametric fastener patterns, and detailed PCB trace layouts with silkscreen.
+   - **Balanced Models (`deepseek-ai/deepseek-r1`, `meta/llama-4-maverick`, `meta/llama-3.3-70b-instruct`, `qwen/qwen3-32b`)**:
+     - Generate structured modular designs with clean parameterization and built-in library calls (`include </lib/gears.scad>`, `include </lib/threads.scad>`).
+   - **Compact & Fast Models (`microsoft/phi-4-mini-instruct`, `llama-3.1-8b-instant`, `meta-llama/llama-4-scout-17b`)**:
+     - Focus tokens strictly on the OpenSCAD code. Omit explanatory descriptions outside code blocks. Keep geometry definitions efficient and avoid overly verbose comment blocks to prevent hitting output caps.
 

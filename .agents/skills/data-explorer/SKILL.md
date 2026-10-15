@@ -135,3 +135,20 @@ print(f"Loaded {len(releases)} releases")
 2. For curated static datasets and macroeconomic series, load them via Data Explorer into `/data/<filename>` and analyze using standard `pd.read_csv('/data/<filename>')`.
 3. Clean missing data with `df.dropna()` or `df.ffill()` before running regressions or statistical tests.
 4. Combine tabular summaries with visual charts for immediate verification.
+
+---
+
+## 5. Model-Specific Token Budget & Anti-Empty Data Pipeline Rules
+
+1. **Anti-Empty Data Analysis Policy**:
+   - Never output empty Python blocks or partial dataframe queries.
+   - Every script must conclude with both tabular validation (`print(df.head())`, `print(df.describe())`) and graphical output (`plt.show()`, `fig.show()`).
+   - All network proxies (`yf_download`, `yf_info`, `FRED`) must have explicit error handling (e.g. checking `df.empty`).
+
+2. **Model Token Allocation Guidelines**:
+   - **High-Capacity Models (`deepseek-ai/deepseek-v4.1-flash`, `moonshotai/kimi-k2`, `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)**:
+     - Implement complete quantitative econometric pipelines: multi-factor regressions, Sharpe ratio and drawdown calculations, Monte Carlo simulations, and multi-asset correlation heatmaps.
+   - **Balanced Models (`deepseek-ai/deepseek-r1`, `meta/llama-4-maverick`, `meta/llama-3.3-70b-instruct`, `qwen/qwen3-32b`)**:
+     - Provide self-contained time-series analyses with moving averages, Bollinger bands, or macro indicator correlations.
+   - **Compact & Fast Models (`microsoft/phi-4-mini-instruct`, `llama-3.1-8b-instant`, `meta-llama/llama-4-scout-17b`)**:
+     - Focus directly on the executable Python data fetching and plotting code. Omit explanatory prose outside the code fence to avoid truncating data transformation logic.

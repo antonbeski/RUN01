@@ -125,3 +125,20 @@ When operating inside RUN01's autonomous Desmos self-healing loop or fixing an e
    - Every equation in the Desmos calculator must parse and evaluate cleanly (`isError === false`) with **0 errors**.
    - If extensive rewrites are necessary, provide a clean ` ```desmos ` block with one valid LaTeX expression per line.
 
+---
+
+## 6. Model-Specific Token Budget & Anti-Empty Equation Rules
+
+1. **Anti-Empty Expression Policy**:
+   - Never output empty ```desmos blocks or solitary comments.
+   - Always output complete systems of equations (constants, functions, parametric coordinates `(x(t), y(t))`).
+   - Every mathematical entity must evaluate to a visual line, surface, curve, or point in Desmos.
+
+2. **Model Token Allocation Guidelines**:
+   - **Reasoning Models (`deepseek-ai/deepseek-r1`, `deepseek-r1-distill-llama-70b`)**:
+     - Provide the analytical physical or geometric derivation concisely, then immediately output the full LaTeX block in ```desmos fences.
+   - **High-Capacity Models (`deepseek-ai/deepseek-v4.1-flash`, `moonshotai/kimi-k2`, `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)**:
+     - Generate rich mathematical models: dynamic parameter sliders with bounds (e.g. `a = 2 \{-5 \le a \le 5\}`), analytical proofs, derivatives, and multiple related curves.
+   - **Compact & Fast Models (`microsoft/phi-4-mini-instruct`, `llama-3.1-8b-instant`, `meta-llama/llama-4-scout-17b`)**:
+     - Directly provide the exact LaTeX block without extra discursive text. Keep equations concise and focused.
+

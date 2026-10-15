@@ -4894,8 +4894,8 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 
 /* nav button */
 .btn-cad{color:var(--text-secondary);font-size:11.5px;font-weight:600;letter-spacing:.03em;gap:5px}
-.btn-cad:hover{color:#a78bfa}
-.btn-cad svg{color:#a78bfa}
+.btn-cad:hover{color:#ffffff}
+.btn-cad svg{color:#ffffff}
 
 /* modal overlay */
 .cad-modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);display:flex;align-items:stretch;justify-content:center;padding:8px}
@@ -4910,9 +4910,9 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-modal-header-right{display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:0}
 .cad-model-select{background:#111;border:1px solid #2a2a2a;border-radius:6px;color:var(--text-primary);font-size:11px;padding:4px 8px;max-width:min(220px,28vw);cursor:pointer;overflow:hidden;text-overflow:ellipsis}
 .cad-model-select:hover{border-color:#444}
-.cad-model-select:focus{outline:none;border-color:#a78bfa66}
+.cad-model-select:focus{outline:none;border-color:rgba(255,255,255,.4)}
 .cad-model-select option,.cad-model-select optgroup{background:#111;color:var(--text-primary)}
-.cad-badge{background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px;flex-shrink:0}
+.cad-badge{background:rgba(255,255,255,.1);color:#ffffff;border:1px solid rgba(255,255,255,.25);font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 7px;border-radius:4px;flex-shrink:0}
 .cad-modal-title{font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .cad-engine-badge{font-size:9px;color:var(--text-muted);background:#1a1a1a;border:1px solid #2a2a2a;padding:2px 6px;border-radius:4px;white-space:nowrap;flex-shrink:0}
 .cad-hdr-btn{font-size:11px;padding:4px 10px;border-radius:5px;color:var(--text-secondary)}
@@ -4932,9 +4932,9 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-chat-system .cad-chat-bubble,
 .cad-chat-assistant .cad-chat-bubble{background:#111;border:1px solid #1e1e1e;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:11.5px;color:var(--text-secondary);max-width:100%;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}
 .cad-chat-user{justify-content:flex-end}
-.cad-chat-user .cad-chat-bubble{background:#1a1030;border:1px solid #a78bfa33;border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:11.5px;color:#c4b5fd;max-width:90%;overflow-wrap:anywhere;word-break:break-word}
+.cad-chat-user .cad-chat-bubble{background:#18181b;border:1px solid rgba(255,255,255,.2);border-radius:10px 10px 2px 10px;padding:8px 12px;font-size:11.5px;color:#ffffff;max-width:90%;overflow-wrap:anywhere;word-break:break-word}
 .cad-chat-error .cad-chat-bubble{border-color:#f8717133;background:#1a0808;color:#fca5a5}
-.cad-chat-bubble strong{color:#a78bfa;font-weight:700}
+.cad-chat-bubble strong{color:#ffffff;font-weight:700}
 .cad-chat-bubble code{background:#1e1e1e;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#e2e8f0;white-space:pre-wrap;word-break:break-word}
 
 /* params */
@@ -4942,13 +4942,13 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-params-panel.hidden{display:none}
 .cad-params-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;min-width:0}
 .cad-params-title{font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase}
-.cad-params-regen-btn{background:#a78bfa22;border:1px solid #a78bfa44;color:#a78bfa;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
-.cad-params-regen-btn:hover{background:#a78bfa33}
+.cad-params-regen-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#ffffff;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
+.cad-params-regen-btn:hover{background:rgba(255,255,255,.16)}
 .cad-params-grid{display:flex;flex-direction:column;gap:5px;max-height:155px;overflow-y:auto}
 .cad-param-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 28px;align-items:center;gap:6px}
 .cad-param-label{font-size:10.5px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:capitalize}
 .cad-param-input{background:#111;border:1px solid #2a2a2a;border-radius:4px;color:var(--text-primary);font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 6px;width:100%;text-align:right}
-.cad-param-input:focus{outline:none;border-color:#a78bfa66}
+.cad-param-input:focus{outline:none;border-color:rgba(255,255,255,.4)}
 .cad-param-unit{font-size:9.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis}
 
 /* prompt area */
@@ -4958,10 +4958,10 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-quick-btn:hover{background:#1e1e1e;color:var(--text-secondary);border-color:#333}
 .cad-textarea-row{display:flex;gap:6px;align-items:flex-end}
 .cad-textarea{flex:1;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:var(--text-primary);font-size:12px;font-family:inherit;padding:8px 10px;resize:none;min-height:52px;max-height:120px;line-height:1.5;overflow-y:auto}
-.cad-textarea:focus{outline:none;border-color:#a78bfa66}
+.cad-textarea:focus{outline:none;border-color:rgba(255,255,255,.4)}
 .cad-textarea::placeholder{color:var(--text-muted);font-size:11px}
-.cad-send-btn{background:#a78bfa;border:none;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;flex-shrink:0;transition:background .15s,transform .12s}
-.cad-send-btn:hover{background:#9061f9;transform:translateY(-1px)}
+.cad-send-btn{background:#ffffff;border:none;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000000;flex-shrink:0;transition:background .15s,transform .12s}
+.cad-send-btn:hover{background:#e4e4e7;transform:translateY(-1px)}
 .cad-send-btn:disabled{background:#333;cursor:not-allowed;transform:none}
 .cad-status-bar{margin-top:6px;font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -4977,10 +4977,10 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-viewport-toolbar{position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:4px;padding:6px 8px;background:rgba(8,8,8,.78);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:8px;z-index:5;pointer-events:auto;min-width:0;flex-wrap:wrap}
 .cad-vp-btn{background:#111;border:1px solid #222;color:var(--text-secondary);font-size:10.5px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s}
 .cad-vp-btn:hover{background:#1e1e1e;color:var(--text-primary)}
-.cad-vp-btn.active{background:#a78bfa22;border-color:#a78bfa55;color:#c4b5fd}
+.cad-vp-btn.active{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35);color:#ffffff}
 .cad-vp-sep{flex:1;min-width:8px}
-.cad-vp-download{color:#a78bfa;border-color:#a78bfa33;background:#a78bfa11}
-.cad-vp-download:hover{background:#a78bfa22}
+.cad-vp-download{color:#ffffff;border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.08)}
+.cad-vp-download:hover{background:rgba(255,255,255,.16)}
 
 /* source editor pane — collapsed by default */
 .cad-source-pane{height:168px;display:flex;flex-direction:column;border-top:1px solid #1a1a1a;flex-shrink:0;transition:height .18s ease}
@@ -4990,8 +4990,8 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 .cad-source-actions{display:flex;gap:6px;flex-shrink:0}
 .cad-src-btn{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:4px;background:#111;border:1px solid #222;color:var(--text-secondary);cursor:pointer;white-space:nowrap}
 .cad-src-btn:hover{background:#1e1e1e;color:var(--text-primary)}
-.cad-src-run{background:#a78bfa22;border-color:#a78bfa44;color:#a78bfa}
-.cad-src-run:hover{background:#a78bfa33}
+.cad-src-run{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#ffffff}
+.cad-src-run:hover{background:rgba(255,255,255,.18)}
 .cad-source-editor{flex:1;background:#080808;border:none;color:#e2e8f0;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.6;padding:10px 14px;resize:none;outline:none;overflow-y:auto;min-height:0}
 .cad-source-editor::placeholder{color:var(--text-muted)}
 
@@ -5823,9 +5823,12 @@ body:has(#ideView.hidden) .physics-modal-overlay {
 }
 
 /* Active editor subtle glowing border */
-.pane-editor.ai-active-editor,
-.cad-source-pane.ai-active-editor {
+.pane-editor.ai-active-editor {
   box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.5), 0 0 12px rgba(168, 85, 247, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+.cad-source-pane.ai-active-editor {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 0 12px rgba(255, 255, 255, 0.15);
   transition: box-shadow 0.3s ease;
 }
 

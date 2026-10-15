@@ -122,10 +122,44 @@ def resolve_panel_skill(panel_key: Optional[str]) -> Dict[str, Any]:
     return skill
 
 
-def build_panel_system_prompt(panel_key: Optional[str]) -> str:
+def _model_token_guidelines(model: Optional[str]) -> str:
+    """Returns tailored instructions based on the active model's architecture and output token budget."""
+    if not model:
+        return ""
+    m = model.lower()
+
+    if "r1" in m or "reasoning" in m:
+        return (
+            "\n--- MODEL-SPECIFIC DIRECTIVE: REASONING ARCHITECTURE ---\n"
+            "• Provide clear mathematical and algorithmic derivation, followed immediately by the complete, runnable code block.\n"
+            "• Ensure the final code block is 100% complete and self-contained; do not let reasoning consume the entire completion.\n"
+        )
+    elif any(k in m for k in ["v4.1-flash", "kimi-k2", "gpt-oss-120b", "llama-3.3-70b-versatile"]):
+        return (
+            "\n--- MODEL-SPECIFIC DIRECTIVE: HIGH-CAPACITY PRODUCTION TIER (32K TOKEN BUDGET) ---\n"
+            "• You have an expansive 32,768 token output budget. Generate rich, robust, production-grade solutions.\n"
+            "• Include comprehensive error handling, full type annotations, docstrings, and edge-case validation.\n"
+            "• Never truncate or abbreviate: provide the full script from imports to visualization/output.\n"
+        )
+    elif any(k in m for k in ["phi-4-mini", "compound-mini", "8b-instant"]):
+        return (
+            "\n--- MODEL-SPECIFIC DIRECTIVE: HIGH-SPEED COMPACT TIER (4K-8K TOKEN BUDGET) ---\n"
+            "• Maximize code density. Omit conversational filler, long introductions, and closing chatter.\n"
+            "• Focus 95% of token budget directly on the executable code block so the entire solution completes without truncation.\n"
+            "• Keep implementations clean, direct, and immediately runnable.\n"
+        )
+    else:
+        return (
+            "\n--- MODEL-SPECIFIC DIRECTIVE: BALANCED TIER (16K TOKEN BUDGET) ---\n"
+            "• Provide a self-contained, clean, fully functional solution with targeted inline documentation.\n"
+            "• Ensure all components are fully written out with zero missing functions.\n"
+        )
+
+
+def build_panel_system_prompt(panel_key: Optional[str], model: Optional[str] = None) -> str:
     """
-    Synthesizes the complete, authoritative system prompt for the specified panel.
-    Ensures the AI acts strictly according to the active panel's runtime, APIs, and constraints.
+    Synthesizes the complete, authoritative system prompt for the specified panel,
+    fine-tuned individually for the active model's token limits and architecture.
     """
     skill = resolve_panel_skill(panel_key)
     active_key = skill.get("key", "editor")
@@ -137,14 +171,18 @@ def build_panel_system_prompt(panel_key: Optional[str]) -> str:
         "Completely adhere to the following environment rules, runtime specifications, and output conventions:\n\n"
     )
 
+    model_tuning = _model_token_guidelines(model)
+
     footer = (
-        "\n\n--- GENERAL RUN01 PROTOCOL ---\n"
-        "1. Never guess or hallucinate unsupported APIs outside the stated environment.\n"
-        "2. Keep responses direct, elegant, and mathematically or mechanically sound.\n"
-        "3. Format all code blocks inside standard markdown fences with language identifiers.\n"
+        "\n\n--- GENERAL RUN01 PROTOCOL & ANTI-EMPTY CODE GUARANTEE ---\n"
+        "1. ZERO EMPTY OUTPUT POLICY: Never generate empty responses, empty code fences, or truncated snippets.\n"
+        "2. ZERO PLACEHOLDER POLICY: Never use '# TODO', '// rest of code here', or ellipses '...'. Always provide 100% complete, runnable code.\n"
+        "3. FORMAT: All executable code MUST be enclosed inside standard markdown fences with language tags (e.g. ```python, ```desmos, ```openscad).\n"
+        "4. ACCURACY: Never guess or hallucinate unsupported APIs outside the stated environment.\n"
+        "5. Keep responses direct, elegant, and mathematically or mechanically sound."
     )
 
-    return header + skill_content + footer
+    return header + skill_content + model_tuning + footer
 
 
 def list_registered_panel_skills() -> List[Dict[str, Any]]:

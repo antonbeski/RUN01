@@ -4039,19 +4039,32 @@ If extensive structural changes are required, output the complete corrected \`\`
 
   let messagesHistory = [];
 
-    // Curated model catalog - NVIDIA NIM & Groq production IDs (Sept 2026)
+    // Curated model catalog - NVIDIA NIM & Groq production IDs (Oct 2026)
+    // ★ = completely free with high daily/minute limits on the free tier
   const MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
+    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
+    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
+    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
+    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
+    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
+    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
+    // ── Groq ────────────────────────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
+    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
+    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
+    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
   ];
 
-  // Default model - DeepSeek V4 Flash on NVIDIA NIM: 284B MoE, 1M context
-  const DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  // Default model - DeepSeek V4.1 Flash on NVIDIA NIM: 284B MoE, 1M context
+  const DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.
@@ -4902,15 +4915,27 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   let desmosAbortController = null;
 
   const DESMOS_MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
+    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
+    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
+    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
+    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
+    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
+    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
+    // ── Groq ────────────────────────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
+    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
+    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
+    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
   ];
-  const DESMOS_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  const DESMOS_DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
 
   function seedDesmosModelSelect(models) {
     if (!desmosModelSelect) return;
@@ -4934,6 +4959,20 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     desmosModelSelect.value = hasDefault ? DESMOS_DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
   seedDesmosModelSelect(DESMOS_MODEL_CATALOG);
+  (async () => {
+    try {
+      const resp = await fetch('/api/ai/models');
+      if (!resp.ok) return;
+      const models = await resp.json();
+      if (Array.isArray(models) && models.length) {
+        const prev = desmosModelSelect ? desmosModelSelect.value : '';
+        seedDesmosModelSelect(models);
+        if (prev && desmosModelSelect && [...desmosModelSelect.options].some(o => o.value === prev)) {
+          desmosModelSelect.value = prev;
+        }
+      }
+    } catch (_) { /* keep static catalog */ }
+  })();
 
   function getDesmosModel() {
     return (desmosModelSelect && desmosModelSelect.value) || DESMOS_DEFAULT_MODEL;
@@ -6174,17 +6213,30 @@ window.ViewManager = (function() {
   window.cadSourceEditorEl = cadSourceEditor;
   if (!btnCAD || !cadModalOverlay) return;
 
-  // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq)
+  // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq, Oct 2026)
+  // ★ = completely free with high daily/minute limits on the free tier
   const CAD_MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
+    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
+    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
+    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
+    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
+    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
+    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
+    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
+    // ── Groq ────────────────────────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
+    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
+    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
+    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
+    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
   ];
-  const CAD_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  const CAD_DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
 
   function seedCadModelSelect(models) {
     if (!cadModelSelect) return;
@@ -7204,23 +7256,47 @@ module fiducial(d=1.0, $fn=24) {
     });
   });
 
-  btnCadGenerate.addEventListener('click', () => {
+  async function handleCadSubmit() {
     if (btnCadGenerate.classList.contains('is-working')) {
       stopCadAI();
-    } else {
-      generateCAD();
+      return;
     }
-  });
+    const rawPrompt = (cadPromptInput ? cadPromptInput.value.trim() : '');
+    if (!rawPrompt) {
+      if (cadPromptInput) cadPromptInput.focus();
+      return;
+    }
+
+    // Immediately clear input box so text is not retained
+    if (cadPromptInput) {
+      cadPromptInput.value = '';
+      cadPromptInput.style.height = 'auto';
+    }
+
+    // Append user message exactly once to chat
+    appendChatMsg('user', rawPrompt);
+
+    // If an existing design is active, construct revision context
+    if (currentSpec && currentScad) {
+      const revisionContext =
+        `REVISION of an existing parametric OpenSCAD design.\n\n` +
+        `Current specification JSON:\n${JSON.stringify(currentSpec, null, 2)}\n\n` +
+        `Current OpenSCAD source:\n${currentScad}\n\n` +
+        `Requested change: ${rawPrompt}\n\n` +
+        `Produce an UPDATED specification that applies the change while keeping unrelated parameters stable.`;
+      await generateCAD(revisionContext, rawPrompt);
+    } else {
+      await generateCAD(rawPrompt, rawPrompt);
+    }
+  }
+
+  btnCadGenerate.addEventListener('click', handleCadSubmit);
 
   if (cadPromptInput) {
     cadPromptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (btnCadGenerate.classList.contains('is-working')) {
-          stopCadAI();
-        } else {
-          generateCAD();
-        }
+        handleCadSubmit();
       }
     });
   }
@@ -7508,20 +7584,15 @@ module fiducial(d=1.0, $fn=24) {
     return geometry;
   }
 
-  //  AI Two-Stage CAD Generation 
-  async function generateCAD(revisionInstruction) {
-    const prompt = (typeof revisionInstruction === 'string' && revisionInstruction.trim())
-      ? revisionInstruction.trim()
-      : cadPromptInput.value.trim();
-    if (!prompt) { cadPromptInput.focus(); return; }
+  // ── AI Two-Stage CAD Generation ───────────────────────────
+  async function generateCAD(generationPrompt, userGoalText) {
+    const prompt = (typeof generationPrompt === 'string' && generationPrompt.trim())
+      ? generationPrompt.trim()
+      : (cadPromptInput ? cadPromptInput.value.trim() : '');
+    if (!prompt) return;
 
     btnCadGenerate.disabled = true;
-    setStatus('Stage 1: Generating CAD specification');
-    // Only echo the short user-facing prompt in chat (not the full revision context blob)
-    const chatPrompt = cadPromptInput.value.trim() || prompt.split('\n').pop() || prompt;
-    if (!revisionInstruction || typeof revisionInstruction !== 'string' || revisionInstruction === chatPrompt) {
-      appendChatMsg('user', chatPrompt);
-    }
+    setStatus('Stage 1: Generating CAD specification…');
 
     const specSystemPrompt = `You are a senior mechanical and electronics engineer and CAD specialist with 20+ years of experience in automotive, aerospace, industrial design, and PCB/mechatronics engineering.
 When the user describes a 3D object, mechanical assembly, or circuit board, you MUST respond with ONLY valid JSON  no markdown, no explanation, no code fences.
@@ -7568,6 +7639,7 @@ Output ONLY the JSON object. No other text.`;
       setStatus(`Stage 1 failed: ${err.message}`);
       appendChatMsg('assistant', `[ERROR] Could not generate design specification: ${err.message}`, true);
       btnCadGenerate.disabled = false;
+      setCadWorking(false);
       return;
     }
 
@@ -7616,6 +7688,7 @@ MANDATORY CODE RULES:
       setStatus(`Stage 2 failed: ${err.message}`);
       appendChatMsg('assistant', `[ERROR] Could not generate OpenSCAD code: ${err.message}`, true);
       btnCadGenerate.disabled = false;
+      setCadWorking(false);
       return;
     }
 
@@ -7642,9 +7715,11 @@ MANDATORY CODE RULES:
       model: getCadModel(),
       chatContainer: cadChatMessages
     });
-    await activeCADLoop.start(prompt, scadCode);
+    await activeCADLoop.start(userGoalText || prompt, scadCode);
 
-    cadPromptInput.value = '';
+    if (cadPromptInput) cadPromptInput.value = '';
+    btnCadGenerate.disabled = false;
+    setCadWorking(false);
   }
 
   //  Autonomous CAD Self-Healing Loop Class 
@@ -8332,36 +8407,6 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
-  //  Follow-up revision support 
-  // Users can type follow-up instructions like "Make it 20mm wider"
-  // Re-run full two-stage generation with existing design as context.
-  async function generateCADWithRevision() {
-    const prompt = cadPromptInput.value.trim();
-    if (!prompt) { cadPromptInput.focus(); return; }
-
-    if (currentSpec && currentScad) {
-      appendChatMsg('user', prompt);
-      const revisionContext =
-        `REVISION of an existing parametric OpenSCAD design.\n\n` +
-        `Current specification JSON:\n${JSON.stringify(currentSpec, null, 2)}\n\n` +
-        `Current OpenSCAD source:\n${currentScad}\n\n` +
-        `Requested change: ${prompt}\n\n` +
-        `Produce an UPDATED specification that applies the change while keeping unrelated parameters stable.`;
-      await generateCAD(revisionContext);
-    } else {
-      await generateCAD();
-    }
-  }
-
-  // Re-wire generate button to smart mode (Enter or Ctrl+Enter)
-  btnCadGenerate.removeEventListener('click', generateCAD);
-  btnCadGenerate.addEventListener('click', generateCADWithRevision);
-  cadPromptInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      generateCADWithRevision();
-    }
-  });
 
   //  Chat helpers 
   function appendChatMsg(role, text, isError = false) {

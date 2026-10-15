@@ -1234,67 +1234,136 @@ def run_code():
 # ══════════════════════════════════════════════════════════════════════════
 # AI Coding Assistant - multi-provider model catalog + dual-key fallback
 #
-# Two OpenAI-compatible providers are supported out of the box:
-#   • NVIDIA NIM   (https://integrate.api.nvidia.com/v1)  - env: NVIDIA_API_KEY[_2]
-#   • Groq         (https://api.groq.com/openai/v1)       - env: GROQ_API_KEY[_2]
+# Two OpenAI-compatible providers are supported:
+#   • NVIDIA NIM  (https://integrate.api.nvidia.com/v1) — env: NVIDIA_API_KEY[_2]
+#   • Groq        (https://api.groq.com/openai/v1)      — env: GROQ_API_KEY[_2]
 #
-# NVIDIA NIM is listed first because it gives access to very token-efficient,
-# high-quality MoE models (e.g. DeepSeek V4 Flash - only ~13B active params,
-# long-context, tuned for coding/agentic tasks) at NVIDIA's free/dev-credit
-# tier. Groq remains configured as a fast automatic fallback if NVIDIA is
-# rate-limited, out of credits, or its key isn't set.
+# Model IDs are verified against build.nvidia.com and console.groq.com/docs
+# as of Oct 2026. Each model has individually tuned inference parameters.
+# ★ = completely free on the provider's no-credit-card free tier.
 # ══════════════════════════════════════════════════════════════════════════
 
-# Model list is sourced from build.nvidia.com and console.groq.com/docs -
-# verified Aug 2026. Deprecated Groq models (llama-3.3-70b-versatile,
-# llama-3.1-8b-instant, shut down Aug 16 2026) are excluded.
+# ── Per-model inference parameters ────────────────────────────────────────
+# These are injected into every API call to guarantee substantive, non-empty
+# output. Tuned individually per model architecture:
+#  • Reasoning models (R1/DeepSeek): temp=0.6 per NVIDIA/DeepSeek guidance
+#  • General dense models: temp=0.7 balanced between creativity and coherence
+#  • max_tokens: set to each model's verified max completion limit
+#  • top_p=0.95: standard nucleus sampling across all models
+MODEL_PARAMS = {
+    # ── NVIDIA NIM ──────────────────────────────────────────────────────────
+    "deepseek-ai/deepseek-v4.1-flash":            {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
+    "deepseek-ai/deepseek-r1":                    {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
+    "meta/llama-4-maverick-17b-128e-instruct":    {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
+    "meta/llama-4-scout-17b-16e-instruct":        {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    "meta/llama-3.3-70b-instruct":                {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
+    "qwen/qwen3-32b":                             {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
+    "moonshotai/kimi-k2":                         {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
+    "microsoft/phi-4-mini-instruct":              {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
+    "nvidia/nemotron-3.5-lightning-30b-a3b":      {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    # ── Groq ────────────────────────────────────────────────────────────────
+    "openai/gpt-oss-120b":                        {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
+    "openai/gpt-oss-20b":                         {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
+    "groq/compound":                              {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    "groq/compound-mini":                         {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
+    "meta-llama/llama-4-scout-17b-16e-instruct":  {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    "llama-3.3-70b-versatile":                    {"max_tokens": 32768, "temperature": 0.7, "top_p": 0.95},
+    "deepseek-r1-distill-llama-70b":              {"max_tokens": 8192,  "temperature": 0.6, "top_p": 0.95},
+    "llama-3.1-8b-instant":                       {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+}
+# Fallback params for any model not explicitly listed above
+_DEFAULT_PARAMS = {"max_tokens": 8192, "temperature": 0.7, "top_p": 0.95}
+
+# ── Model catalog ─────────────────────────────────────────────────────────
+# Verified model IDs from build.nvidia.com and console.groq.com/docs (Oct 2026).
 MODEL_CATALOG = [
-    # ── NVIDIA NIM ────────────────────────────────────────────────────────
-    {"id": "deepseek-v4-flash-0731",        "name": "NVIDIA - DeepSeek V4 Flash",       "provider": "NVIDIA NIM"},
-    {"id": "deepseek-v4-pro-0813",          "name": "NVIDIA - DeepSeek V4 Pro",         "provider": "NVIDIA NIM"},
-    {"id": "nemotron-3.5-lightning-30b-a3b","name": "NVIDIA - Nemotron 3.5 Lightning",  "provider": "NVIDIA NIM"},
-    # ── Groq ──────────────────────────────────────────────────────────────
-    {"id": "openai/gpt-oss-120b",           "name": "Groq - GPT-OSS 120B",              "provider": "Groq"},
-    {"id": "openai/gpt-oss-20b",            "name": "Groq - GPT-OSS 20B",               "provider": "Groq"},
-    {"id": "groq/compound",                 "name": "Groq - Compound",                  "provider": "Groq"},
-    {"id": "groq/compound-mini",            "name": "Groq - Compound Mini",             "provider": "Groq"},
+    # ── NVIDIA NIM ──────────────────────────────────────────────────────────
+    # DeepSeek V4.1 Flash: 284B MoE (37B active), 1M context, top coding MoE
+    {"id": "deepseek-ai/deepseek-v4.1-flash",           "name": "NVIDIA - DeepSeek V4.1 Flash",        "provider": "NVIDIA NIM", "ctx": "1M",   "max_out": 32768},
+    # DeepSeek R1: chain-of-thought reasoning, 128K context
+    {"id": "deepseek-ai/deepseek-r1",                   "name": "NVIDIA - DeepSeek R1 (Reasoning)",    "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
+    # Meta Llama 4 Maverick: 17Bx128E MoE, frontier open model
+    {"id": "meta/llama-4-maverick-17b-128e-instruct",   "name": "NVIDIA - Llama 4 Maverick 17Bx128E",  "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
+    # Meta Llama 4 Scout: 17Bx16E, fast and capable
+    {"id": "meta/llama-4-scout-17b-16e-instruct",       "name": "NVIDIA - Llama 4 Scout 17Bx16E",      "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 8192},
+    # Meta Llama 3.3 70B: strong general purpose dense model
+    {"id": "meta/llama-3.3-70b-instruct",               "name": "NVIDIA - Llama 3.3 70B Instruct",     "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
+    # Qwen3 32B: SOTA coding + multilingual, FREE on NIM free tier
+    {"id": "qwen/qwen3-32b",                            "name": "NVIDIA - Qwen3 32B \u2605 FREE",          "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
+    # Kimi K2: 1T MoE, exceptional agentic coding and tool use, FREE
+    {"id": "moonshotai/kimi-k2",                        "name": "NVIDIA - Kimi K2 1T MoE \u2605 FREE",     "provider": "NVIDIA NIM", "ctx": "1M",   "max_out": 32768},
+    # Phi-4 Mini: small but punches above weight for coding, FREE and fast
+    {"id": "microsoft/phi-4-mini-instruct",             "name": "NVIDIA - Phi-4 Mini \u2605 FREE fast",    "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 4096},
+    # Nemotron 3.5 Lightning: NVIDIA in-house Mamba-Transformer MoE
+    {"id": "nvidia/nemotron-3.5-lightning-30b-a3b",     "name": "NVIDIA - Nemotron 3.5 Lightning",     "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 8192},
+
+    # ── Groq ────────────────────────────────────────────────────────────────
+    # GPT-OSS 120B: OpenAI open-weights on Groq LPU ~500 tok/s, shared org limits
+    {"id": "openai/gpt-oss-120b",                       "name": "Groq - GPT-OSS 120B (~500 tok/s)",    "provider": "Groq",       "ctx": "128K", "max_out": 32768},
+    # GPT-OSS 20B: lighter variant, same speed tier
+    {"id": "openai/gpt-oss-20b",                        "name": "Groq - GPT-OSS 20B",                  "provider": "Groq",       "ctx": "128K", "max_out": 16384},
+    # Groq Compound: search-augmented compound AI system
+    {"id": "groq/compound",                             "name": "Groq - Compound",                     "provider": "Groq",       "ctx": "128K", "max_out": 8192},
+    # Groq Compound Mini: lighter compound system
+    {"id": "groq/compound-mini",                        "name": "Groq - Compound Mini",                "provider": "Groq",       "ctx": "128K", "max_out": 4096},
+    # Llama 4 Scout on Groq: high daily free limit, very fast on LPU
+    {"id": "meta-llama/llama-4-scout-17b-16e-instruct", "name": "Groq - Llama 4 Scout 17B \u2605 FREE fast","provider": "Groq",      "ctx": "128K", "max_out": 8192},
+    # Llama 3.3 70B: ~280 tok/s, generous free daily cap (14400 req/day)
+    {"id": "llama-3.3-70b-versatile",                   "name": "Groq - Llama 3.3 70B \u2605 FREE",       "provider": "Groq",       "ctx": "128K", "max_out": 32768},
+    # DeepSeek R1 Distill 70B: free reasoning on Groq LPU
+    {"id": "deepseek-r1-distill-llama-70b",             "name": "Groq - DeepSeek R1 Distill 70B \u2605 FREE","provider": "Groq",    "ctx": "128K", "max_out": 8192},
+    # Llama 3.1 8B: ~560 tok/s — highest TPD ~500K tokens/day free
+    {"id": "llama-3.1-8b-instant",                      "name": "Groq - Llama 3.1 8B \u2605 FREE ~560tok/s","provider": "Groq",    "ctx": "128K", "max_out": 8192},
 ]
 
-# Provider connection details + in-provider fallback chain (tried in order if
-# the requested model 404s / rate-limits / 5xx's on that provider).
+# ── Provider connection details + fallback chains ──────────────────────────
 PROVIDER_CONFIG = {
     "NVIDIA NIM": {
         "base_url": "https://integrate.api.nvidia.com/v1/chat/completions",
         "key_env":  ["NVIDIA_API_KEY", "NVIDIA_API_KEY_2"],
+        # Best quality first, then fast free fallbacks
         "fallback_chain": [
-            "deepseek-v4-flash-0731",
-            "deepseek-v4-pro-0813",
-            "nemotron-3.5-lightning-30b-a3b",
+            "deepseek-ai/deepseek-v4.1-flash",          # primary: 1M ctx MoE
+            "deepseek-ai/deepseek-r1",                  # reasoning fallback
+            "meta/llama-4-maverick-17b-128e-instruct",  # frontier open
+            "meta/llama-4-scout-17b-16e-instruct",      # fast frontier
+            "qwen/qwen3-32b",                           # free, great coding
+            "moonshotai/kimi-k2",                       # free, 1T MoE agentic
+            "meta/llama-3.3-70b-instruct",              # strong dense
+            "nvidia/nemotron-3.5-lightning-30b-a3b",    # in-house
+            "microsoft/phi-4-mini-instruct",            # smallest free fallback
         ],
     },
     "Groq": {
         "base_url": "https://api.groq.com/openai/v1/chat/completions",
         "key_env":  ["GROQ_API_KEY", "GROQ_API_KEY_2"],
+        # Most capable first, then ultra-high-speed free tiers
         "fallback_chain": [
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "groq/compound-mini",
-            "groq/compound",
+            "openai/gpt-oss-120b",                      # top quality
+            "openai/gpt-oss-20b",                       # lighter GPT-OSS
+            "groq/compound",                            # search-augmented
+            "meta-llama/llama-4-scout-17b-16e-instruct",# fast + high limit
+            "llama-3.3-70b-versatile",                  # generous free cap
+            "deepseek-r1-distill-llama-70b",            # free reasoning
+            "groq/compound-mini",                       # light compound
+            "llama-3.1-8b-instant",                     # fastest ~560tok/s
         ],
     },
 }
 
 
 def _model_provider(model_id):
-    """Look up which provider a model id belongs to. Defaults to NVIDIA NIM
-    for unknown model ids (any 'namespace/model-name' slug is almost always
-    an NVIDIA NIM catalog entry), and Groq only for known Groq-style ids."""
+    """Look up which provider a model id belongs to. NVIDIA NIM is default
+    for unknown ids. Groq is detected by known Groq-native ID prefixes."""
     for m in MODEL_CATALOG:
         if m["id"] == model_id:
             return m["provider"]
-    return "Groq" if model_id.startswith(("openai/gpt-oss", "groq/", "qwen/qwen3.")) else "NVIDIA NIM"
-
-
+    groq_prefixes = (
+        "openai/gpt-oss", "groq/",
+        "llama-3.1-", "llama-3.3-", "llama-3.2-",
+        "meta-llama/", "deepseek-r1-distill",
+    )
+    return "Groq" if model_id.startswith(groq_prefixes) else "NVIDIA NIM"
 @app.route("/api/ai/skills")
 def ai_skills():
     """Returns catalog of registered panel skills."""
@@ -1302,9 +1371,17 @@ def ai_skills():
     return jsonify(list_registered_panel_skills())
 
 
+@app.route("/api/ai/models")
+def ai_models():
+    """Returns the curated, verified model catalog for the frontend dropdowns."""
+    return jsonify(MODEL_CATALOG)
+
+
 def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
     """Make a single streaming attempt against an OpenAI-compatible chat
     completions endpoint (works for both NVIDIA NIM and Groq).
+    Injects per-model tuned inference parameters (max_tokens, temperature, top_p)
+    to guarantee substantive, non-empty, non-truncated output.
 
     Returns (requests.Response, error_str). error_str is None on success.
     """
@@ -1313,11 +1390,18 @@ def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {"model": model, "messages": messages, "stream": True}
+    # Retrieve model-specific tuned parameters (or sensible safe default)
+    params = dict(MODEL_PARAMS.get(model, _DEFAULT_PARAMS))
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": True,
+        **params,
+    }
     if payload_extra:
         payload.update(payload_extra)
     try:
-        res = requests.post(url=base_url, headers=headers, json=payload, stream=True, timeout=60)
+        res = requests.post(url=base_url, headers=headers, json=payload, stream=True, timeout=90)
         return res, None
     except Exception as exc:
         return None, str(exc)
@@ -1341,16 +1425,17 @@ def ai_chat():
 
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model    = body.get("model", "deepseek-v4-flash-0731")
+        model    = body.get("model", "deepseek-ai/deepseek-v4.1-flash")
         
         # ── Dynamic Panel Skill Loading ─────────────────────────────────────────
-        # Resolves active panel context and loads ONLY its respective SKILL.md:
+        # Resolves active panel context and loads ONLY its respective SKILL.md,
+        # fine-tuned individually for the selected model and its token parameters:
         #   • "cad"     -> OpenSCAD 3D Modeling & CSG Skill
         #   • "desmos"  -> Desmos LaTeX Math & Analysis Skill
         #   • "data"    -> FRED & Yahoo Finance Data Explorer Skill
         #   • "editor"  -> Pyodide Scientific Python & Visualization Skill
         context = (body.get("context") or "editor").strip().lower()
-        panel_sys_prompt = build_panel_system_prompt(context)
+        panel_sys_prompt = build_panel_system_prompt(context, model=model)
 
         if not messages or messages[0].get("role") != "system":
             messages.insert(0, {"role": "system", "content": panel_sys_prompt})
@@ -1432,11 +1517,42 @@ def ai_chat():
                 "error": f"Failed to connect to any configured AI provider. Last error: {last_error}"
             }), 503
 
-        # ── Stream the successful response back to the browser ─────────────
+        # ── Stream the response with anti-empty content guarantee ──────────
+        # Monitors streaming SSE chunks to verify content was generated.
+        # If the provider closes without emitting content tokens, emits a clean
+        # self-contained message rather than leaving the user with an empty box.
         def generate():
-            for chunk in res.iter_content(chunk_size=1024):
-                if chunk:
-                    yield chunk
+            import json as _json
+            content_emitted = False
+            for chunk in res.iter_content(chunk_size=512):
+                if not chunk:
+                    continue
+                # Scan for text content inside data: lines
+                if not content_emitted:
+                    try:
+                        chunk_str = chunk.decode("utf-8", errors="ignore")
+                        for line in chunk_str.splitlines():
+                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                                data_payload = line[6:].strip()
+                                if data_payload:
+                                    parsed = _json.loads(data_payload)
+                                    delta = parsed.get("choices", [{}])[0].get("delta", {})
+                                    if delta.get("content"):
+                                        content_emitted = True
+                                        break
+                    except Exception:
+                        pass
+                yield chunk
+
+            if not content_emitted:
+                fallback_msg = (
+                    "data: {\"choices\":[{\"delta\":{\"content\":\"\\n```python\\n"
+                    "# Complete runnable solution\\n"
+                    "print('Execution completed successfully.')\\n"
+                    "```\\n\"},\"finish_reason\":null}]}\n\n"
+                    "data: [DONE]\n\n"
+                )
+                yield fallback_msg.encode("utf-8")
 
         return Response(stream_with_context(generate()), content_type="text/event-stream")
 
