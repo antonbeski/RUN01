@@ -5024,13 +5024,13 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
     if (!line) return '';
 
     // Convert Unicode Greek symbols to LaTeX commands
-    line = line.replace(//g, '\\theta');
-    line = line.replace(//g, '\\pi');
-    line = line.replace(//g, '\\alpha');
-    line = line.replace(//g, '\\beta');
-    line = line.replace(//g, '\\gamma');
-    line = line.replace(//g, '\\omega');
-    line = line.replace(//g, '\\lambda');
+    line = line.replace(/\u03b8/g, '\\theta');
+    line = line.replace(/\u03c0/g, '\\pi');
+    line = line.replace(/\u03b1/g, '\\alpha');
+    line = line.replace(/\u03b2/g, '\\beta');
+    line = line.replace(/\u03b3/g, '\\gamma');
+    line = line.replace(/\u03c9/g, '\\omega');
+    line = line.replace(/\u03bb/g, '\\lambda');
 
     // Replace Python power ** with LaTeX ^
     line = line.replace(/\*\*/g, '^');

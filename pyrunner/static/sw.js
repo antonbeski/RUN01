@@ -9,7 +9,7 @@
                   Plotly.js (~3 MB), Google Fonts, PyPI wheels, CSS, App JS.
    ================================================================ */
 
-const CACHE_VERSION = 'run01-v5';
+const CACHE_VERSION = 'run01-v6';
 
 const CACHE_ORIGINS = [
   'https://cdn.jsdelivr.net',
