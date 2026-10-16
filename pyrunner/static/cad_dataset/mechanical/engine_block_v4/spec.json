@@ -1,0 +1,45 @@
+{
+  "name": "engine_block_v4",
+  "title": "4-Cylinder Automotive Engine Block Casting",
+  "category": "mechanical",
+  "type": "mechanical",
+  "units": "mm",
+  "source_file": "Product2_ENGINE_BLOCK.stp",
+  "dimensions": {
+    "length": 140.0,
+    "width": 68.0,
+    "height": 77.5
+  },
+  "default_material": "iron",
+  "parameters": {
+    "bore_diameter": 80.0,
+    "stroke": 89.0,
+    "cylinder_count": 4,
+    "cylinder_spacing": 90.0,
+    "deck_height": 220.0,
+    "main_journal_diameter": 55.0,
+    "main_bearing_saddles": 5,
+    "cooling_jacket_wall": 8.0,
+    "head_bolt_size": "M11x1.5",
+    "explode_factor": 0
+  },
+  "parts": [
+    "monobloc_crankcase",
+    "cylinder_siamese_bores",
+    "water_cooling_passages",
+    "crankshaft_main_bearing_caps",
+    "oil_gallery_feed",
+    "bellhousing_flange"
+  ],
+  "features": [
+    "cross-bolted 5 main bearing saddles",
+    "siamese wet cylinder sleeves",
+    "perimeter oil pan gasket rail",
+    "reinforced starter and alternator bosses"
+  ],
+  "standards": [
+    "ISO 286 H7",
+    "DIN EN 1561 GJL-250",
+    "SAE J431"
+  ]
+}

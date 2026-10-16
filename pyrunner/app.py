@@ -1757,5 +1757,19 @@ def cv_cleanup(job_id: str):
     return jsonify({"deleted": bool(job)})
 
 
+@app.route("/api/cad/dataset")
+def cad_dataset():
+    """Return the curated CAD engineering dataset catalog."""
+    import json as _json_mod
+    catalog_path = _os.path.join(_os.path.dirname(__file__), 'static', 'cad_dataset', 'models.json')
+    try:
+        with open(catalog_path, 'r', encoding='utf-8') as f:
+            return jsonify(_json_mod.load(f))
+    except FileNotFoundError:
+        return jsonify({"error": "Dataset catalog not found"}), 404
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 if __name__ == "__main__":
     app.run(debug=True)

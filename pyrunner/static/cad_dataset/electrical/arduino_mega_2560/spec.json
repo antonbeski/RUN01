@@ -1,0 +1,48 @@
+{
+  "name": "arduino_mega_2560",
+  "title": "Arduino Mega 2560 R3 Microcontroller Board",
+  "category": "electrical",
+  "type": "pcb",
+  "units": "mm",
+  "source_file": "ArduinoMega_STEP_AP203.STEP",
+  "dimensions": {
+    "length": 101.6,
+    "width": 53.3,
+    "thickness": 14.5
+  },
+  "default_material": "pcb_fr4",
+  "parameters": {
+    "board_length": 101.6,
+    "board_width": 53.3,
+    "microcontroller": "ATmega2560",
+    "digital_io_pins": 54,
+    "pwm_channels": 15,
+    "analog_inputs": 16,
+    "flash_memory_kb": 256,
+    "clock_speed_mhz": 16,
+    "input_voltage_v": -5,
+    "explode_factor": 0
+  },
+  "parts": [
+    "fr4_pcb_substrate",
+    "atmega2560_tqfp100",
+    "usb_type_b_receptacle",
+    "dc_barrel_jack",
+    "double_row_digital_headers",
+    "analog_input_headers",
+    "power_headers",
+    "16mhz_crystal",
+    "reset_pushbutton"
+  ],
+  "features": [
+    "54 digital input/output pins",
+    "16 analog inputs with 10-bit ADC",
+    "4 hardware serial UART ports",
+    "standard Arduino R3 shield compatibility"
+  ],
+  "standards": [
+    "IPC-7351B",
+    "Arduino Form Factor Spec",
+    "RoHS"
+  ]
+}

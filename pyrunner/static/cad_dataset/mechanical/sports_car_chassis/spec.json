@@ -1,0 +1,47 @@
+{
+  "name": "sports_car_chassis",
+  "title": "Aerodynamic Sports Car Chassis & Aero Domain",
+  "category": "mechanical",
+  "type": "mechanical",
+  "units": "mm",
+  "source_file": "domain car2.STEP",
+  "dimensions": {
+    "length": 160.0,
+    "width": 76.0,
+    "height": 38.5
+  },
+  "default_material": "aluminum",
+  "parameters": {
+    "wheelbase": 105.0,
+    "track_width_front": 68.0,
+    "track_width_rear": 72.0,
+    "ground_clearance": 4.0,
+    "front_splitter_overhang": 28.0,
+    "rear_wing_span": 60.0,
+    "rear_wing_height": 36.0,
+    "diffuser_angle_deg": 12.0,
+    "drag_coefficient_cd": 0.28,
+    "downforce_cl": -0.65,
+    "explode_factor": 0
+  },
+  "parts": [
+    "carbon_monocoque",
+    "front_splitter_assembly",
+    "vented_bonnet",
+    "aerodynamic_cockpit",
+    "rear_diffuser",
+    "adjustable_downforce_wing",
+    "side_radiator_pods"
+  ],
+  "features": [
+    "underbody venturi tunnels",
+    "high-downforce swan-neck wing mounts",
+    "sculpted wheel arch extractors",
+    "CFD-optimized frontal stagnation zone"
+  ],
+  "standards": [
+    "FIA Appendix J",
+    "ISO 286",
+    "DIN 70010"
+  ]
+}

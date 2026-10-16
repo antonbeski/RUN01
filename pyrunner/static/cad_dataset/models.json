@@ -1,0 +1,390 @@
+{
+  "title": "RUN01 CAD Studio Curated Engineering Datasets",
+  "description": "High-fidelity parametric mechanical and electrical CAD datasets with real-time 3D rendering and bidirectional AI editing.",
+  "datasets": {
+    "mechanical": [
+      {
+        "id": "mg90_servo",
+        "title": "MG90S Micro Metal Gear Servo Assembly",
+        "category": "mechanical",
+        "type": "mechanical",
+        "source_file": "MG90servo_assembly.STEP",
+        "dimensions": {
+          "length": 32.5,
+          "width": 12.2,
+          "height": 30.5
+        },
+        "default_material": "steel",
+        "parameters": {
+          "body_length": 22.8,
+          "body_width": 12.2,
+          "body_height": 22.5,
+          "flange_length": 32.5,
+          "flange_thickness": 2.0,
+          "spline_diameter": 4.8,
+          "spline_height": 3.5,
+          "horn_length": 16.0,
+          "gear_module": 0.4,
+          "operating_voltage": 4.8,
+          "stall_torque_kg_cm": 2.2,
+          "explode_factor": 0
+        },
+        "parts_count": 7,
+        "features": [
+          "metal gear train",
+          "brass output shaft with 21T spline",
+          "dual mounting tabs with M2 eyelets",
+          "reinforced polycarbonate casing"
+        ],
+        "standards": [
+          "ISO 286",
+          "DIN 933",
+          "JIS B 1701"
+        ],
+        "spec_url": "/static/cad_dataset/mechanical/mg90_servo/spec.json",
+        "scad_url": "/static/cad_dataset/mechanical/mg90_servo/model.scad",
+        "stl_url": "/static/cad_dataset/mechanical/mg90_servo/model.stl",
+        "stl_size_bytes": 20484
+      },
+      {
+        "id": "turbojet_engine",
+        "title": "Compact Axial Flow Turbojet Engine Assembly",
+        "category": "mechanical",
+        "type": "mechanical",
+        "source_file": "TurboJetEngine.STEP",
+        "dimensions": {
+          "diameter": 72.0,
+          "length": 125.0,
+          "weight_kg": 1.45
+        },
+        "default_material": "aluminum",
+        "parameters": {
+          "intake_diameter": 64.0,
+          "max_casing_diameter": 72.0,
+          "exhaust_nozzle_diameter": 52.0,
+          "total_length": 120.0,
+          "compressor_stages": 2,
+          "rotor_blade_count": 12,
+          "turbine_inlet_temp_c": 950,
+          "max_rpm": 115000,
+          "thrust_n": 140,
+          "explode_factor": 0
+        },
+        "parts_count": 8,
+        "features": [
+          "twin axial compressor stages",
+          "annular reverse-flow combustor",
+          "Inconel 718 turbine wheel",
+          "convergent thrust nozzle"
+        ],
+        "standards": [
+          "ISO 286",
+          "AS9100D",
+          "MIL-STD-1530C"
+        ],
+        "spec_url": "/static/cad_dataset/mechanical/turbojet_engine/spec.json",
+        "scad_url": "/static/cad_dataset/mechanical/turbojet_engine/model.scad",
+        "stl_url": "/static/cad_dataset/mechanical/turbojet_engine/model.stl",
+        "stl_size_bytes": 87684
+      },
+      {
+        "id": "engine_block_v4",
+        "title": "4-Cylinder Automotive Engine Block Casting",
+        "category": "mechanical",
+        "type": "mechanical",
+        "source_file": "Product2_ENGINE_BLOCK.stp",
+        "dimensions": {
+          "length": 140.0,
+          "width": 68.0,
+          "height": 77.5
+        },
+        "default_material": "iron",
+        "parameters": {
+          "bore_diameter": 80.0,
+          "stroke": 89.0,
+          "cylinder_count": 4,
+          "cylinder_spacing": 90.0,
+          "deck_height": 220.0,
+          "main_journal_diameter": 55.0,
+          "main_bearing_saddles": 5,
+          "cooling_jacket_wall": 8.0,
+          "head_bolt_size": "M11x1.5",
+          "explode_factor": 0
+        },
+        "parts_count": 6,
+        "features": [
+          "cross-bolted 5 main bearing saddles",
+          "siamese wet cylinder sleeves",
+          "perimeter oil pan gasket rail",
+          "reinforced starter and alternator bosses"
+        ],
+        "standards": [
+          "ISO 286 H7",
+          "DIN EN 1561 GJL-250",
+          "SAE J431"
+        ],
+        "spec_url": "/static/cad_dataset/mechanical/engine_block_v4/spec.json",
+        "scad_url": "/static/cad_dataset/mechanical/engine_block_v4/model.scad",
+        "stl_url": "/static/cad_dataset/mechanical/engine_block_v4/model.stl",
+        "stl_size_bytes": 83084
+      },
+      {
+        "id": "sports_car_chassis",
+        "title": "Aerodynamic Sports Car Chassis & Aero Domain",
+        "category": "mechanical",
+        "type": "mechanical",
+        "source_file": "domain car2.STEP",
+        "dimensions": {
+          "length": 160.0,
+          "width": 76.0,
+          "height": 38.5
+        },
+        "default_material": "aluminum",
+        "parameters": {
+          "wheelbase": 105.0,
+          "track_width_front": 68.0,
+          "track_width_rear": 72.0,
+          "ground_clearance": 4.0,
+          "front_splitter_overhang": 28.0,
+          "rear_wing_span": 60.0,
+          "rear_wing_height": 36.0,
+          "diffuser_angle_deg": 12.0,
+          "drag_coefficient_cd": 0.28,
+          "downforce_cl": -0.65,
+          "explode_factor": 0
+        },
+        "parts_count": 7,
+        "features": [
+          "underbody venturi tunnels",
+          "high-downforce swan-neck wing mounts",
+          "sculpted wheel arch extractors",
+          "CFD-optimized frontal stagnation zone"
+        ],
+        "standards": [
+          "FIA Appendix J",
+          "ISO 286",
+          "DIN 70010"
+        ],
+        "spec_url": "/static/cad_dataset/mechanical/sports_car_chassis/spec.json",
+        "scad_url": "/static/cad_dataset/mechanical/sports_car_chassis/model.scad",
+        "stl_url": "/static/cad_dataset/mechanical/sports_car_chassis/model.stl",
+        "stl_size_bytes": 9684
+      }
+    ],
+    "electrical": [
+      {
+        "id": "raspberry_pi_zero_w",
+        "title": "Raspberry Pi Zero W Single-Board Computer",
+        "category": "electrical",
+        "type": "pcb",
+        "source_file": "RaspberryPiZeroW.STEP",
+        "dimensions": {
+          "length": 65.0,
+          "width": 30.0,
+          "thickness": 5.0
+        },
+        "default_material": "pcb_fr4",
+        "parameters": {
+          "board_length": 65.0,
+          "board_width": 30.0,
+          "pcb_thickness": 1.6,
+          "gpio_pin_count": 40,
+          "gpio_pitch": 2.54,
+          "soc_package": "BGA-168",
+          "soc_size": 12.0,
+          "mounting_hole_dia": 2.7,
+          "mounting_hole_inset": 3.5,
+          "wifi_bluetooth": "CYW43438",
+          "explode_factor": 0
+        },
+        "parts_count": 9,
+        "features": [
+          "40-pin 0.1-inch GPIO header",
+          "dual Micro-USB 2.0 connectors",
+          "mini-HDMI 1080p output",
+          "onboard 2.4GHz ceramic antenna",
+          "4x M2.5 mounting holes"
+        ],
+        "standards": [
+          "IPC-7351B",
+          "IPC-2221",
+          "Raspberry Pi HAT spec"
+        ],
+        "spec_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/spec.json",
+        "scad_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/model.scad",
+        "stl_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/model.stl",
+        "stl_size_bytes": 79084
+      },
+      {
+        "id": "esp32_38pin",
+        "title": "ESP32 NodeMCU-32S 38-Pin Development Board",
+        "category": "electrical",
+        "type": "pcb",
+        "source_file": "PCB_ESP32-38Pines.STEP",
+        "dimensions": {
+          "length": 55.0,
+          "width": 28.0,
+          "thickness": 12.5
+        },
+        "default_material": "pcb_fr4",
+        "parameters": {
+          "board_length": 55.0,
+          "board_width": 28.0,
+          "pin_count": 38,
+          "header_rows": 2,
+          "pin_pitch": 2.54,
+          "row_spacing": 25.4,
+          "module_size_x": 25.5,
+          "module_size_y": 18.0,
+          "usb_interface": "CP2102 / CH340",
+          "flash_memory_mb": 4,
+          "explode_factor": 0
+        },
+        "parts_count": 8,
+        "features": [
+          "dual-core Xtensa 32-bit LX6 @ 240MHz",
+          "Wi-Fi 802.11 b/g/n & BLE 4.2",
+          "twin 19-pin 2.54mm breadboard headers",
+          "integrated 3.3V LDO regulator"
+        ],
+        "standards": [
+          "IPC-7351B",
+          "FCC ID 2AC7Z-ESPWROOM32",
+          "RoHS"
+        ],
+        "spec_url": "/static/cad_dataset/electrical/esp32_38pin/spec.json",
+        "scad_url": "/static/cad_dataset/electrical/esp32_38pin/model.scad",
+        "stl_url": "/static/cad_dataset/electrical/esp32_38pin/model.stl",
+        "stl_size_bytes": 66284
+      },
+      {
+        "id": "msi_x370_motherboard",
+        "title": "MSI X370 Gaming Pro Carbon ATX Motherboard",
+        "category": "electrical",
+        "type": "pcb",
+        "source_file": "MSI X370 Gaming Pro Carbon.STEP",
+        "dimensions": {
+          "length": 305.0,
+          "width": 244.0,
+          "thickness": 35.0
+        },
+        "default_material": "pcb_fr4",
+        "parameters": {
+          "form_factor": "ATX",
+          "board_length": 305.0,
+          "board_width": 244.0,
+          "cpu_socket": "Socket AM4",
+          "ddr4_slots": 4,
+          "pcie_x16_slots": 3,
+          "pcie_x1_slots": 3,
+          "m2_slots": 2,
+          "vrm_power_phases": 10,
+          "sata_ports": 6,
+          "explode_factor": 0
+        },
+        "parts_count": 9,
+        "features": [
+          "AMD AM4 Ryzen socket",
+          "Steel Armor reinforced PCIe and DIMM slots",
+          "Dual Turbo M.2 with Shield Frozr",
+          "Audio Boost 4 with isolated audio PCB",
+          "Mystic Light RGB synchronization"
+        ],
+        "standards": [
+          "ATX Specification 2.2",
+          "IPC-7351B",
+          "PCIe Base 3.0",
+          "JEDEC DDR4"
+        ],
+        "spec_url": "/static/cad_dataset/electrical/msi_x370_motherboard/spec.json",
+        "scad_url": "/static/cad_dataset/electrical/msi_x370_motherboard/model.scad",
+        "stl_url": "/static/cad_dataset/electrical/msi_x370_motherboard/model.stl",
+        "stl_size_bytes": 20484
+      },
+      {
+        "id": "arduino_mega_2560",
+        "title": "Arduino Mega 2560 R3 Microcontroller Board",
+        "category": "electrical",
+        "type": "pcb",
+        "source_file": "ArduinoMega_STEP_AP203.STEP",
+        "dimensions": {
+          "length": 101.6,
+          "width": 53.3,
+          "thickness": 14.5
+        },
+        "default_material": "pcb_fr4",
+        "parameters": {
+          "board_length": 101.6,
+          "board_width": 53.3,
+          "microcontroller": "ATmega2560",
+          "digital_io_pins": 54,
+          "pwm_channels": 15,
+          "analog_inputs": 16,
+          "flash_memory_kb": 256,
+          "clock_speed_mhz": 16,
+          "input_voltage_v": -5,
+          "explode_factor": 0
+        },
+        "parts_count": 9,
+        "features": [
+          "54 digital input/output pins",
+          "16 analog inputs with 10-bit ADC",
+          "4 hardware serial UART ports",
+          "standard Arduino R3 shield compatibility"
+        ],
+        "standards": [
+          "IPC-7351B",
+          "Arduino Form Factor Spec",
+          "RoHS"
+        ],
+        "spec_url": "/static/cad_dataset/electrical/arduino_mega_2560/spec.json",
+        "scad_url": "/static/cad_dataset/electrical/arduino_mega_2560/model.scad",
+        "stl_url": "/static/cad_dataset/electrical/arduino_mega_2560/model.stl",
+        "stl_size_bytes": 63084
+      },
+      {
+        "id": "speedybee_2807_motor",
+        "title": "SpeedyBee 2807 1050kV Brushless Drone Motor",
+        "category": "electrical",
+        "type": "mechanical",
+        "source_file": "SpeedyBee 2807 1050kV Motor.IGS",
+        "dimensions": {
+          "diameter": 33.5,
+          "height": 38.5,
+          "weight_g": 48.0
+        },
+        "default_material": "aluminum",
+        "parameters": {
+          "stator_diameter": 28.0,
+          "stator_height": 7.0,
+          "kv_rating": 1050,
+          "configuration": "12N14P",
+          "rotor_outer_diameter": 33.5,
+          "shaft_diameter": 5.0,
+          "shaft_length": 14.0,
+          "mount_hole_pattern": "19x19mm M3",
+          "idle_current_a": 1.2,
+          "max_power_w": 1350,
+          "max_thrust_g": 2450,
+          "explode_factor": 0
+        },
+        "parts_count": 7,
+        "features": [
+          "12N14P high-torque multi-pole stator",
+          "curved N52H Neodymium arc magnets",
+          "vented high-airflow bell cooling",
+          "19x19mm standard quadcopter mounting"
+        ],
+        "standards": [
+          "ISO 286",
+          "IPC-2221",
+          "RoHS"
+        ],
+        "spec_url": "/static/cad_dataset/electrical/speedybee_2807_motor/spec.json",
+        "scad_url": "/static/cad_dataset/electrical/speedybee_2807_motor/model.scad",
+        "stl_url": "/static/cad_dataset/electrical/speedybee_2807_motor/model.stl",
+        "stl_size_bytes": 74484
+      }
+    ]
+  }
+}

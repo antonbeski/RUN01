@@ -1,0 +1,48 @@
+{
+  "name": "speedybee_2807_motor",
+  "title": "SpeedyBee 2807 1050kV Brushless Drone Motor",
+  "category": "electrical",
+  "type": "mechanical",
+  "units": "mm",
+  "source_file": "SpeedyBee 2807 1050kV Motor.IGS",
+  "dimensions": {
+    "diameter": 33.5,
+    "height": 38.5,
+    "weight_g": 48.0
+  },
+  "default_material": "aluminum",
+  "parameters": {
+    "stator_diameter": 28.0,
+    "stator_height": 7.0,
+    "kv_rating": 1050,
+    "configuration": "12N14P",
+    "rotor_outer_diameter": 33.5,
+    "shaft_diameter": 5.0,
+    "shaft_length": 14.0,
+    "mount_hole_pattern": "19x19mm M3",
+    "idle_current_a": 1.2,
+    "max_power_w": 1350,
+    "max_thrust_g": 2450,
+    "explode_factor": 0
+  },
+  "parts": [
+    "cnc_aluminum_bell",
+    "n52h_arc_magnets",
+    "kawasaki_silicon_steel_stator",
+    "oxygen_free_copper_windings",
+    "titanium_alloy_shaft",
+    "nsk_9x4x4_ball_bearings",
+    "m3_base_plate"
+  ],
+  "features": [
+    "12N14P high-torque multi-pole stator",
+    "curved N52H Neodymium arc magnets",
+    "vented high-airflow bell cooling",
+    "19x19mm standard quadcopter mounting"
+  ],
+  "standards": [
+    "ISO 286",
+    "IPC-2221",
+    "RoHS"
+  ]
+}

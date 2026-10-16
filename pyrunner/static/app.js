@@ -6207,7 +6207,12 @@ window.ViewManager = (function() {
   const btnCadNewProject  = document.getElementById('btnCadNewProject');
   const btnCadSaveProject = document.getElementById('btnCadSaveProject');
   const btnCadOpenProject = document.getElementById('btnCadOpenProject');
+  const btnCadLibrary     = document.getElementById('btnCadLibrary');
+  const cadLibraryOverlay = document.getElementById('cadLibraryOverlay');
+  const btnCadLibraryClose = document.getElementById('btnCadLibraryClose');
+  const cadLibraryGrid    = document.getElementById('cadLibraryGrid');
   const cadModelSelect    = document.getElementById('cadModelSelect');
+
 
   window.btnCAD = btnCAD;
   window.cadSourceEditorEl = cadSourceEditor;
@@ -8408,7 +8413,186 @@ If extensive structural rewriting is required, output the complete corrected \`\
   }
 
 
+  // ── Curated CAD Dataset Library ─────────────────────────────────────────
+  let cadDatasetCache = null;
+  let activeLibraryTab = 'all';
+
+  async function fetchCadDataset() {
+    if (cadDatasetCache) return cadDatasetCache;
+    try {
+      const resp = await fetch('/api/cad/dataset');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      cadDatasetCache = await resp.json();
+      return cadDatasetCache;
+    } catch (err) {
+      console.warn('[CAD Library] Failed to fetch dataset catalog:', err);
+      return null;
+    }
+  }
+
+  function renderCadLibrary(catalog) {
+    if (!cadLibraryGrid) return;
+    if (!catalog || !catalog.datasets) {
+      cadLibraryGrid.innerHTML = '<div class="cad-library-loading">Failed to load datasets. Please try again.</div>';
+      return;
+    }
+
+    const mechanical = catalog.datasets.mechanical || [];
+    const electrical = catalog.datasets.electrical || [];
+    let items = [];
+    if (activeLibraryTab === 'all') items = [...mechanical, ...electrical];
+    else if (activeLibraryTab === 'mechanical') items = mechanical;
+    else if (activeLibraryTab === 'electrical') items = electrical;
+
+    if (!items.length) {
+      cadLibraryGrid.innerHTML = '<div class="cad-library-loading">No models found in this category.</div>';
+      return;
+    }
+
+    cadLibraryGrid.innerHTML = items.map(m => {
+      const isMech = m.category === 'mechanical';
+      const badgeClass = isMech ? 'mechanical' : 'electrical';
+      const badgeLabel = isMech ? 'Mechanical' : 'Electrical';
+      const dim = m.dimensions ? (m.dimensions.diameter ? `Ø${m.dimensions.diameter}×${m.dimensions.height || m.dimensions.length}mm` : `${m.dimensions.length}×${m.dimensions.width}×${m.dimensions.height || m.dimensions.thickness}mm`) : '';
+      const sizeKb = m.stl_size_bytes ? `${Math.round(m.stl_size_bytes / 1024)} KB` : '';
+      const featuresStr = (m.features || []).slice(0, 3).map(f => `• ${f}`).join('<br>');
+
+      return `
+        <div class="cad-card" data-id="${m.id}" data-category="${m.category}">
+          <div class="cad-card-header">
+            <div class="cad-card-title">${m.title}</div>
+            <span class="cad-card-badge ${badgeClass}">${badgeLabel}</span>
+          </div>
+          <div class="cad-card-meta">
+            ${dim ? `<span>📏 ${dim}</span>` : ''}
+            ${sizeKb ? `<span>💾 ${sizeKb}</span>` : ''}
+            ${m.parts_count ? `<span>🧩 ${m.parts_count} parts</span>` : ''}
+          </div>
+          <div class="cad-card-features">${featuresStr}</div>
+          <button class="cad-card-btn" data-id="${m.id}" data-category="${m.category}">Load Model</button>
+        </div>
+      `;
+    }).join('');
+
+    // Attach click listeners to cards and load buttons
+    cadLibraryGrid.querySelectorAll('.cad-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        const id = card.dataset.id;
+        const category = card.dataset.category;
+        loadDatasetModel(category, id);
+      });
+    });
+  }
+
+  async function openCadLibrary() {
+    if (!cadLibraryOverlay) return;
+    cadLibraryOverlay.classList.remove('hidden');
+    const catalog = await fetchCadDataset();
+    renderCadLibrary(catalog);
+  }
+
+  function closeCadLibrary() {
+    if (cadLibraryOverlay) cadLibraryOverlay.classList.add('hidden');
+  }
+
+  async function loadDatasetModel(category, modelId) {
+    closeCadLibrary();
+    const catalog = await fetchCadDataset();
+    if (!catalog || !catalog.datasets) return;
+    const list = catalog.datasets[category] || [];
+    const model = list.find(m => m.id === modelId);
+    if (!model) return;
+
+    setStatus(`Loading ${model.title}...`);
+    try {
+      // 1. Fetch spec.json
+      let spec = null;
+      try {
+        const sResp = await fetch(model.spec_url);
+        if (sResp.ok) spec = await sResp.json();
+      } catch (e) {
+        console.warn('Failed to load spec.json:', e);
+      }
+
+      // 2. Fetch model.scad
+      let scadCode = '';
+      try {
+        const scResp = await fetch(model.scad_url);
+        if (scResp.ok) scadCode = await scResp.text();
+      } catch (e) {
+        console.warn('Failed to load model.scad:', e);
+      }
+
+      // 3. Fetch model.stl (binary)
+      const stlResp = await fetch(model.stl_url);
+      if (!stlResp.ok) throw new Error(`Failed to fetch STL: HTTP ${stlResp.status}`);
+      const stlBuffer = await stlResp.arrayBuffer();
+
+      // Ensure Three.js viewport is initialized
+      initThreeViewport();
+
+      // Set current state
+      currentSpec = spec || {
+        title: model.title,
+        category: model.category,
+        type: model.type,
+        dimensions: model.dimensions,
+        parameters: model.parameters,
+        features: model.features,
+        standards: model.standards
+      };
+      currentScad = scadCode;
+      cadSourceEditor.value = scadCode;
+
+      // Render parameters panel
+      if (currentSpec && currentSpec.parameters) {
+        renderParamControls(currentSpec.parameters, (currentSpec.units || 'mm'));
+      }
+
+      // Render in Three.js viewport
+      loadSTLIntoViewport(stlBuffer, model.default_material || 'steel');
+
+      // Append assistant chat confirmation
+      appendChatMsg('assistant',
+        `[DATASET] **Loaded: ${model.title}**\n\n` +
+        `• **Category**: ${model.category.toUpperCase()}\n` +
+        `• **Source File**: \`${model.source_file}\`\n` +
+        `• **Engineering Standards**: ${(model.standards || []).join(', ') || 'ISO / DIN'}\n` +
+        `• **Component Count**: ${model.parts_count || 'N/A'}\n\n` +
+        `The 3D model is rendered in the viewport and full parametric OpenSCAD source is in the editor.\n` +
+        `You can use the parameter sliders or prompt AI to edit and enhance this design!`
+      );
+    } catch (err) {
+      console.error('Failed to load dataset model:', err);
+      setStatus(`[ERROR] Load failed: ${err.message}`);
+      appendChatMsg('assistant', `[ERROR] Failed to load ${model.title}: ${err.message}`, true);
+    }
+  }
+
+  if (btnCadLibrary) {
+    btnCadLibrary.addEventListener('click', openCadLibrary);
+  }
+  if (btnCadLibraryClose) {
+    btnCadLibraryClose.addEventListener('click', closeCadLibrary);
+  }
+  if (cadLibraryOverlay) {
+    cadLibraryOverlay.addEventListener('click', (e) => {
+      if (e.target === cadLibraryOverlay) closeCadLibrary();
+    });
+  }
+
+  // Library category tab switching
+  document.querySelectorAll('.cad-lib-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.cad-lib-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeLibraryTab = tab.dataset.tab || 'all';
+      if (cadDatasetCache) renderCadLibrary(cadDatasetCache);
+    });
+  });
+
   //  Chat helpers 
+
   function appendChatMsg(role, text, isError = false) {
     if (!cadChatMessages) return;
     const msg = document.createElement('div');

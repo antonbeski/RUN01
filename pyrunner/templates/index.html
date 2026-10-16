@@ -1085,11 +1085,13 @@
         </div>
         <div class="cad-modal-header-right">
           <select class="cad-model-select" id="cadModelSelect" aria-label="Select AI model" title="AI model (same providers as code editor)"></select>
+          <button class="btn btn-ghost cad-hdr-btn" id="btnCadLibrary" title="Browse curated engineering dataset">&#x1F4DA; Library</button>
           <button class="btn btn-ghost cad-hdr-btn" id="btnCadNewProject" title="New project">New</button>
           <button class="btn btn-ghost cad-hdr-btn" id="btnCadSaveProject" title="Save to browser">Save</button>
           <button class="btn btn-ghost cad-hdr-btn" id="btnCadOpenProject" title="Open saved project">Open</button>
           <button class="cad-modal-close" id="btnCloseCADModal" aria-label="Close CAD Studio">&times;</button>
         </div>
+
       </div>
 
       <!-- Body: 3-column layout -->
@@ -1196,7 +1198,27 @@
 
 
 
+  <!-- CAD Dataset Library Overlay -->
+  <div class="cad-library-overlay hidden" id="cadLibraryOverlay" role="dialog" aria-modal="true" aria-label="CAD Engineering Dataset Library">
+    <div class="cad-library-panel">
+      <div class="cad-library-header">
+        <span class="cad-library-title">&#x1F4DA; Engineering Dataset Library</span>
+        <span class="cad-library-subtitle">9 curated models &mdash; AI-editable &bull; Three.js rendered</span>
+        <button class="cad-library-close" id="btnCadLibraryClose" aria-label="Close library">&times;</button>
+      </div>
+      <div class="cad-library-tabs">
+        <button class="cad-lib-tab active" data-tab="all">All (9)</button>
+        <button class="cad-lib-tab" data-tab="mechanical">Mechanical (4)</button>
+        <button class="cad-lib-tab" data-tab="electrical">Electrical (5)</button>
+      </div>
+      <div class="cad-library-grid" id="cadLibraryGrid">
+        <div class="cad-library-loading">Loading dataset&hellip;</div>
+      </div>
+    </div>
+  </div>
+
   <!--  SCRIPTS  -->
+
   <!-- Three.js for 3D CAD Viewport -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin defer
           onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.crossOrigin='anonymous';s.defer=true;document.head.appendChild(s);"></script>

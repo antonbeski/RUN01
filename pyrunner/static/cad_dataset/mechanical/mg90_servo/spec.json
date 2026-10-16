@@ -1,0 +1,48 @@
+{
+  "name": "mg90_servo",
+  "title": "MG90S Micro Metal Gear Servo Assembly",
+  "category": "mechanical",
+  "type": "mechanical",
+  "units": "mm",
+  "source_file": "MG90servo_assembly.STEP",
+  "dimensions": {
+    "length": 32.5,
+    "width": 12.2,
+    "height": 30.5
+  },
+  "default_material": "steel",
+  "parameters": {
+    "body_length": 22.8,
+    "body_width": 12.2,
+    "body_height": 22.5,
+    "flange_length": 32.5,
+    "flange_thickness": 2.0,
+    "spline_diameter": 4.8,
+    "spline_height": 3.5,
+    "horn_length": 16.0,
+    "gear_module": 0.4,
+    "operating_voltage": 4.8,
+    "stall_torque_kg_cm": 2.2,
+    "explode_factor": 0
+  },
+  "parts": [
+    "lower_case",
+    "middle_case",
+    "top_case_gearbox",
+    "metal_gear_train",
+    "output_spline",
+    "servo_horn",
+    "3_pin_cable"
+  ],
+  "features": [
+    "metal gear train",
+    "brass output shaft with 21T spline",
+    "dual mounting tabs with M2 eyelets",
+    "reinforced polycarbonate casing"
+  ],
+  "standards": [
+    "ISO 286",
+    "DIN 933",
+    "JIS B 1701"
+  ]
+}

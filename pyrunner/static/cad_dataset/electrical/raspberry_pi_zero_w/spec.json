@@ -1,0 +1,50 @@
+{
+  "name": "raspberry_pi_zero_w",
+  "title": "Raspberry Pi Zero W Single-Board Computer",
+  "category": "electrical",
+  "type": "pcb",
+  "units": "mm",
+  "source_file": "RaspberryPiZeroW.STEP",
+  "dimensions": {
+    "length": 65.0,
+    "width": 30.0,
+    "thickness": 5.0
+  },
+  "default_material": "pcb_fr4",
+  "parameters": {
+    "board_length": 65.0,
+    "board_width": 30.0,
+    "pcb_thickness": 1.6,
+    "gpio_pin_count": 40,
+    "gpio_pitch": 2.54,
+    "soc_package": "BGA-168",
+    "soc_size": 12.0,
+    "mounting_hole_dia": 2.7,
+    "mounting_hole_inset": 3.5,
+    "wifi_bluetooth": "CYW43438",
+    "explode_factor": 0
+  },
+  "parts": [
+    "fr4_multilayer_pcb",
+    "bcm2835_soc",
+    "40_pin_gpio_header",
+    "mini_hdmi_port",
+    "micro_usb_otg",
+    "micro_usb_pwr",
+    "csi_camera_connector",
+    "microsd_socket",
+    "wifi_shield_can"
+  ],
+  "features": [
+    "40-pin 0.1-inch GPIO header",
+    "dual Micro-USB 2.0 connectors",
+    "mini-HDMI 1080p output",
+    "onboard 2.4GHz ceramic antenna",
+    "4x M2.5 mounting holes"
+  ],
+  "standards": [
+    "IPC-7351B",
+    "IPC-2221",
+    "Raspberry Pi HAT spec"
+  ]
+}

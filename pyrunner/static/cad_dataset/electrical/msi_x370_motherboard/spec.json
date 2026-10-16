@@ -1,0 +1,51 @@
+{
+  "name": "msi_x370_motherboard",
+  "title": "MSI X370 Gaming Pro Carbon ATX Motherboard",
+  "category": "electrical",
+  "type": "pcb",
+  "units": "mm",
+  "source_file": "MSI X370 Gaming Pro Carbon.STEP",
+  "dimensions": {
+    "length": 305.0,
+    "width": 244.0,
+    "thickness": 35.0
+  },
+  "default_material": "pcb_fr4",
+  "parameters": {
+    "form_factor": "ATX",
+    "board_length": 305.0,
+    "board_width": 244.0,
+    "cpu_socket": "Socket AM4",
+    "ddr4_slots": 4,
+    "pcie_x16_slots": 3,
+    "pcie_x1_slots": 3,
+    "m2_slots": 2,
+    "vrm_power_phases": 10,
+    "sata_ports": 6,
+    "explode_factor": 0
+  },
+  "parts": [
+    "atx_6layer_pcb",
+    "am4_cpu_socket",
+    "4x_ddr4_steel_armor_dimms",
+    "3x_pcie_steel_armor_slots",
+    "dual_finned_vrm_heatsinks",
+    "carbon_chipset_heatsink",
+    "m2_shield_frozr",
+    "rear_io_cluster",
+    "audio_boost_capacitors"
+  ],
+  "features": [
+    "AMD AM4 Ryzen socket",
+    "Steel Armor reinforced PCIe and DIMM slots",
+    "Dual Turbo M.2 with Shield Frozr",
+    "Audio Boost 4 with isolated audio PCB",
+    "Mystic Light RGB synchronization"
+  ],
+  "standards": [
+    "ATX Specification 2.2",
+    "IPC-7351B",
+    "PCIe Base 3.0",
+    "JEDEC DDR4"
+  ]
+}

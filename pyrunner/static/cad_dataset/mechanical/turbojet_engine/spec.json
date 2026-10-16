@@ -1,0 +1,47 @@
+{
+  "name": "turbojet_engine",
+  "title": "Compact Axial Flow Turbojet Engine Assembly",
+  "category": "mechanical",
+  "type": "mechanical",
+  "units": "mm",
+  "source_file": "TurboJetEngine.STEP",
+  "dimensions": {
+    "diameter": 72.0,
+    "length": 125.0,
+    "weight_kg": 1.45
+  },
+  "default_material": "aluminum",
+  "parameters": {
+    "intake_diameter": 64.0,
+    "max_casing_diameter": 72.0,
+    "exhaust_nozzle_diameter": 52.0,
+    "total_length": 120.0,
+    "compressor_stages": 2,
+    "rotor_blade_count": 12,
+    "turbine_inlet_temp_c": 950,
+    "max_rpm": 115000,
+    "thrust_n": 140,
+    "explode_factor": 0
+  },
+  "parts": [
+    "intake_nacelle",
+    "center_bullet_cone",
+    "multistage_axial_compressor",
+    "combustion_chamber",
+    "turbine_wheel",
+    "exhaust_cone",
+    "main_shaft",
+    "hybrid_ceramic_bearings"
+  ],
+  "features": [
+    "twin axial compressor stages",
+    "annular reverse-flow combustor",
+    "Inconel 718 turbine wheel",
+    "convergent thrust nozzle"
+  ],
+  "standards": [
+    "ISO 286",
+    "AS9100D",
+    "MIL-STD-1530C"
+  ]
+}

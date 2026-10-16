@@ -1,0 +1,48 @@
+{
+  "name": "esp32_38pin",
+  "title": "ESP32 NodeMCU-32S 38-Pin Development Board",
+  "category": "electrical",
+  "type": "pcb",
+  "units": "mm",
+  "source_file": "PCB_ESP32-38Pines.STEP",
+  "dimensions": {
+    "length": 55.0,
+    "width": 28.0,
+    "thickness": 12.5
+  },
+  "default_material": "pcb_fr4",
+  "parameters": {
+    "board_length": 55.0,
+    "board_width": 28.0,
+    "pin_count": 38,
+    "header_rows": 2,
+    "pin_pitch": 2.54,
+    "row_spacing": 25.4,
+    "module_size_x": 25.5,
+    "module_size_y": 18.0,
+    "usb_interface": "CP2102 / CH340",
+    "flash_memory_mb": 4,
+    "explode_factor": 0
+  },
+  "parts": [
+    "fr4_circuit_board",
+    "esp_wroom_32_module",
+    "rf_shield_can",
+    "pcb_trace_antenna",
+    "twin_19_pin_male_headers",
+    "micro_usb_connector",
+    "ams1117_regulator",
+    "tactile_switches"
+  ],
+  "features": [
+    "dual-core Xtensa 32-bit LX6 @ 240MHz",
+    "Wi-Fi 802.11 b/g/n & BLE 4.2",
+    "twin 19-pin 2.54mm breadboard headers",
+    "integrated 3.3V LDO regulator"
+  ],
+  "standards": [
+    "IPC-7351B",
+    "FCC ID 2AC7Z-ESPWROOM32",
+    "RoHS"
+  ]
+}
