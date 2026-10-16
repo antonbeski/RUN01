@@ -7314,13 +7314,12 @@ module fiducial(d=1.0, $fn=24) {
     const THREE = window.THREE;
 
     cadScene    = new THREE.Scene();
-    cadScene.background = new THREE.Color(0x111318);
-    cadScene.fog = new THREE.FogExp2(0x111318, 0.003);
+    cadScene.background = new THREE.Color(0x181a1f); // Blender dark viewport theme
 
     cadCamera   = new THREE.PerspectiveCamera(40, cadViewport.clientWidth / cadViewport.clientHeight, 0.1, 20000);
     cadCamera.position.set(120, 90, 160);
 
-    cadRenderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    cadRenderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, alpha: true });
     cadRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     cadRenderer.setSize(cadViewport.clientWidth, cadViewport.clientHeight);
     cadRenderer.shadowMap.enabled = true;
@@ -7329,18 +7328,39 @@ module fiducial(d=1.0, $fn=24) {
     cadRenderer.toneMappingExposure = 1.1;
     cadViewport.appendChild(cadRenderer.domElement);
 
-    // Ground grid + shadow receiver plane
-    const grid = new THREE.GridHelper(400, 40, 0x1a2030, 0x141820);
-    grid.position.y = -0.5;
+    // Blender-style transparent floor grid
+    const grid = new THREE.GridHelper(500, 50, 0x4a525d, 0x282c34);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.35;
+    grid.material.depthWrite = false;
+    grid.position.y = 0;
     cadScene.add(grid);
 
-    const floorGeo = new THREE.PlaneGeometry(600, 600);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 1.0, metalness: 0.0 });
+    // Blender floor axes: Red X axis, Green Z (Blender Y ground) axis
+    const axisSpan = 250;
+    const xAxisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-axisSpan, 0.005, 0),
+      new THREE.Vector3(axisSpan, 0.005, 0)
+    ]);
+    const xAxisMat = new THREE.LineBasicMaterial({ color: 0xd94343, transparent: true, opacity: 0.85, depthWrite: false });
+    cadScene.add(new THREE.Line(xAxisGeo, xAxisMat));
+
+    const zAxisGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.005, -axisSpan),
+      new THREE.Vector3(0, 0.005, axisSpan)
+    ]);
+    const zAxisMat = new THREE.LineBasicMaterial({ color: 0x38b855, transparent: true, opacity: 0.85, depthWrite: false });
+    cadScene.add(new THREE.Line(zAxisGeo, zAxisMat));
+
+    // Transparent shadow-receiving floor plane (shows shadows only, 100% transparent ground)
+    const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+    const floorMat = new THREE.ShadowMaterial({ opacity: 0.30 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.6;
+    floor.position.y = -0.01;
     floor.receiveShadow = true;
     cadScene.add(floor);
+
 
     //  5-point studio lighting for realistic metal rendering 
     // Key light (main, warm white, casts shadows)
@@ -7450,7 +7470,11 @@ module fiducial(d=1.0, $fn=24) {
       e.preventDefault();
     }, { passive: false });
 
-    return { update: () => {}, reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); } };
+    return {
+      update: () => {},
+      reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); },
+      setTarget: (x, y, z) => { target.set(x, y, z); updateCamera(); }
+    };
   }
 
   //  STL Parser + Three.js mesh rendering 
@@ -7499,15 +7523,19 @@ module fiducial(d=1.0, $fn=24) {
     cadMesh.castShadow = true;
     cadMesh.receiveShadow = true;
 
-    // Center and scale model to fit viewport
+    // Center X/Z and place model base directly on the grid floor (y = 0)
     const box = geometry.boundingBox;
     const center = new THREE.Vector3();
     box.getCenter(center);
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    cadMesh.position.sub(center);
-    cadMesh.scale.setScalar(100 / maxDim);
+    const scale = 100 / maxDim;
+
+    cadMesh.scale.setScalar(scale);
+    cadMesh.position.x = -center.x * scale;
+    cadMesh.position.z = -center.z * scale;
+    cadMesh.position.y = -box.min.y * scale; // Lowest point sits directly on top of the grid!
 
     cadScene.add(cadMesh);
 
@@ -7520,7 +7548,10 @@ module fiducial(d=1.0, $fn=24) {
     if (cadViewportPlaceholder) cadViewportPlaceholder.style.display = 'none';
 
     currentStlData = stlBuffer;
-    if (cadControls && cadControls.reset) cadControls.reset();
+    if (cadControls) {
+      if (cadControls.setTarget) cadControls.setTarget(0, (size.y * scale) / 2, 0);
+      else if (cadControls.reset) cadControls.reset();
+    }
   }
 
   function parseSTLBinary(buffer) {

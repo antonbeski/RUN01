@@ -44,7 +44,7 @@
         "spec_url": "/static/cad_dataset/mechanical/mg90_servo/spec.json",
         "scad_url": "/static/cad_dataset/mechanical/mg90_servo/model.scad",
         "stl_url": "/static/cad_dataset/mechanical/mg90_servo/model.stl",
-        "stl_size_bytes": 20484
+        "stl_size_bytes": 154884
       },
       {
         "id": "turbojet_engine",
@@ -168,7 +168,7 @@
         "spec_url": "/static/cad_dataset/mechanical/sports_car_chassis/spec.json",
         "scad_url": "/static/cad_dataset/mechanical/sports_car_chassis/model.scad",
         "stl_url": "/static/cad_dataset/mechanical/sports_car_chassis/model.stl",
-        "stl_size_bytes": 9684
+        "stl_size_bytes": 4196234
       }
     ],
     "electrical": [
@@ -213,7 +213,7 @@
         "spec_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/spec.json",
         "scad_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/model.scad",
         "stl_url": "/static/cad_dataset/electrical/raspberry_pi_zero_w/model.stl",
-        "stl_size_bytes": 79084
+        "stl_size_bytes": 382184
       },
       {
         "id": "esp32_38pin",
@@ -255,7 +255,7 @@
         "spec_url": "/static/cad_dataset/electrical/esp32_38pin/spec.json",
         "scad_url": "/static/cad_dataset/electrical/esp32_38pin/model.scad",
         "stl_url": "/static/cad_dataset/electrical/esp32_38pin/model.stl",
-        "stl_size_bytes": 66284
+        "stl_size_bytes": 8591584
       },
       {
         "id": "msi_x370_motherboard",
@@ -340,7 +340,7 @@
         "spec_url": "/static/cad_dataset/electrical/arduino_mega_2560/spec.json",
         "scad_url": "/static/cad_dataset/electrical/arduino_mega_2560/model.scad",
         "stl_url": "/static/cad_dataset/electrical/arduino_mega_2560/model.stl",
-        "stl_size_bytes": 63084
+        "stl_size_bytes": 1064484
       },
       {
         "id": "speedybee_2807_motor",
