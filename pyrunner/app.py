@@ -1354,9 +1354,56 @@ def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
         return None, str(exc)
 
 
-# Status codes that warrant an automatic fallback to the next key/model/provider.
-# 404 = model not found / no access to model on this key - try the next option.
-_FALLBACK_STATUS_CODES = {404, 429, 500, 502, 503, 504}
+def _peek_stream(res):
+    """Safely verify that a streaming HTTP 200 response actually contains readable data.
+    Reads the first chunk to ensure the connection did not immediately drop, hang,
+    or emit an error payload. Returns (first_chunk, error_str).
+    """
+    try:
+        import json as _json
+        for chunk in res.iter_content(chunk_size=512):
+            if chunk:
+                # Check for SSE error payloads embedded in 200 responses
+                try:
+                    chunk_str = chunk.decode("utf-8", errors="ignore")
+                    if '"error":' in chunk_str:
+                        for line in chunk_str.splitlines():
+                            if line.startswith("data: ") and line.strip() != "data: [DONE]":
+                                data_json = _json.loads(line[6:].strip())
+                                if "error" in data_json:
+                                    err_msg = data_json["error"].get("message", "Streaming API error")
+                                    return None, f"Stream error: {err_msg}"
+                except Exception:
+                    pass
+                return chunk, None
+        return None, "Empty stream: no response data retrieved from provider"
+    except Exception as exc:
+        return None, f"Stream read error: {exc}"
+
+
+# Any status code that indicates a key issue, rate limit, timeout, or server error
+# warrants immediate fallback to the backup key (GROQ_API_KEY_2) and next model.
+_FALLBACK_STATUS_CODES = {400, 401, 402, 403, 404, 408, 429, 500, 502, 503, 504}
+
+
+@app.route("/api/ai/keys-status")
+def ai_keys_status():
+    """Returns the operational status of configured Groq API keys (masked for privacy)."""
+    k1 = os.environ.get("GROQ_API_KEY", "").strip()
+    k2 = os.environ.get("GROQ_API_KEY_2", "").strip()
+    return jsonify({
+        "provider": "Groq",
+        "primary_key": {
+            "configured": bool(k1),
+            "masked": (k1[:6] + "..." + k1[-4:]) if len(k1) >= 10 else ("***" if k1 else None),
+        },
+        "secondary_key": {
+            "configured": bool(k2),
+            "masked": (k2[:6] + "..." + k2[-4:]) if len(k2) >= 10 else ("***" if k2 else None),
+        },
+        "dual_key_fallback_active": bool(k1 and k2),
+        "fallback_chain_length": len(PROVIDER_CONFIG["Groq"]["fallback_chain"]),
+    })
 
 
 @app.route("/api/ai/chat", methods=["POST"])
@@ -1400,14 +1447,14 @@ def ai_chat():
 
         if not any(configured_keys.values()):
             return jsonify({
-                "error": "No AI provider API key is configured. Set NVIDIA_API_KEY "
-                         "(recommended) and/or GROQ_API_KEY - each with an optional "
-                         "_2 backup key - in your Vercel environment settings."
+                "error": "No AI provider API key is configured. Set GROQ_API_KEY "
+                         "(and optional GROQ_API_KEY_2 backup key) in your environment settings."
             }), 400
 
         res = None
         last_error = None
         success = False
+        active_first_chunk = None
 
         for provider in provider_order:
             keys_to_try = configured_keys.get(provider) or []
@@ -1435,8 +1482,14 @@ def ai_chat():
                         continue
 
                     if res.status_code == 200:
+                        first_chunk, peek_err = _peek_stream(res)
+                        if peek_err:
+                            last_error = f"[{provider} {label} key, model {target_model}] {peek_err}"
+                            res = None
+                            continue
+                        active_first_chunk = first_chunk
                         success = True
-                        break  # Success - stream this response
+                        break  # Success - validated stream response ready
 
                     try:
                         err_data = res.json()
@@ -1446,12 +1499,9 @@ def ai_chat():
 
                     last_error = f"[{provider} {label} key, model {target_model}] HTTP {res.status_code}: {err_msg}"
 
-                    if res.status_code in _FALLBACK_STATUS_CODES:
-                        res = None
-                        continue
-                    else:
-                        # Non-retryable error (e.g. 400 Bad Request) - surface immediately.
-                        return jsonify({"error": f"{provider} API Error ({res.status_code}): {err_msg}"}), res.status_code
+                    # Fall back to next key or next model
+                    res = None
+                    continue
 
                 if success:
                     break
@@ -1471,6 +1521,9 @@ def ai_chat():
         def generate():
             import json as _json
             content_emitted = False
+            if active_first_chunk:
+                content_emitted = True
+                yield active_first_chunk
             for chunk in res.iter_content(chunk_size=512):
                 if not chunk:
                     continue
