@@ -1251,53 +1251,49 @@ def run_code():
 #  • max_tokens: set to each model's verified max completion limit
 #  • top_p=0.95: standard nucleus sampling across all models
 MODEL_PARAMS = {
-    # ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
     "openai/gpt-oss-120b":                        {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
+    "llama-3.3-70b-versatile":                    {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
     "openai/gpt-oss-20b":                         {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
     "qwen/qwen3.8-27b":                           {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
+    "llama-3.1-8b-instant":                       {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    "minimaxai/minimax-m2.7":                     {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
     "allam-2-7b":                                 {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
     "openai/gpt-oss-safeguard-20b":               {"max_tokens": 4096,  "temperature": 0.6, "top_p": 0.95},
     "meta-llama/llama-prompt-guard-2-86m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
     "meta-llama/llama-prompt-guard-2-22m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
 }
 # Fallback params for any model not explicitly listed above
-_DEFAULT_PARAMS = {"max_tokens": 8192, "temperature": 0.7, "top_p": 0.95}
+_DEFAULT_PARAMS = {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95}
 
 # ── Model catalog ─────────────────────────────────────────────────────────
 # Only verified Groq production models. NVIDIA NIM temporarily excluded.
 MODEL_CATALOG = [
-    # ── Groq ────────────────────────────────────────────────────────────────
-    # GPT-OSS 120B: OpenAI open-weights on Groq LPU ~500 tok/s, 128K context
-    {"id": "openai/gpt-oss-120b",                       "name": "Groq - GPT-OSS 120B (~500 tok/s)",    "provider": "Groq",       "ctx": "128K", "max_out": 32768},
-    # GPT-OSS 20B: lighter variant, high speed
-    {"id": "openai/gpt-oss-20b",                        "name": "Groq - GPT-OSS 20B",                  "provider": "Groq",       "ctx": "128K", "max_out": 16384},
-    # Qwen 3.8 27B: multilingual & coding
-    {"id": "qwen/qwen3.8-27b",                          "name": "Groq - Qwen 3.8 27B",                 "provider": "Groq",       "ctx": "128K", "max_out": 16384},
-    # ALLAM 2 7B: Arabic & multilingual LLM
-    {"id": "allam-2-7b",                                "name": "Groq - ALLAM 2 7B",                   "provider": "Groq",       "ctx": "128K", "max_out": 4096},
-    # GPT-OSS Safeguard 20B: safety moderation & alignment
-    {"id": "openai/gpt-oss-safeguard-20b",              "name": "Groq - GPT-OSS Safeguard 20B",        "provider": "Groq",       "ctx": "128K", "max_out": 4096},
-    # Meta Llama Prompt Guard 2 86M: prompt injection & jailbreak detection
-    {"id": "meta-llama/llama-prompt-guard-2-86m",       "name": "Groq - Llama Prompt Guard 2 86M",     "provider": "Groq",       "ctx": "8K",   "max_out": 512},
-    # Meta Llama Prompt Guard 2 22M: ultra-compact prompt guard
-    {"id": "meta-llama/llama-prompt-guard-2-22m",       "name": "Groq - Llama Prompt Guard 2 22M",     "provider": "Groq",       "ctx": "8K",   "max_out": 512},
+    # ── Primary Chat/Code Models (Groq LPU) ────────────────────────────────────
+    {"id": "openai/gpt-oss-120b",          "name": "GPT-OSS 120B (~500 tok/s)",        "provider": "Groq",  "ctx": "128K", "max_out": 32768, "tier": "primary"},
+    {"id": "llama-3.3-70b-versatile",      "name": "Llama 3.3 70B Versatile",          "provider": "Groq",  "ctx": "128K", "max_out": 32768, "tier": "primary"},
+    {"id": "openai/gpt-oss-20b",           "name": "GPT-OSS 20B",                       "provider": "Groq",  "ctx": "128K", "max_out": 16384, "tier": "primary"},
+    {"id": "qwen/qwen3.8-27b",             "name": "Qwen 3.8 27B (Multimodal)",         "provider": "Groq",  "ctx": "128K", "max_out": 16384, "tier": "primary"},
+    {"id": "llama-3.1-8b-instant",         "name": "Llama 3.1 8B Instant (Fast)",       "provider": "Groq",  "ctx": "128K", "max_out": 8192,  "tier": "primary"},
+    {"id": "minimaxai/minimax-m2.7",       "name": "MiniMax M2.7 (196K ctx)",           "provider": "Groq",  "ctx": "196K", "max_out": 16384, "tier": "primary"},
+    # ── Specialized / Safety (NOT for general chat) ────────────────────────────
+    {"id": "allam-2-7b",                              "name": "ALLAM 2 7B [Arabic/Multilingual]",   "provider": "Groq", "ctx": "128K", "max_out": 4096, "tier": "specialized"},
+    {"id": "openai/gpt-oss-safeguard-20b",            "name": "GPT-OSS Safeguard 20B [Safety]",     "provider": "Groq", "ctx": "128K", "max_out": 4096, "tier": "safety"},
+    {"id": "meta-llama/llama-prompt-guard-2-86m",     "name": "Llama Prompt Guard 2 86M [Guard]",   "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
+    {"id": "meta-llama/llama-prompt-guard-2-22m",     "name": "Llama Prompt Guard 2 22M [Guard]",   "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
 ]
 
 # ── Provider connection details + fallback chains ──────────────────────────
 PROVIDER_CONFIG = {
-    # NOTE: NVIDIA NIM is temporarily disabled while API key issue is being resolved.
     "Groq": {
         "base_url": "https://api.groq.com/openai/v1/chat/completions",
         "key_env":  ["GROQ_API_KEY", "GROQ_API_KEY_2"],
-        # Most capable first, then lighter/specialized models
         "fallback_chain": [
-            "openai/gpt-oss-120b",                      # top quality
-            "openai/gpt-oss-20b",                       # lighter GPT-OSS
-            "qwen/qwen3.8-27b",                         # Qwen 3.8 27B
-            "allam-2-7b",                               # ALLAM 2 7B
-            "openai/gpt-oss-safeguard-20b",             # Safeguard 20B
-            "meta-llama/llama-prompt-guard-2-86m",      # Guard 86M
-            "meta-llama/llama-prompt-guard-2-22m",      # Guard 22M
+            "openai/gpt-oss-120b",
+            "llama-3.3-70b-versatile",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+            "minimaxai/minimax-m2.7",
+            "llama-3.1-8b-instant",
         ],
     },
 }
@@ -1406,6 +1402,71 @@ def ai_keys_status():
     })
 
 
+@app.route("/api/ai/validate-model", methods=["POST"])
+def ai_validate_model():
+    """Validates a model ID by making a minimal test call to check it's functional."""
+    try:
+        body = request.get_json(force=True) or {}
+        model = body.get("model", "").strip()
+        if not model:
+            return jsonify({"valid": False, "error": "No model specified"}), 400
+
+        # Find the provider for this model
+        provider_name = _model_provider(model)
+        cfg = PROVIDER_CONFIG.get(provider_name)
+        if not cfg:
+            return jsonify({"valid": False, "error": f"Unknown provider for model: {model}"}), 400
+
+        keys = [os.environ.get(k, "").strip() for k in cfg["key_env"] if os.environ.get(k, "").strip()]
+        if not keys:
+            return jsonify({"valid": False, "error": f"No API key configured for provider: {provider_name}"}), 400
+
+        import requests as _req
+        params = dict(MODEL_PARAMS.get(model, _DEFAULT_PARAMS))
+        params["max_tokens"] = min(params.get("max_tokens", 256), 64)  # minimal for validation
+
+        headers = {"Authorization": f"Bearer {keys[0]}", "Content-Type": "application/json"}
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": "Reply with one word: OK"}],
+            "stream": False,
+            **params,
+        }
+
+        try:
+            resp = _req.post(cfg["base_url"], headers=headers, json=payload, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                return jsonify({"valid": True, "model": model, "provider": provider_name, "response_preview": content[:50]})
+            else:
+                try:
+                    err = resp.json().get("error", {})
+                    msg = err.get("message", resp.text[:200]) if isinstance(err, dict) else str(err)[:200]
+                except Exception:
+                    msg = resp.text[:200]
+                return jsonify({"valid": False, "model": model, "error": f"HTTP {resp.status_code}: {msg}"}), 200
+        except Exception as exc:
+            return jsonify({"valid": False, "model": model, "error": str(exc)}), 200
+    except Exception as exc:
+        return jsonify({"valid": False, "error": str(exc)}), 500
+
+
+@app.route("/api/ai/skills/<panel_key>")
+def ai_skill_detail(panel_key):
+    """Returns the resolved skill details for a specific panel key."""
+    from pyrunner.skills import resolve_panel_skill
+    skill = resolve_panel_skill(panel_key)
+    # Only return metadata, not full content (too large for frontend)
+    return jsonify({
+        "panel_key": skill.get("key"),
+        "name": skill.get("name"),
+        "description": skill.get("description"),
+        "version": skill.get("version"),
+        "content_length": len(skill.get("content", "")),
+    })
+
+
 @app.route("/api/ai/chat", methods=["POST"])
 def ai_chat():
     """Chat endpoint with automatic dual-provider, dual-key fallback.
@@ -1493,10 +1554,15 @@ def ai_chat():
 
                     try:
                         err_data = res.json()
-                        err_msg  = err_data.get("error", {}).get("message", res.text)
+                        err_msg = err_data.get("error", {})
+                        if isinstance(err_msg, dict):
+                            err_msg = err_msg.get("message", res.text[:200])
+                        elif isinstance(err_msg, str):
+                            pass
+                        else:
+                            err_msg = res.text[:200]
                     except Exception:
-                        err_msg = res.text
-
+                        err_msg = res.text[:200]
                     last_error = f"[{provider} {label} key, model {target_model}] HTTP {res.status_code}: {err_msg}"
 
                     # Fall back to next key or next model

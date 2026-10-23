@@ -128,25 +128,31 @@ def _model_token_guidelines(model: Optional[str]) -> str:
         return ""
     m = model.lower()
 
-    if "r1" in m or "reasoning" in m:
+    if any(k in m for k in ["r1", "reasoning", "qwq"]):
         return (
             "\n--- MODEL-SPECIFIC DIRECTIVE: REASONING ARCHITECTURE ---\n"
             "• Provide clear mathematical and algorithmic derivation, followed immediately by the complete, runnable code block.\n"
             "• Ensure the final code block is 100% complete and self-contained; do not let reasoning consume the entire completion.\n"
         )
-    elif any(k in m for k in ["v4.1-flash", "kimi-k2", "gpt-oss-120b", "llama-3.3-70b-versatile"]):
+    elif any(k in m for k in ["gpt-oss-120b", "llama-3.3-70b", "minimax-m2.7"]):
         return (
             "\n--- MODEL-SPECIFIC DIRECTIVE: HIGH-CAPACITY PRODUCTION TIER (32K TOKEN BUDGET) ---\n"
             "• You have an expansive 32,768 token output budget. Generate rich, robust, production-grade solutions.\n"
             "• Include comprehensive error handling, full type annotations, docstrings, and edge-case validation.\n"
             "• Never truncate or abbreviate: provide the full script from imports to visualization/output.\n"
         )
-    elif any(k in m for k in ["phi-4-mini", "compound-mini", "8b-instant"]):
+    elif any(k in m for k in ["8b-instant", "llama-3.1-8b", "allam-2-7b"]):
         return (
             "\n--- MODEL-SPECIFIC DIRECTIVE: HIGH-SPEED COMPACT TIER (4K-8K TOKEN BUDGET) ---\n"
             "• Maximize code density. Omit conversational filler, long introductions, and closing chatter.\n"
             "• Focus 95% of token budget directly on the executable code block so the entire solution completes without truncation.\n"
             "• Keep implementations clean, direct, and immediately runnable.\n"
+        )
+    elif any(k in m for k in ["prompt-guard", "safeguard"]):
+        return (
+            "\n--- MODEL-SPECIFIC DIRECTIVE: SAFETY/CLASSIFIER MODEL ---\n"
+            "• This model is specialized for safety classification, not code generation.\n"
+            "• Provide short, direct safety assessments only.\n"
         )
     else:
         return (

@@ -4039,17 +4039,21 @@ If extensive structural changes are required, output the complete corrected \`\`
 
   let messagesHistory = [];
 
-    // Curated model catalog - NVIDIA NIM & Groq production IDs (Oct 2026)
-    // ★ = completely free with high daily/minute limits on the free tier
+    // Curated model catalog - Groq production IDs (Oct 2026)
+    // Primary chat/coding models first; specialized/safety models grouped separately
   const MODEL_CATALOG = [
-    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
-    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
-    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
-    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
+    // ── Primary Chat / Code Models ──────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
+    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
+    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
+    // ── Specialized Models ──────────────────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
   ];
 
   const DEFAULT_MODEL = 'openai/gpt-oss-120b';
@@ -4058,21 +4062,25 @@ If extensive structural changes are required, output the complete corrected \`\`
   // there is always a valid selection even before /api/ai/models responds.
   function seedModelSelect(models) {
     aiModelSelect.innerHTML = '';
-    const groups = {};
-    const order = [];
+    const primaryGroup = document.createElement('optgroup');
+    primaryGroup.label = 'Groq — Chat & Code Models';
+    const specializedGroup = document.createElement('optgroup');
+    specializedGroup.label = 'Groq — Specialized / Safety';
+
     models.forEach(m => {
-      const groupName = m.provider || 'Other';
-      if (!groups[groupName]) {
-        groups[groupName] = document.createElement('optgroup');
-        groups[groupName].label = groupName;
-        order.push(groupName);
-      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      groups[groupName].appendChild(opt);
+      if (m.tier === 'safety' || m.tier === 'specialized') {
+        specializedGroup.appendChild(opt);
+      } else {
+        primaryGroup.appendChild(opt);
+      }
     });
-    order.forEach(g => aiModelSelect.appendChild(groups[g]));
+
+    aiModelSelect.appendChild(primaryGroup);
+    if (specializedGroup.children.length > 0) aiModelSelect.appendChild(specializedGroup);
+
     const hasDefault = models.some(m => m.id === DEFAULT_MODEL);
     aiModelSelect.value = hasDefault ? DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
@@ -4903,35 +4911,43 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   let desmosAbortController = null;
 
   const DESMOS_MODEL_CATALOG = [
-    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
-    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
-    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
-    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
+    // ── Primary Chat / Code Models ──────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
+    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
+    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
+    // ── Specialized Models ──────────────────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
   ];
   const DESMOS_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedDesmosModelSelect(models) {
     if (!desmosModelSelect) return;
     desmosModelSelect.innerHTML = '';
-    const groups = {};
-    const order = [];
+    const primaryGroup = document.createElement('optgroup');
+    primaryGroup.label = 'Groq — Chat & Code Models';
+    const specializedGroup = document.createElement('optgroup');
+    specializedGroup.label = 'Groq — Specialized / Safety';
+
     models.forEach(m => {
-      const groupName = m.provider || 'Other';
-      if (!groups[groupName]) {
-        groups[groupName] = document.createElement('optgroup');
-        groups[groupName].label = groupName;
-        order.push(groupName);
-      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      groups[groupName].appendChild(opt);
+      if (m.tier === 'safety' || m.tier === 'specialized') {
+        specializedGroup.appendChild(opt);
+      } else {
+        primaryGroup.appendChild(opt);
+      }
     });
-    order.forEach(g => desmosModelSelect.appendChild(groups[g]));
+
+    desmosModelSelect.appendChild(primaryGroup);
+    if (specializedGroup.children.length > 0) desmosModelSelect.appendChild(specializedGroup);
+
     const hasDefault = models.some(m => m.id === DESMOS_DEFAULT_MODEL);
     desmosModelSelect.value = hasDefault ? DESMOS_DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
@@ -6195,38 +6211,46 @@ window.ViewManager = (function() {
   window.cadSourceEditorEl = cadSourceEditor;
   if (!btnCAD || !cadModalOverlay) return;
 
-  // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq, Oct 2026)
-  // ★ = completely free with high daily/minute limits on the free tier
+  // Same curated catalog as the code editor AI panel (Groq, Oct 2026)
+  // Primary chat/coding models first; specialized/safety models grouped separately
   const CAD_MODEL_CATALOG = [
-    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
-    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
-    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
-    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
+    // ── Primary Chat / Code Models ──────────────────────────────────────────────
+    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
+    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
+    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
+    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
+    // ── Specialized Models ──────────────────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
   ];
   const CAD_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedCadModelSelect(models) {
     if (!cadModelSelect) return;
     cadModelSelect.innerHTML = '';
-    const groups = {};
-    const order = [];
+    const primaryGroup = document.createElement('optgroup');
+    primaryGroup.label = 'Groq — Chat & Code Models';
+    const specializedGroup = document.createElement('optgroup');
+    specializedGroup.label = 'Groq — Specialized / Safety';
+
     models.forEach(m => {
-      const groupName = m.provider || 'Other';
-      if (!groups[groupName]) {
-        groups[groupName] = document.createElement('optgroup');
-        groups[groupName].label = groupName;
-        order.push(groupName);
-      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      groups[groupName].appendChild(opt);
+      if (m.tier === 'safety' || m.tier === 'specialized') {
+        specializedGroup.appendChild(opt);
+      } else {
+        primaryGroup.appendChild(opt);
+      }
     });
-    order.forEach(g => cadModelSelect.appendChild(groups[g]));
+
+    cadModelSelect.appendChild(primaryGroup);
+    if (specializedGroup.children.length > 0) cadModelSelect.appendChild(specializedGroup);
+
     const hasDefault = models.some(m => m.id === CAD_DEFAULT_MODEL);
     cadModelSelect.value = hasDefault ? CAD_DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
@@ -6323,8 +6347,8 @@ window.ViewManager = (function() {
     }
 
     return {
-      errorType,
-      errorLine,
+      errorType: errType,
+      errorLine: errLine,
       cleanMessage: cleanMsg,
       snippet,
       fullStderr: errorMsg
