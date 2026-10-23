@@ -1,4 +1,4 @@
-﻿import os
+import os
 import unittest
 from pyrunner.skills import (
     PANEL_SKILL_MAP,
@@ -49,6 +49,25 @@ class TestPanelSkills(unittest.TestCase):
         self.assertIn("Pyodide", prompt)
         self.assertIn("plt.show()", prompt)
         self.assertNotIn("OpenSCAD", prompt)
+
+    def test_api_models_endpoint_groq_only(self):
+        resp = self.client.get("/api/ai/models")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 7)
+        allowed_ids = {
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+            "allam-2-7b",
+            "openai/gpt-oss-safeguard-20b",
+            "meta-llama/llama-prompt-guard-2-86m",
+            "meta-llama/llama-prompt-guard-2-22m",
+        }
+        for item in data:
+            self.assertEqual(item["provider"], "Groq")
+            self.assertIn(item["id"], allowed_ids)
 
     def test_api_skills_endpoint(self):
         resp = self.client.get("/api/ai/skills")

@@ -4041,17 +4041,17 @@ If extensive structural changes are required, output the complete corrected \`\`
 
     // Curated model catalog - NVIDIA NIM & Groq production IDs (Sept 2026)
   const MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
 
-  // Default model - DeepSeek V4 Flash on NVIDIA NIM: 284B MoE, 1M context
-  const DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.
@@ -4902,15 +4902,16 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   let desmosAbortController = null;
 
   const DESMOS_MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
-  const DESMOS_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  const DESMOS_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedDesmosModelSelect(models) {
     if (!desmosModelSelect) return;
@@ -6176,15 +6177,16 @@ window.ViewManager = (function() {
 
   // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq)
   const CAD_MODEL_CATALOG = [
-    { id: 'deepseek-v4-flash-0731',        name: 'NVIDIA - DeepSeek V4 Flash',       provider: 'NVIDIA NIM' },
-    { id: 'deepseek-v4-pro-0813',          name: 'NVIDIA - DeepSeek V4 Pro',         provider: 'NVIDIA NIM' },
-    { id: 'nemotron-3.5-lightning-30b-a3b',name: 'NVIDIA - Nemotron 3.5 Lightning',  provider: 'NVIDIA NIM' },
-    { id: 'openai/gpt-oss-120b',           name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',            name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
-    { id: 'groq/compound',                 name: 'Groq - Compound',                  provider: 'Groq' },
-    { id: 'groq/compound-mini',            name: 'Groq - Compound Mini',             provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
-  const CAD_DEFAULT_MODEL = 'deepseek-v4-flash-0731';
+  const CAD_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedCadModelSelect(models) {
     if (!cadModelSelect) return;

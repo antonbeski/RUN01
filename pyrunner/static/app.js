@@ -4042,29 +4042,17 @@ If extensive structural changes are required, output the complete corrected \`\`
     // Curated model catalog - NVIDIA NIM & Groq production IDs (Oct 2026)
     // ★ = completely free with high daily/minute limits on the free tier
   const MODEL_CATALOG = [
-    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
-    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
-    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
-    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
-    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
-    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
-    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
-    // ── Groq ────────────────────────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
-    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
-    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
-    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
-    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
 
-  // Default model - DeepSeek V4.1 Flash on NVIDIA NIM: 284B MoE, 1M context
-  const DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
+  const DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.
@@ -4915,27 +4903,16 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   let desmosAbortController = null;
 
   const DESMOS_MODEL_CATALOG = [
-    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
-    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
-    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
-    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
-    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
-    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
-    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
-    // ── Groq ────────────────────────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
-    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
-    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
-    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
-    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
-  const DESMOS_DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
+  const DESMOS_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedDesmosModelSelect(models) {
     if (!desmosModelSelect) return;
@@ -6221,27 +6198,16 @@ window.ViewManager = (function() {
   // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq, Oct 2026)
   // ★ = completely free with high daily/minute limits on the free tier
   const CAD_MODEL_CATALOG = [
-    // ── NVIDIA NIM ──────────────────────────────────────────────────────────
-    { id: 'deepseek-ai/deepseek-v4.1-flash',           name: 'NVIDIA - DeepSeek V4.1 Flash',            provider: 'NVIDIA NIM' },
-    { id: 'deepseek-ai/deepseek-r1',                  name: 'NVIDIA - DeepSeek R1 (Reasoning)',        provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-maverick-17b-128e-instruct',  name: 'NVIDIA - Llama 4 Maverick 17Bx128E',     provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-4-scout-17b-16e-instruct',      name: 'NVIDIA - Llama 4 Scout 17Bx16E',         provider: 'NVIDIA NIM' },
-    { id: 'meta/llama-3.3-70b-instruct',              name: 'NVIDIA - Llama 3.3 70B Instruct',        provider: 'NVIDIA NIM' },
-    { id: 'qwen/qwen3-32b',                           name: 'NVIDIA - Qwen3 32B ★ FREE',              provider: 'NVIDIA NIM' },
-    { id: 'moonshotai/kimi-k2',                       name: 'NVIDIA - Kimi K2 1T MoE ★ FREE',         provider: 'NVIDIA NIM' },
-    { id: 'microsoft/phi-4-mini-instruct',            name: 'NVIDIA - Phi-4 Mini ★ FREE fast',        provider: 'NVIDIA NIM' },
-    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b',     name: 'NVIDIA - Nemotron 3.5 Lightning',        provider: 'NVIDIA NIM' },
-    // ── Groq ────────────────────────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',                      name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                       name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'groq/compound',                            name: 'Groq - Compound',                       provider: 'Groq' },
-    { id: 'groq/compound-mini',                       name: 'Groq - Compound Mini',                  provider: 'Groq' },
-    { id: 'meta-llama/llama-4-scout-17b-16e-instruct',name: 'Groq - Llama 4 Scout 17B ★ FREE fast',  provider: 'Groq' },
-    { id: 'llama-3.3-70b-versatile',                  name: 'Groq - Llama 3.3 70B ★ FREE',           provider: 'Groq' },
-    { id: 'deepseek-r1-distill-llama-70b',            name: 'Groq - DeepSeek R1 Distill 70B ★ FREE', provider: 'Groq' },
-    { id: 'llama-3.1-8b-instant',                     name: 'Groq - Llama 3.1 8B ★ FREE ~560tok/s',  provider: 'Groq' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
-  const CAD_DEFAULT_MODEL = 'deepseek-ai/deepseek-v4.1-flash';
+  const CAD_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedCadModelSelect(models) {
     if (!cadModelSelect) return;

@@ -1251,119 +1251,66 @@ def run_code():
 #  • max_tokens: set to each model's verified max completion limit
 #  • top_p=0.95: standard nucleus sampling across all models
 MODEL_PARAMS = {
-    # ── NVIDIA NIM ──────────────────────────────────────────────────────────
-    "deepseek-ai/deepseek-v4.1-flash":            {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
-    "deepseek-ai/deepseek-r1":                    {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
-    "meta/llama-4-maverick-17b-128e-instruct":    {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
-    "meta/llama-4-scout-17b-16e-instruct":        {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
-    "meta/llama-3.3-70b-instruct":                {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
-    "qwen/qwen3-32b":                             {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
-    "moonshotai/kimi-k2":                         {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
-    "microsoft/phi-4-mini-instruct":              {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
-    "nvidia/nemotron-3.5-lightning-30b-a3b":      {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
-    # ── Groq ────────────────────────────────────────────────────────────────
+    # ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
     "openai/gpt-oss-120b":                        {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
     "openai/gpt-oss-20b":                         {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
-    "groq/compound":                              {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
-    "groq/compound-mini":                         {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
-    "meta-llama/llama-4-scout-17b-16e-instruct":  {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
-    "llama-3.3-70b-versatile":                    {"max_tokens": 32768, "temperature": 0.7, "top_p": 0.95},
-    "deepseek-r1-distill-llama-70b":              {"max_tokens": 8192,  "temperature": 0.6, "top_p": 0.95},
-    "llama-3.1-8b-instant":                       {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
+    "qwen/qwen3.8-27b":                           {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
+    "allam-2-7b":                                 {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
+    "openai/gpt-oss-safeguard-20b":               {"max_tokens": 4096,  "temperature": 0.6, "top_p": 0.95},
+    "meta-llama/llama-prompt-guard-2-86m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
+    "meta-llama/llama-prompt-guard-2-22m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
 }
 # Fallback params for any model not explicitly listed above
 _DEFAULT_PARAMS = {"max_tokens": 8192, "temperature": 0.7, "top_p": 0.95}
 
 # ── Model catalog ─────────────────────────────────────────────────────────
-# Verified model IDs from build.nvidia.com and console.groq.com/docs (Oct 2026).
+# Only verified Groq production models. NVIDIA NIM temporarily excluded.
 MODEL_CATALOG = [
-    # ── NVIDIA NIM ──────────────────────────────────────────────────────────
-    # DeepSeek V4.1 Flash: 284B MoE (37B active), 1M context, top coding MoE
-    {"id": "deepseek-ai/deepseek-v4.1-flash",           "name": "NVIDIA - DeepSeek V4.1 Flash",        "provider": "NVIDIA NIM", "ctx": "1M",   "max_out": 32768},
-    # DeepSeek R1: chain-of-thought reasoning, 128K context
-    {"id": "deepseek-ai/deepseek-r1",                   "name": "NVIDIA - DeepSeek R1 (Reasoning)",    "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
-    # Meta Llama 4 Maverick: 17Bx128E MoE, frontier open model
-    {"id": "meta/llama-4-maverick-17b-128e-instruct",   "name": "NVIDIA - Llama 4 Maverick 17Bx128E",  "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
-    # Meta Llama 4 Scout: 17Bx16E, fast and capable
-    {"id": "meta/llama-4-scout-17b-16e-instruct",       "name": "NVIDIA - Llama 4 Scout 17Bx16E",      "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 8192},
-    # Meta Llama 3.3 70B: strong general purpose dense model
-    {"id": "meta/llama-3.3-70b-instruct",               "name": "NVIDIA - Llama 3.3 70B Instruct",     "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
-    # Qwen3 32B: SOTA coding + multilingual, FREE on NIM free tier
-    {"id": "qwen/qwen3-32b",                            "name": "NVIDIA - Qwen3 32B \u2605 FREE",          "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 16384},
-    # Kimi K2: 1T MoE, exceptional agentic coding and tool use, FREE
-    {"id": "moonshotai/kimi-k2",                        "name": "NVIDIA - Kimi K2 1T MoE \u2605 FREE",     "provider": "NVIDIA NIM", "ctx": "1M",   "max_out": 32768},
-    # Phi-4 Mini: small but punches above weight for coding, FREE and fast
-    {"id": "microsoft/phi-4-mini-instruct",             "name": "NVIDIA - Phi-4 Mini \u2605 FREE fast",    "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 4096},
-    # Nemotron 3.5 Lightning: NVIDIA in-house Mamba-Transformer MoE
-    {"id": "nvidia/nemotron-3.5-lightning-30b-a3b",     "name": "NVIDIA - Nemotron 3.5 Lightning",     "provider": "NVIDIA NIM", "ctx": "128K", "max_out": 8192},
-
     # ── Groq ────────────────────────────────────────────────────────────────
-    # GPT-OSS 120B: OpenAI open-weights on Groq LPU ~500 tok/s, shared org limits
+    # GPT-OSS 120B: OpenAI open-weights on Groq LPU ~500 tok/s, 128K context
     {"id": "openai/gpt-oss-120b",                       "name": "Groq - GPT-OSS 120B (~500 tok/s)",    "provider": "Groq",       "ctx": "128K", "max_out": 32768},
-    # GPT-OSS 20B: lighter variant, same speed tier
+    # GPT-OSS 20B: lighter variant, high speed
     {"id": "openai/gpt-oss-20b",                        "name": "Groq - GPT-OSS 20B",                  "provider": "Groq",       "ctx": "128K", "max_out": 16384},
-    # Groq Compound: search-augmented compound AI system
-    {"id": "groq/compound",                             "name": "Groq - Compound",                     "provider": "Groq",       "ctx": "128K", "max_out": 8192},
-    # Groq Compound Mini: lighter compound system
-    {"id": "groq/compound-mini",                        "name": "Groq - Compound Mini",                "provider": "Groq",       "ctx": "128K", "max_out": 4096},
-    # Llama 4 Scout on Groq: high daily free limit, very fast on LPU
-    {"id": "meta-llama/llama-4-scout-17b-16e-instruct", "name": "Groq - Llama 4 Scout 17B \u2605 FREE fast","provider": "Groq",      "ctx": "128K", "max_out": 8192},
-    # Llama 3.3 70B: ~280 tok/s, generous free daily cap (14400 req/day)
-    {"id": "llama-3.3-70b-versatile",                   "name": "Groq - Llama 3.3 70B \u2605 FREE",       "provider": "Groq",       "ctx": "128K", "max_out": 32768},
-    # DeepSeek R1 Distill 70B: free reasoning on Groq LPU
-    {"id": "deepseek-r1-distill-llama-70b",             "name": "Groq - DeepSeek R1 Distill 70B \u2605 FREE","provider": "Groq",    "ctx": "128K", "max_out": 8192},
-    # Llama 3.1 8B: ~560 tok/s — highest TPD ~500K tokens/day free
-    {"id": "llama-3.1-8b-instant",                      "name": "Groq - Llama 3.1 8B \u2605 FREE ~560tok/s","provider": "Groq",    "ctx": "128K", "max_out": 8192},
+    # Qwen 3.8 27B: multilingual & coding
+    {"id": "qwen/qwen3.8-27b",                          "name": "Groq - Qwen 3.8 27B",                 "provider": "Groq",       "ctx": "128K", "max_out": 16384},
+    # ALLAM 2 7B: Arabic & multilingual LLM
+    {"id": "allam-2-7b",                                "name": "Groq - ALLAM 2 7B",                   "provider": "Groq",       "ctx": "128K", "max_out": 4096},
+    # GPT-OSS Safeguard 20B: safety moderation & alignment
+    {"id": "openai/gpt-oss-safeguard-20b",              "name": "Groq - GPT-OSS Safeguard 20B",        "provider": "Groq",       "ctx": "128K", "max_out": 4096},
+    # Meta Llama Prompt Guard 2 86M: prompt injection & jailbreak detection
+    {"id": "meta-llama/llama-prompt-guard-2-86m",       "name": "Groq - Llama Prompt Guard 2 86M",     "provider": "Groq",       "ctx": "8K",   "max_out": 512},
+    # Meta Llama Prompt Guard 2 22M: ultra-compact prompt guard
+    {"id": "meta-llama/llama-prompt-guard-2-22m",       "name": "Groq - Llama Prompt Guard 2 22M",     "provider": "Groq",       "ctx": "8K",   "max_out": 512},
 ]
 
 # ── Provider connection details + fallback chains ──────────────────────────
 PROVIDER_CONFIG = {
-    "NVIDIA NIM": {
-        "base_url": "https://integrate.api.nvidia.com/v1/chat/completions",
-        "key_env":  ["NVIDIA_API_KEY", "NVIDIA_API_KEY_2"],
-        # Best quality first, then fast free fallbacks
-        "fallback_chain": [
-            "deepseek-ai/deepseek-v4.1-flash",          # primary: 1M ctx MoE
-            "deepseek-ai/deepseek-r1",                  # reasoning fallback
-            "meta/llama-4-maverick-17b-128e-instruct",  # frontier open
-            "meta/llama-4-scout-17b-16e-instruct",      # fast frontier
-            "qwen/qwen3-32b",                           # free, great coding
-            "moonshotai/kimi-k2",                       # free, 1T MoE agentic
-            "meta/llama-3.3-70b-instruct",              # strong dense
-            "nvidia/nemotron-3.5-lightning-30b-a3b",    # in-house
-            "microsoft/phi-4-mini-instruct",            # smallest free fallback
-        ],
-    },
+    # NOTE: NVIDIA NIM is temporarily disabled while API key issue is being resolved.
     "Groq": {
         "base_url": "https://api.groq.com/openai/v1/chat/completions",
         "key_env":  ["GROQ_API_KEY", "GROQ_API_KEY_2"],
-        # Most capable first, then ultra-high-speed free tiers
+        # Most capable first, then lighter/specialized models
         "fallback_chain": [
             "openai/gpt-oss-120b",                      # top quality
             "openai/gpt-oss-20b",                       # lighter GPT-OSS
-            "groq/compound",                            # search-augmented
-            "meta-llama/llama-4-scout-17b-16e-instruct",# fast + high limit
-            "llama-3.3-70b-versatile",                  # generous free cap
-            "deepseek-r1-distill-llama-70b",            # free reasoning
-            "groq/compound-mini",                       # light compound
-            "llama-3.1-8b-instant",                     # fastest ~560tok/s
+            "qwen/qwen3.8-27b",                         # Qwen 3.8 27B
+            "allam-2-7b",                               # ALLAM 2 7B
+            "openai/gpt-oss-safeguard-20b",             # Safeguard 20B
+            "meta-llama/llama-prompt-guard-2-86m",      # Guard 86M
+            "meta-llama/llama-prompt-guard-2-22m",      # Guard 22M
         ],
     },
 }
 
 
 def _model_provider(model_id):
-    """Look up which provider a model id belongs to. NVIDIA NIM is default
-    for unknown ids. Groq is detected by known Groq-native ID prefixes."""
+    """Look up which provider a model id belongs to. Currently only Groq is active."""
     for m in MODEL_CATALOG:
         if m["id"] == model_id:
             return m["provider"]
-    groq_prefixes = (
-        "openai/gpt-oss", "groq/",
-        "llama-3.1-", "llama-3.3-", "llama-3.2-",
-        "meta-llama/", "deepseek-r1-distill",
-    )
-    return "Groq" if model_id.startswith(groq_prefixes) else "NVIDIA NIM"
+    return "Groq"
+
+
 @app.route("/api/ai/skills")
 def ai_skills():
     """Returns catalog of registered panel skills."""
@@ -1425,7 +1372,7 @@ def ai_chat():
 
         body     = request.get_json(force=True)
         messages = body.get("messages", [])
-        model    = body.get("model", "deepseek-ai/deepseek-v4.1-flash")
+        model    = body.get("model", "openai/gpt-oss-120b")
         
         # ── Dynamic Panel Skill Loading ─────────────────────────────────────────
         # Resolves active panel context and loads ONLY its respective SKILL.md,
