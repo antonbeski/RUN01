@@ -21,10 +21,10 @@ class MockStreamingResponse:
 class TestDualKeyFallback(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
-        # Set both test keys
+        # Set dummy mock test keys (pure unit test fixtures, not real credentials)
         self.patch_env = patch.dict(os.environ, {
-            "GROQ_API_KEY": "gsk_primary_key_00000000001",
-            "GROQ_API_KEY_2": "gsk_secondary_key_00000002",
+            "GROQ_API_KEY": "mock_test_key_primary_001",
+            "GROQ_API_KEY_2": "mock_test_key_secondary_002",
         })
         self.patch_env.start()
 
@@ -46,13 +46,13 @@ class TestDualKeyFallback(unittest.TestCase):
         valid_chunk = b'data: {"choices":[{"delta":{"content":"Hello from Key 2"}}]}\n\n'
 
         def side_effect(base_url, api_key, model, messages, payload_extra=None):
-            if api_key == "gsk_primary_key_00000000001":
+            if api_key == "mock_test_key_primary_001":
                 # Key 1 hits rate limit
                 return MockStreamingResponse(
                     status_code=429,
                     error_json={"error": {"message": "Rate limit reached on TPM"}}
                 ), None
-            elif api_key == "gsk_secondary_key_00000002":
+            elif api_key == "mock_test_key_secondary_002":
                 # Key 2 succeeds
                 return MockStreamingResponse(
                     status_code=200,
@@ -70,9 +70,9 @@ class TestDualKeyFallback(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(mock_call.call_count, 2)
         # First call was with Key 1
-        self.assertEqual(mock_call.call_args_list[0][0][1], "gsk_primary_key_00000000001")
+        self.assertEqual(mock_call.call_args_list[0][0][1], "mock_test_key_primary_001")
         # Second call was with Key 2
-        self.assertEqual(mock_call.call_args_list[1][0][1], "gsk_secondary_key_00000002")
+        self.assertEqual(mock_call.call_args_list[1][0][1], "mock_test_key_secondary_002")
 
         # Verify streamed response from Key 2
         data_str = resp.data.decode("utf-8")
@@ -84,13 +84,13 @@ class TestDualKeyFallback(unittest.TestCase):
         valid_chunk = b'data: {"choices":[{"delta":{"content":"Retrieved from Key 2"}}]}\n\n'
 
         def side_effect(base_url, api_key, model, messages, payload_extra=None):
-            if api_key == "gsk_primary_key_00000000001":
+            if api_key == "mock_test_key_primary_001":
                 # Key 1 returns 200 but empty stream (no response retrieved)
                 return MockStreamingResponse(
                     status_code=200,
                     chunks=[]
                 ), None
-            elif api_key == "gsk_secondary_key_00000002":
+            elif api_key == "mock_test_key_secondary_002":
                 # Key 2 succeeds
                 return MockStreamingResponse(
                     status_code=200,
@@ -107,8 +107,8 @@ class TestDualKeyFallback(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(mock_call.call_count, 2)
-        self.assertEqual(mock_call.call_args_list[0][0][1], "gsk_primary_key_00000000001")
-        self.assertEqual(mock_call.call_args_list[1][0][1], "gsk_secondary_key_00000002")
+        self.assertEqual(mock_call.call_args_list[0][0][1], "mock_test_key_primary_001")
+        self.assertEqual(mock_call.call_args_list[1][0][1], "mock_test_key_secondary_002")
         data_str = resp.data.decode("utf-8")
         self.assertIn("Retrieved from Key 2", data_str)
 
@@ -118,9 +118,9 @@ class TestDualKeyFallback(unittest.TestCase):
         valid_chunk = b'data: {"choices":[{"delta":{"content":"Success after network error"}}]}\n\n'
 
         def side_effect(base_url, api_key, model, messages, payload_extra=None):
-            if api_key == "gsk_primary_key_00000000001":
+            if api_key == "mock_test_key_primary_001":
                 return None, "Connection reset by peer"
-            elif api_key == "gsk_secondary_key_00000002":
+            elif api_key == "mock_test_key_secondary_002":
                 return MockStreamingResponse(
                     status_code=200,
                     chunks=[valid_chunk]
@@ -136,8 +136,8 @@ class TestDualKeyFallback(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(mock_call.call_count, 2)
-        self.assertEqual(mock_call.call_args_list[0][0][1], "gsk_primary_key_00000000001")
-        self.assertEqual(mock_call.call_args_list[1][0][1], "gsk_secondary_key_00000002")
+        self.assertEqual(mock_call.call_args_list[0][0][1], "mock_test_key_primary_001")
+        self.assertEqual(mock_call.call_args_list[1][0][1], "mock_test_key_secondary_002")
         data_str = resp.data.decode("utf-8")
         self.assertIn("Success after network error", data_str)
 
@@ -147,12 +147,12 @@ class TestDualKeyFallback(unittest.TestCase):
         valid_chunk = b'data: {"choices":[{"delta":{"content":"Success with valid Key 2"}}]}\n\n'
 
         def side_effect(base_url, api_key, model, messages, payload_extra=None):
-            if api_key == "gsk_primary_key_00000000001":
+            if api_key == "mock_test_key_primary_001":
                 return MockStreamingResponse(
                     status_code=401,
                     error_json={"error": {"message": "Invalid API Key"}}
                 ), None
-            elif api_key == "gsk_secondary_key_00000002":
+            elif api_key == "mock_test_key_secondary_002":
                 return MockStreamingResponse(
                     status_code=200,
                     chunks=[valid_chunk]
@@ -168,8 +168,8 @@ class TestDualKeyFallback(unittest.TestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(mock_call.call_count, 2)
-        self.assertEqual(mock_call.call_args_list[0][0][1], "gsk_primary_key_00000000001")
-        self.assertEqual(mock_call.call_args_list[1][0][1], "gsk_secondary_key_00000002")
+        self.assertEqual(mock_call.call_args_list[0][0][1], "mock_test_key_primary_001")
+        self.assertEqual(mock_call.call_args_list[1][0][1], "mock_test_key_secondary_002")
         data_str = resp.data.decode("utf-8")
         self.assertIn("Success with valid Key 2", data_str)
 
