@@ -1516,6 +1516,7 @@ def ai_chat():
         last_error = None
         success = False
         active_first_chunk = None
+        active_stream_iter = None
 
         for provider in provider_order:
             keys_to_try = configured_keys.get(provider) or []
@@ -1543,12 +1544,22 @@ def ai_chat():
                         continue
 
                     if res.status_code == 200:
-                        first_chunk, peek_err = _peek_stream(res)
-                        if peek_err:
-                            last_error = f"[{provider} {label} key, model {target_model}] {peek_err}"
+                        stream_iter = res.iter_content(chunk_size=1024)
+                        first_chunk = next(stream_iter, None)
+                        if not first_chunk:
+                            last_error = f"[{provider} {label} key, model {target_model}] Empty stream from provider"
                             res = None
                             continue
+                        try:
+                            fstr = first_chunk.decode("utf-8", errors="ignore")
+                            if '"error":' in fstr:
+                                last_error = f"[{provider} {label} key, model {target_model}] Stream error: {fstr[:200]}"
+                                res = None
+                                continue
+                        except Exception:
+                            pass
                         active_first_chunk = first_chunk
+                        active_stream_iter = stream_iter
                         success = True
                         break  # Success - validated stream response ready
 
@@ -1580,15 +1591,24 @@ def ai_chat():
                 "error": f"Failed to connect to any configured AI provider. Last error: {last_error}"
             }), 503
 
-        # Stream the response - GPT-OSS thinking token fix
+        # Stream the response directly from the active iterator
         def generate():
             if active_first_chunk:
                 yield active_first_chunk
-            for chunk in res.iter_content(chunk_size=1024):
-                if chunk:
-                    yield chunk
+            if active_stream_iter:
+                for chunk in active_stream_iter:
+                    if chunk:
+                        yield chunk
 
-        return Response(stream_with_context(generate()), content_type="text/event-stream")
+        return Response(
+            stream_with_context(generate()),
+            content_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            }
+        )
 
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500

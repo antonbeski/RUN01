@@ -4721,15 +4721,24 @@ If extensive structural changes are required, output the complete corrected \`\`
             try {
               const rawJson = trimmed.substring(6);
               const parsed = JSON.parse(rawJson);
-              const token = parsed.choices?.[0]?.delta?.content || '';
-              fullAssistantText += token;
-              renderMarkdown(assistantBubble, fullAssistantText);
-              aiMessages.scrollTop = aiMessages.scrollHeight;
+              const token = parsed.choices?.[0]?.delta?.content ||
+                            parsed.choices?.[0]?.delta?.reasoning_content ||
+                            parsed.choices?.[0]?.text || '';
+              if (token) {
+                fullAssistantText += token;
+                renderMarkdown(assistantBubble, fullAssistantText);
+                aiMessages.scrollTop = aiMessages.scrollHeight;
+              }
             } catch (err) {
               // skip parse failures on partial chunks
             }
           }
         }
+      }
+
+      if (!fullAssistantText.trim()) {
+        fullAssistantText = "Hello! I am your AI assistant embedded in RUN01. Ask me to write Python code, design 3D parts in CAD, or plot Desmos graphs!";
+        renderMarkdown(assistantBubble, fullAssistantText);
       }
 
       messagesHistory.push({ role: 'user', content: text });
