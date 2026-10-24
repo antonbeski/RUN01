@@ -4039,19 +4039,23 @@ If extensive structural changes are required, output the complete corrected \`\`
 
   let messagesHistory = [];
 
-    // Curated model catalog - NVIDIA NIM & Groq production IDs (Sept 2026)
+    // Curated model catalog - verified Groq free-tier models (Oct 24, 2026)
   const MODEL_CATALOG = [
-    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
-    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
-    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
-    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
-    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
+    // ── Primary Chat/Code Models (Groq LPU) — best for general use ──────────────
+    { id: 'llama-3.3-70b-versatile',    name: 'Groq - Llama 3.3 70B Versatile ⭐',   provider: 'Groq' },
+    { id: 'openai/gpt-oss-120b',        name: 'Groq - GPT-OSS 120B (~500 tok/s)',    provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',         name: 'Groq - GPT-OSS 20B',                 provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Groq - Qwen 3.8 27B (Multimodal)',   provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',       name: 'Groq - Llama 3.1 8B Instant (Fast)', provider: 'Groq' },
+    { id: 'minimaxai/minimax-m2.7',     name: 'Groq - MiniMax M2.7 (196K ctx)',     provider: 'Groq' },
+    // ── Specialized / Safety Models ──────────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'Groq - ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'Groq - GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Groq - Llama Prompt Guard 2 86M [Guard]', provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Groq - Llama Prompt Guard 2 22M [Guard]', provider: 'Groq' },
   ];
 
-  const DEFAULT_MODEL = 'openai/gpt-oss-120b';
+  const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.

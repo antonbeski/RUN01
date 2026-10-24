@@ -4039,48 +4039,43 @@ If extensive structural changes are required, output the complete corrected \`\`
 
   let messagesHistory = [];
 
-    // Curated model catalog - Groq production IDs (Oct 2026)
-    // Primary chat/coding models first; specialized/safety models grouped separately
+    // Curated model catalog - verified Groq free-tier models (Oct 24, 2026)
   const MODEL_CATALOG = [
-    // ── Primary Chat / Code Models ──────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
-    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
-    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
-    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
-    // ── Specialized Models ──────────────────────────────────────────────────────
-    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
-    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
+    // ── Primary Chat/Code Models (Groq LPU) — best for general use ──────────────
+    { id: 'llama-3.3-70b-versatile',    name: 'Groq - Llama 3.3 70B Versatile ⭐',   provider: 'Groq' },
+    { id: 'openai/gpt-oss-120b',        name: 'Groq - GPT-OSS 120B (~500 tok/s)',    provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',         name: 'Groq - GPT-OSS 20B',                 provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Groq - Qwen 3.8 27B (Multimodal)',   provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',       name: 'Groq - Llama 3.1 8B Instant (Fast)', provider: 'Groq' },
+    { id: 'minimaxai/minimax-m2.7',     name: 'Groq - MiniMax M2.7 (196K ctx)',     provider: 'Groq' },
+    // ── Specialized / Safety Models ──────────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'Groq - ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'Groq - GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Groq - Llama Prompt Guard 2 86M [Guard]', provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Groq - Llama Prompt Guard 2 22M [Guard]', provider: 'Groq' },
   ];
 
-  const DEFAULT_MODEL = 'openai/gpt-oss-120b';
+  const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
   // Pre-seed dropdown immediately (grouped by provider via <optgroup>) so
   // there is always a valid selection even before /api/ai/models responds.
   function seedModelSelect(models) {
     aiModelSelect.innerHTML = '';
-    const primaryGroup = document.createElement('optgroup');
-    primaryGroup.label = 'Groq — Chat & Code Models';
-    const specializedGroup = document.createElement('optgroup');
-    specializedGroup.label = 'Groq — Specialized / Safety';
-
+    const groups = {};
+    const order = [];
     models.forEach(m => {
+      const groupName = m.provider || 'Other';
+      if (!groups[groupName]) {
+        groups[groupName] = document.createElement('optgroup');
+        groups[groupName].label = groupName;
+        order.push(groupName);
+      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      if (m.tier === 'safety' || m.tier === 'specialized') {
-        specializedGroup.appendChild(opt);
-      } else {
-        primaryGroup.appendChild(opt);
-      }
+      groups[groupName].appendChild(opt);
     });
-
-    aiModelSelect.appendChild(primaryGroup);
-    if (specializedGroup.children.length > 0) aiModelSelect.appendChild(specializedGroup);
-
+    order.forEach(g => aiModelSelect.appendChild(groups[g]));
     const hasDefault = models.some(m => m.id === DEFAULT_MODEL);
     aiModelSelect.value = hasDefault ? DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
@@ -4911,61 +4906,39 @@ let desmosApiKey = 'dca3170180db492b4eb4508460839bad';
   let desmosAbortController = null;
 
   const DESMOS_MODEL_CATALOG = [
-    // ── Primary Chat / Code Models ──────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
-    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
-    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
-    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
-    // ── Specialized Models ──────────────────────────────────────────────────────
-    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
-    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
   const DESMOS_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedDesmosModelSelect(models) {
     if (!desmosModelSelect) return;
     desmosModelSelect.innerHTML = '';
-    const primaryGroup = document.createElement('optgroup');
-    primaryGroup.label = 'Groq — Chat & Code Models';
-    const specializedGroup = document.createElement('optgroup');
-    specializedGroup.label = 'Groq — Specialized / Safety';
-
+    const groups = {};
+    const order = [];
     models.forEach(m => {
+      const groupName = m.provider || 'Other';
+      if (!groups[groupName]) {
+        groups[groupName] = document.createElement('optgroup');
+        groups[groupName].label = groupName;
+        order.push(groupName);
+      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      if (m.tier === 'safety' || m.tier === 'specialized') {
-        specializedGroup.appendChild(opt);
-      } else {
-        primaryGroup.appendChild(opt);
-      }
+      groups[groupName].appendChild(opt);
     });
-
-    desmosModelSelect.appendChild(primaryGroup);
-    if (specializedGroup.children.length > 0) desmosModelSelect.appendChild(specializedGroup);
-
+    order.forEach(g => desmosModelSelect.appendChild(groups[g]));
     const hasDefault = models.some(m => m.id === DESMOS_DEFAULT_MODEL);
     desmosModelSelect.value = hasDefault ? DESMOS_DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
   seedDesmosModelSelect(DESMOS_MODEL_CATALOG);
-  (async () => {
-    try {
-      const resp = await fetch('/api/ai/models');
-      if (!resp.ok) return;
-      const models = await resp.json();
-      if (Array.isArray(models) && models.length) {
-        const prev = desmosModelSelect ? desmosModelSelect.value : '';
-        seedDesmosModelSelect(models);
-        if (prev && desmosModelSelect && [...desmosModelSelect.options].some(o => o.value === prev)) {
-          desmosModelSelect.value = prev;
-        }
-      }
-    } catch (_) { /* keep static catalog */ }
-  })();
 
   function getDesmosModel() {
     return (desmosModelSelect && desmosModelSelect.value) || DESMOS_DEFAULT_MODEL;
@@ -6200,57 +6173,43 @@ window.ViewManager = (function() {
   const btnCadNewProject  = document.getElementById('btnCadNewProject');
   const btnCadSaveProject = document.getElementById('btnCadSaveProject');
   const btnCadOpenProject = document.getElementById('btnCadOpenProject');
-  const btnCadLibrary     = document.getElementById('btnCadLibrary');
-  const cadLibraryOverlay = document.getElementById('cadLibraryOverlay');
-  const btnCadLibraryClose = document.getElementById('btnCadLibraryClose');
-  const cadLibraryGrid    = document.getElementById('cadLibraryGrid');
   const cadModelSelect    = document.getElementById('cadModelSelect');
-
 
   window.btnCAD = btnCAD;
   window.cadSourceEditorEl = cadSourceEditor;
   if (!btnCAD || !cadModalOverlay) return;
 
-  // Same curated catalog as the code editor AI panel (Groq, Oct 2026)
-  // Primary chat/coding models first; specialized/safety models grouped separately
+  // Same curated catalog as the code editor AI panel (NVIDIA NIM + Groq)
   const CAD_MODEL_CATALOG = [
-    // ── Primary Chat / Code Models ──────────────────────────────────────────────
-    { id: 'openai/gpt-oss-120b',        name: 'GPT-OSS 120B (~500 tok/s)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.3-70b-versatile',    name: 'Llama 3.3 70B Versatile',          provider: 'Groq', tier: 'primary' },
-    { id: 'openai/gpt-oss-20b',         name: 'GPT-OSS 20B',                      provider: 'Groq', tier: 'primary' },
-    { id: 'qwen/qwen3.8-27b',           name: 'Qwen 3.8 27B (Multimodal)',        provider: 'Groq', tier: 'primary' },
-    { id: 'llama-3.1-8b-instant',       name: 'Llama 3.1 8B Instant (Fast)',      provider: 'Groq', tier: 'primary' },
-    { id: 'minimaxai/minimax-m2.7',     name: 'MiniMax M2.7 (196K ctx)',          provider: 'Groq', tier: 'primary' },
-    // ── Specialized Models ──────────────────────────────────────────────────────
-    { id: 'allam-2-7b',                              name: 'ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq', tier: 'specialized' },
-    { id: 'openai/gpt-oss-safeguard-20b',            name: 'GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Llama Prompt Guard 2 86M [Guard]', provider: 'Groq', tier: 'safety' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Llama Prompt Guard 2 22M [Guard]', provider: 'Groq', tier: 'safety' },
+    // ── Groq (NVIDIA NIM temporarily disabled) ──────────────────────────────
+    { id: 'openai/gpt-oss-120b',                 name: 'Groq - GPT-OSS 120B (~500 tok/s)',       provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',                  name: 'Groq - GPT-OSS 20B',                    provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',                    name: 'Groq - Qwen 3.8 27B',                   provider: 'Groq' },
+    { id: 'allam-2-7b',                          name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',        name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m', name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m', name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
   const CAD_DEFAULT_MODEL = 'openai/gpt-oss-120b';
 
   function seedCadModelSelect(models) {
     if (!cadModelSelect) return;
     cadModelSelect.innerHTML = '';
-    const primaryGroup = document.createElement('optgroup');
-    primaryGroup.label = 'Groq — Chat & Code Models';
-    const specializedGroup = document.createElement('optgroup');
-    specializedGroup.label = 'Groq — Specialized / Safety';
-
+    const groups = {};
+    const order = [];
     models.forEach(m => {
+      const groupName = m.provider || 'Other';
+      if (!groups[groupName]) {
+        groups[groupName] = document.createElement('optgroup');
+        groups[groupName].label = groupName;
+        order.push(groupName);
+      }
       const opt = document.createElement('option');
       opt.value = m.id;
       opt.textContent = m.name;
-      if (m.tier === 'safety' || m.tier === 'specialized') {
-        specializedGroup.appendChild(opt);
-      } else {
-        primaryGroup.appendChild(opt);
-      }
+      groups[groupName].appendChild(opt);
     });
-
-    cadModelSelect.appendChild(primaryGroup);
-    if (specializedGroup.children.length > 0) cadModelSelect.appendChild(specializedGroup);
-
+    order.forEach(g => cadModelSelect.appendChild(groups[g]));
     const hasDefault = models.some(m => m.id === CAD_DEFAULT_MODEL);
     cadModelSelect.value = hasDefault ? CAD_DEFAULT_MODEL : (models[0] ? models[0].id : '');
   }
@@ -6347,8 +6306,8 @@ window.ViewManager = (function() {
     }
 
     return {
-      errorType: errType,
-      errorLine: errLine,
+      errorType,
+      errorLine,
       cleanMessage: cleanMsg,
       snippet,
       fullStderr: errorMsg
@@ -7251,47 +7210,23 @@ module fiducial(d=1.0, $fn=24) {
     });
   });
 
-  async function handleCadSubmit() {
+  btnCadGenerate.addEventListener('click', () => {
     if (btnCadGenerate.classList.contains('is-working')) {
       stopCadAI();
-      return;
-    }
-    const rawPrompt = (cadPromptInput ? cadPromptInput.value.trim() : '');
-    if (!rawPrompt) {
-      if (cadPromptInput) cadPromptInput.focus();
-      return;
-    }
-
-    // Immediately clear input box so text is not retained
-    if (cadPromptInput) {
-      cadPromptInput.value = '';
-      cadPromptInput.style.height = 'auto';
-    }
-
-    // Append user message exactly once to chat
-    appendChatMsg('user', rawPrompt);
-
-    // If an existing design is active, construct revision context
-    if (currentSpec && currentScad) {
-      const revisionContext =
-        `REVISION of an existing parametric OpenSCAD design.\n\n` +
-        `Current specification JSON:\n${JSON.stringify(currentSpec, null, 2)}\n\n` +
-        `Current OpenSCAD source:\n${currentScad}\n\n` +
-        `Requested change: ${rawPrompt}\n\n` +
-        `Produce an UPDATED specification that applies the change while keeping unrelated parameters stable.`;
-      await generateCAD(revisionContext, rawPrompt);
     } else {
-      await generateCAD(rawPrompt, rawPrompt);
+      generateCAD();
     }
-  }
-
-  btnCadGenerate.addEventListener('click', handleCadSubmit);
+  });
 
   if (cadPromptInput) {
     cadPromptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        handleCadSubmit();
+        if (btnCadGenerate.classList.contains('is-working')) {
+          stopCadAI();
+        } else {
+          generateCAD();
+        }
       }
     });
   }
@@ -7304,12 +7239,13 @@ module fiducial(d=1.0, $fn=24) {
     const THREE = window.THREE;
 
     cadScene    = new THREE.Scene();
-    cadScene.background = new THREE.Color(0x181a1f); // Blender dark viewport theme
+    cadScene.background = new THREE.Color(0x111318);
+    cadScene.fog = new THREE.FogExp2(0x111318, 0.003);
 
     cadCamera   = new THREE.PerspectiveCamera(40, cadViewport.clientWidth / cadViewport.clientHeight, 0.1, 20000);
     cadCamera.position.set(120, 90, 160);
 
-    cadRenderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, alpha: true });
+    cadRenderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     cadRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     cadRenderer.setSize(cadViewport.clientWidth, cadViewport.clientHeight);
     cadRenderer.shadowMap.enabled = true;
@@ -7318,39 +7254,18 @@ module fiducial(d=1.0, $fn=24) {
     cadRenderer.toneMappingExposure = 1.1;
     cadViewport.appendChild(cadRenderer.domElement);
 
-    // Blender-style transparent floor grid
-    const grid = new THREE.GridHelper(500, 50, 0x4a525d, 0x282c34);
-    grid.material.transparent = true;
-    grid.material.opacity = 0.35;
-    grid.material.depthWrite = false;
-    grid.position.y = 0;
+    // Ground grid + shadow receiver plane
+    const grid = new THREE.GridHelper(400, 40, 0x1a2030, 0x141820);
+    grid.position.y = -0.5;
     cadScene.add(grid);
 
-    // Blender floor axes: Red X axis, Green Z (Blender Y ground) axis
-    const axisSpan = 250;
-    const xAxisGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-axisSpan, 0.005, 0),
-      new THREE.Vector3(axisSpan, 0.005, 0)
-    ]);
-    const xAxisMat = new THREE.LineBasicMaterial({ color: 0xd94343, transparent: true, opacity: 0.85, depthWrite: false });
-    cadScene.add(new THREE.Line(xAxisGeo, xAxisMat));
-
-    const zAxisGeo = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0.005, -axisSpan),
-      new THREE.Vector3(0, 0.005, axisSpan)
-    ]);
-    const zAxisMat = new THREE.LineBasicMaterial({ color: 0x38b855, transparent: true, opacity: 0.85, depthWrite: false });
-    cadScene.add(new THREE.Line(zAxisGeo, zAxisMat));
-
-    // Transparent shadow-receiving floor plane (shows shadows only, 100% transparent ground)
-    const floorGeo = new THREE.PlaneGeometry(1000, 1000);
-    const floorMat = new THREE.ShadowMaterial({ opacity: 0.30 });
+    const floorGeo = new THREE.PlaneGeometry(600, 600);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x0d1117, roughness: 1.0, metalness: 0.0 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.01;
+    floor.position.y = -0.6;
     floor.receiveShadow = true;
     cadScene.add(floor);
-
 
     //  5-point studio lighting for realistic metal rendering 
     // Key light (main, warm white, casts shadows)
@@ -7460,11 +7375,7 @@ module fiducial(d=1.0, $fn=24) {
       e.preventDefault();
     }, { passive: false });
 
-    return {
-      update: () => {},
-      reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); },
-      setTarget: (x, y, z) => { target.set(x, y, z); updateCamera(); }
-    };
+    return { update: () => {}, reset: () => { phi = Math.PI / 4; theta = Math.PI / 4; radius = 200; updateCamera(); } };
   }
 
   //  STL Parser + Three.js mesh rendering 
@@ -7513,19 +7424,15 @@ module fiducial(d=1.0, $fn=24) {
     cadMesh.castShadow = true;
     cadMesh.receiveShadow = true;
 
-    // Center X/Z and place model base directly on the grid floor (y = 0)
+    // Center and scale model to fit viewport
     const box = geometry.boundingBox;
     const center = new THREE.Vector3();
     box.getCenter(center);
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const scale = 100 / maxDim;
-
-    cadMesh.scale.setScalar(scale);
-    cadMesh.position.x = -center.x * scale;
-    cadMesh.position.z = -center.z * scale;
-    cadMesh.position.y = -box.min.y * scale; // Lowest point sits directly on top of the grid!
+    cadMesh.position.sub(center);
+    cadMesh.scale.setScalar(100 / maxDim);
 
     cadScene.add(cadMesh);
 
@@ -7538,10 +7445,7 @@ module fiducial(d=1.0, $fn=24) {
     if (cadViewportPlaceholder) cadViewportPlaceholder.style.display = 'none';
 
     currentStlData = stlBuffer;
-    if (cadControls) {
-      if (cadControls.setTarget) cadControls.setTarget(0, (size.y * scale) / 2, 0);
-      else if (cadControls.reset) cadControls.reset();
-    }
+    if (cadControls && cadControls.reset) cadControls.reset();
   }
 
   function parseSTLBinary(buffer) {
@@ -7610,15 +7514,20 @@ module fiducial(d=1.0, $fn=24) {
     return geometry;
   }
 
-  // ── AI Two-Stage CAD Generation ───────────────────────────
-  async function generateCAD(generationPrompt, userGoalText) {
-    const prompt = (typeof generationPrompt === 'string' && generationPrompt.trim())
-      ? generationPrompt.trim()
-      : (cadPromptInput ? cadPromptInput.value.trim() : '');
-    if (!prompt) return;
+  //  AI Two-Stage CAD Generation 
+  async function generateCAD(revisionInstruction) {
+    const prompt = (typeof revisionInstruction === 'string' && revisionInstruction.trim())
+      ? revisionInstruction.trim()
+      : cadPromptInput.value.trim();
+    if (!prompt) { cadPromptInput.focus(); return; }
 
     btnCadGenerate.disabled = true;
-    setStatus('Stage 1: Generating CAD specification…');
+    setStatus('Stage 1: Generating CAD specification');
+    // Only echo the short user-facing prompt in chat (not the full revision context blob)
+    const chatPrompt = cadPromptInput.value.trim() || prompt.split('\n').pop() || prompt;
+    if (!revisionInstruction || typeof revisionInstruction !== 'string' || revisionInstruction === chatPrompt) {
+      appendChatMsg('user', chatPrompt);
+    }
 
     const specSystemPrompt = `You are a senior mechanical and electronics engineer and CAD specialist with 20+ years of experience in automotive, aerospace, industrial design, and PCB/mechatronics engineering.
 When the user describes a 3D object, mechanical assembly, or circuit board, you MUST respond with ONLY valid JSON  no markdown, no explanation, no code fences.
@@ -7665,7 +7574,6 @@ Output ONLY the JSON object. No other text.`;
       setStatus(`Stage 1 failed: ${err.message}`);
       appendChatMsg('assistant', `[ERROR] Could not generate design specification: ${err.message}`, true);
       btnCadGenerate.disabled = false;
-      setCadWorking(false);
       return;
     }
 
@@ -7714,7 +7622,6 @@ MANDATORY CODE RULES:
       setStatus(`Stage 2 failed: ${err.message}`);
       appendChatMsg('assistant', `[ERROR] Could not generate OpenSCAD code: ${err.message}`, true);
       btnCadGenerate.disabled = false;
-      setCadWorking(false);
       return;
     }
 
@@ -7741,11 +7648,9 @@ MANDATORY CODE RULES:
       model: getCadModel(),
       chatContainer: cadChatMessages
     });
-    await activeCADLoop.start(userGoalText || prompt, scadCode);
+    await activeCADLoop.start(prompt, scadCode);
 
-    if (cadPromptInput) cadPromptInput.value = '';
-    btnCadGenerate.disabled = false;
-    setCadWorking(false);
+    cadPromptInput.value = '';
   }
 
   //  Autonomous CAD Self-Healing Loop Class 
@@ -8433,187 +8338,38 @@ If extensive structural rewriting is required, output the complete corrected \`\
     });
   }
 
+  //  Follow-up revision support 
+  // Users can type follow-up instructions like "Make it 20mm wider"
+  // Re-run full two-stage generation with existing design as context.
+  async function generateCADWithRevision() {
+    const prompt = cadPromptInput.value.trim();
+    if (!prompt) { cadPromptInput.focus(); return; }
 
-  // ── Curated CAD Dataset Library ─────────────────────────────────────────
-  let cadDatasetCache = null;
-  let activeLibraryTab = 'all';
-
-  async function fetchCadDataset() {
-    if (cadDatasetCache) return cadDatasetCache;
-    try {
-      const resp = await fetch('/api/cad/dataset');
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      cadDatasetCache = await resp.json();
-      return cadDatasetCache;
-    } catch (err) {
-      console.warn('[CAD Library] Failed to fetch dataset catalog:', err);
-      return null;
+    if (currentSpec && currentScad) {
+      appendChatMsg('user', prompt);
+      const revisionContext =
+        `REVISION of an existing parametric OpenSCAD design.\n\n` +
+        `Current specification JSON:\n${JSON.stringify(currentSpec, null, 2)}\n\n` +
+        `Current OpenSCAD source:\n${currentScad}\n\n` +
+        `Requested change: ${prompt}\n\n` +
+        `Produce an UPDATED specification that applies the change while keeping unrelated parameters stable.`;
+      await generateCAD(revisionContext);
+    } else {
+      await generateCAD();
     }
   }
 
-  function renderCadLibrary(catalog) {
-    if (!cadLibraryGrid) return;
-    if (!catalog || !catalog.datasets) {
-      cadLibraryGrid.innerHTML = '<div class="cad-library-loading">Failed to load datasets. Please try again.</div>';
-      return;
+  // Re-wire generate button to smart mode (Enter or Ctrl+Enter)
+  btnCadGenerate.removeEventListener('click', generateCAD);
+  btnCadGenerate.addEventListener('click', generateCADWithRevision);
+  cadPromptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      generateCADWithRevision();
     }
-
-    const mechanical = catalog.datasets.mechanical || [];
-    const electrical = catalog.datasets.electrical || [];
-    let items = [];
-    if (activeLibraryTab === 'all') items = [...mechanical, ...electrical];
-    else if (activeLibraryTab === 'mechanical') items = mechanical;
-    else if (activeLibraryTab === 'electrical') items = electrical;
-
-    if (!items.length) {
-      cadLibraryGrid.innerHTML = '<div class="cad-library-loading">No models found in this category.</div>';
-      return;
-    }
-
-    cadLibraryGrid.innerHTML = items.map(m => {
-      const isMech = m.category === 'mechanical';
-      const badgeClass = isMech ? 'mechanical' : 'electrical';
-      const badgeLabel = isMech ? 'Mechanical' : 'Electrical';
-      const dim = m.dimensions ? (m.dimensions.diameter ? `Ø${m.dimensions.diameter}×${m.dimensions.height || m.dimensions.length}mm` : `${m.dimensions.length}×${m.dimensions.width}×${m.dimensions.height || m.dimensions.thickness}mm`) : '';
-      const sizeKb = m.stl_size_bytes ? `${Math.round(m.stl_size_bytes / 1024)} KB` : '';
-      const featuresStr = (m.features || []).slice(0, 3).map(f => `• ${f}`).join('<br>');
-
-      return `
-        <div class="cad-card" data-id="${m.id}" data-category="${m.category}">
-          <div class="cad-card-header">
-            <div class="cad-card-title">${m.title}</div>
-            <span class="cad-card-badge ${badgeClass}">${badgeLabel}</span>
-          </div>
-          <div class="cad-card-meta">
-            ${dim ? `<span>📏 ${dim}</span>` : ''}
-            ${sizeKb ? `<span>💾 ${sizeKb}</span>` : ''}
-            ${m.parts_count ? `<span>🧩 ${m.parts_count} parts</span>` : ''}
-          </div>
-          <div class="cad-card-features">${featuresStr}</div>
-          <button class="cad-card-btn" data-id="${m.id}" data-category="${m.category}">Load Model</button>
-        </div>
-      `;
-    }).join('');
-
-    // Attach click listeners to cards and load buttons
-    cadLibraryGrid.querySelectorAll('.cad-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        const id = card.dataset.id;
-        const category = card.dataset.category;
-        loadDatasetModel(category, id);
-      });
-    });
-  }
-
-  async function openCadLibrary() {
-    if (!cadLibraryOverlay) return;
-    cadLibraryOverlay.classList.remove('hidden');
-    const catalog = await fetchCadDataset();
-    renderCadLibrary(catalog);
-  }
-
-  function closeCadLibrary() {
-    if (cadLibraryOverlay) cadLibraryOverlay.classList.add('hidden');
-  }
-
-  async function loadDatasetModel(category, modelId) {
-    closeCadLibrary();
-    const catalog = await fetchCadDataset();
-    if (!catalog || !catalog.datasets) return;
-    const list = catalog.datasets[category] || [];
-    const model = list.find(m => m.id === modelId);
-    if (!model) return;
-
-    setStatus(`Loading ${model.title}...`);
-    try {
-      // 1. Fetch spec.json
-      let spec = null;
-      try {
-        const sResp = await fetch(model.spec_url);
-        if (sResp.ok) spec = await sResp.json();
-      } catch (e) {
-        console.warn('Failed to load spec.json:', e);
-      }
-
-      // 2. Fetch model.scad
-      let scadCode = '';
-      try {
-        const scResp = await fetch(model.scad_url);
-        if (scResp.ok) scadCode = await scResp.text();
-      } catch (e) {
-        console.warn('Failed to load model.scad:', e);
-      }
-
-      // 3. Fetch model.stl (binary)
-      const stlResp = await fetch(model.stl_url);
-      if (!stlResp.ok) throw new Error(`Failed to fetch STL: HTTP ${stlResp.status}`);
-      const stlBuffer = await stlResp.arrayBuffer();
-
-      // Ensure Three.js viewport is initialized
-      initThreeViewport();
-
-      // Set current state
-      currentSpec = spec || {
-        title: model.title,
-        category: model.category,
-        type: model.type,
-        dimensions: model.dimensions,
-        parameters: model.parameters,
-        features: model.features,
-        standards: model.standards
-      };
-      currentScad = scadCode;
-      cadSourceEditor.value = scadCode;
-
-      // Render parameters panel
-      if (currentSpec && currentSpec.parameters) {
-        renderParamControls(currentSpec.parameters, (currentSpec.units || 'mm'));
-      }
-
-      // Render in Three.js viewport
-      loadSTLIntoViewport(stlBuffer, model.default_material || 'steel');
-
-      // Append assistant chat confirmation
-      appendChatMsg('assistant',
-        `[DATASET] **Loaded: ${model.title}**\n\n` +
-        `• **Category**: ${model.category.toUpperCase()}\n` +
-        `• **Source File**: \`${model.source_file}\`\n` +
-        `• **Engineering Standards**: ${(model.standards || []).join(', ') || 'ISO / DIN'}\n` +
-        `• **Component Count**: ${model.parts_count || 'N/A'}\n\n` +
-        `The 3D model is rendered in the viewport and full parametric OpenSCAD source is in the editor.\n` +
-        `You can use the parameter sliders or prompt AI to edit and enhance this design!`
-      );
-    } catch (err) {
-      console.error('Failed to load dataset model:', err);
-      setStatus(`[ERROR] Load failed: ${err.message}`);
-      appendChatMsg('assistant', `[ERROR] Failed to load ${model.title}: ${err.message}`, true);
-    }
-  }
-
-  if (btnCadLibrary) {
-    btnCadLibrary.addEventListener('click', openCadLibrary);
-  }
-  if (btnCadLibraryClose) {
-    btnCadLibraryClose.addEventListener('click', closeCadLibrary);
-  }
-  if (cadLibraryOverlay) {
-    cadLibraryOverlay.addEventListener('click', (e) => {
-      if (e.target === cadLibraryOverlay) closeCadLibrary();
-    });
-  }
-
-  // Library category tab switching
-  document.querySelectorAll('.cad-lib-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.cad-lib-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      activeLibraryTab = tab.dataset.tab || 'all';
-      if (cadDatasetCache) renderCadLibrary(cadDatasetCache);
-    });
   });
 
   //  Chat helpers 
-
   function appendChatMsg(role, text, isError = false) {
     if (!cadChatMessages) return;
     const msg = document.createElement('div');
