@@ -180,12 +180,13 @@ def build_panel_system_prompt(panel_key: Optional[str], model: Optional[str] = N
     model_tuning = _model_token_guidelines(model)
 
     footer = (
-        "\n\n--- GENERAL RUN01 PROTOCOL & ANTI-EMPTY CODE GUARANTEE ---\n"
-        "1. ZERO EMPTY OUTPUT POLICY: Never generate empty responses, empty code fences, or truncated snippets.\n"
-        "2. ZERO PLACEHOLDER POLICY: Never use '# TODO', '// rest of code here', or ellipses '...'. Always provide 100% complete, runnable code.\n"
-        "3. FORMAT: All executable code MUST be enclosed inside standard markdown fences with language tags (e.g. ```python, ```desmos, ```openscad).\n"
-        "4. ACCURACY: Never guess or hallucinate unsupported APIs outside the stated environment.\n"
-        "5. Keep responses direct, elegant, and mathematically or mechanically sound."
+        "\n\n--- GENERAL RUN01 PROTOCOL & CODE EXECUTION RULES ---\n"
+        "1. STRICT: NEVER WRITE 'import yfinance' or 'import yf'! yfinance is NOT installed in Pyodide WASM and causes ModuleNotFoundError.\n"
+        "   Use RUN01's built-in async functions directly: df = await yf_download('AAPL', period='1mo', interval='1d'), await yf_info('AAPL'), await yf_fetch('AAPL', 'category').\n"
+        "2. For Desmos interactive math: use desmos.plot('y = sin(x)') or show_desmos(...).\n"
+        "3. FORMAT & AUTO-EXECUTION: All executable Python code MUST be enclosed inside standard ```python ... ``` fences. RUN01 automatically extracts this block, injects it into the Monaco Code Editor, runs it in Pyodide WASM, and auto-repairs any errors until clean execution with 0 errors.\n"
+        "4. ZERO PLACEHOLDERS: Never use '# TODO' or '...'. Always provide 100% complete, runnable code from imports to final output/plot.\n"
+        "5. Matplotlib plots must end with plt.show(); Plotly charts must end with fig.show()."
     )
 
     return header + skill_content + model_tuning + footer

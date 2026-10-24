@@ -115,6 +115,33 @@ async def yf_info(ticker):
         raise ValueError(data["error"])
     return data
 
+#  yfinance compatibility module shim for Pyodide WASM 
+import sys, types
+class _YFTicker:
+    def __init__(self, ticker):
+        self.ticker = str(ticker).upper()
+    async def history(self, period="1mo", interval="1d", **kwargs):
+        return await yf_download(self.ticker, period=period, interval=interval)
+    async def get_info(self):
+        return await yf_info(self.ticker)
+    @property
+    def info(self):
+        return {}
+
+class _YFModule(types.ModuleType):
+    async def download(self, ticker, period="1mo", interval="1d", **kwargs):
+        return await yf_download(ticker, period=period, interval=interval)
+    def Ticker(self, ticker):
+        return _YFTicker(ticker)
+
+_yf_mod = _YFModule("yfinance")
+_yf_mod.download = yf_download
+_yf_mod.Ticker = lambda ticker: _YFTicker(ticker)
+_yf_mod.info = yf_info
+_yf_mod.fetch = yf_fetch
+sys.modules["yfinance"] = _yf_mod
+
+
 #  yf_actions: fetch corporate actions timeline 
 async def yf_actions(ticker):
     resp = await pyodide.http.pyfetch(f"/api/yf/{ticker}/actions")
@@ -3672,7 +3699,7 @@ document.addEventListener('keydown', (e) => {
   //  Autonomous AI Self-Healing Execution Loop Class 
   class AutonomousRepairLoop {
     constructor(options = {}) {
-      this.maxIterations = options.maxIterations || 3;
+      this.maxIterations = options.maxIterations || 6;
       this.model = options.model || (aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL);
       this.chatContainer = options.chatContainer || aiMessages;
       this.isActive = false;
@@ -3797,8 +3824,8 @@ document.addEventListener('keydown', (e) => {
         }
       }
 
-      // 2. Try full python block
-      const pyMatch = text.match(/```python([\s\S]*?)```/);
+      // 2. Try full python block (supports ```python, ```py, or code fences)
+      const pyMatch = text.match(/```(?:python|py)?\s*[\r\n]([\s\S]*?)```/i);
       if (pyMatch && pyMatch[1]) {
         const code = pyMatch[1].trim();
         if (monacoEditor) {
@@ -3830,6 +3857,7 @@ ${stdout || '(no output)'}
 
 [INSTRUCTION]
 Perform an exact, deterministic surgical fix to eliminate this error while fully preserving the user's intent, helper functions, and imports.
+CRITICAL: In RUN01, never use raw 'import yfinance' - use the built-in async functions: df = await yf_download(ticker, period, interval) or await yf_info(ticker).
 Respond with the surgical replacement using this exact format:
 <<<SURGICAL_EDIT>>>
 <<<FIND>>>
