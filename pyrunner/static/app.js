@@ -4041,18 +4041,17 @@ If extensive structural changes are required, output the complete corrected \`\`
 
     // Curated model catalog - verified Groq free-tier models (Oct 24, 2026)
   const MODEL_CATALOG = [
-    // ── Primary Chat/Code Models (Groq LPU) — best for general use ──────────────
-    { id: 'llama-3.3-70b-versatile',    name: 'Groq - Llama 3.3 70B Versatile ⭐',   provider: 'Groq' },
-    { id: 'openai/gpt-oss-120b',        name: 'Groq - GPT-OSS 120B (~500 tok/s)',    provider: 'Groq' },
-    { id: 'openai/gpt-oss-20b',         name: 'Groq - GPT-OSS 20B',                 provider: 'Groq' },
-    { id: 'qwen/qwen3.8-27b',           name: 'Groq - Qwen 3.8 27B (Multimodal)',   provider: 'Groq' },
-    { id: 'llama-3.1-8b-instant',       name: 'Groq - Llama 3.1 8B Instant (Fast)', provider: 'Groq' },
-    { id: 'minimaxai/minimax-m2.7',     name: 'Groq - MiniMax M2.7 (196K ctx)',     provider: 'Groq' },
-    // ── Specialized / Safety Models ──────────────────────────────────────────────
-    { id: 'allam-2-7b',                              name: 'Groq - ALLAM 2 7B [Arabic/Multilingual]', provider: 'Groq' },
-    { id: 'openai/gpt-oss-safeguard-20b',            name: 'Groq - GPT-OSS Safeguard 20B [Safety]',   provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Groq - Llama Prompt Guard 2 86M [Guard]', provider: 'Groq' },
-    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Groq - Llama Prompt Guard 2 22M [Guard]', provider: 'Groq' },
+    // ── Primary Chat/Code Models (Groq LPU Free Tier - Live Oct 24, 2026) ──────
+    { id: 'llama-3.3-70b-versatile',    name: 'Groq - Llama 3.3 70B Versatile',   provider: 'Groq' },
+    { id: 'llama-3.1-8b-instant',       name: 'Groq - Llama 3.1 8B Instant',      provider: 'Groq' },
+    { id: 'qwen/qwen3.8-27b',           name: 'Groq - Qwen 3.8 27B (Multimodal)', provider: 'Groq' },
+    { id: 'openai/gpt-oss-120b',        name: 'Groq - GPT-OSS 120B',              provider: 'Groq' },
+    { id: 'openai/gpt-oss-20b',         name: 'Groq - GPT-OSS 20B',               provider: 'Groq' },
+    // ── Specialized / Safety Models ───────────────────────────────────────────
+    { id: 'allam-2-7b',                              name: 'Groq - ALLAM 2 7B',                     provider: 'Groq' },
+    { id: 'openai/gpt-oss-safeguard-20b',            name: 'Groq - GPT-OSS Safeguard 20B',           provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-86m',     name: 'Groq - Llama Prompt Guard 2 86M',        provider: 'Groq' },
+    { id: 'meta-llama/llama-prompt-guard-2-22m',     name: 'Groq - Llama Prompt Guard 2 22M',        provider: 'Groq' },
   ];
 
   const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
@@ -4752,7 +4751,11 @@ If extensive structural changes are required, output the complete corrected \`\`
       const hasCadCode = /```(?:openscad|scad)[\s\S]*?```/.test(fullAssistantText);
       const hasDesmosCode = /```desmos[\s\S]*?```/.test(fullAssistantText);
 
-      if ((hasCode || hasSurgicalEdit) && activePanelContext === 'editor') {
+      if (hasCadCode && window.startCADAutonomousLoop) {
+        window.startCADAutonomousLoop(text, fullAssistantText, aiMessages);
+      } else if (hasDesmosCode && window.startDesmosAutonomousLoop) {
+        window.startDesmosAutonomousLoop(text, fullAssistantText, aiMessages);
+      } else if (hasCode || hasSurgicalEdit) {
         if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
           window.activeAutonomousLoop.abort();
         }
@@ -4762,10 +4765,6 @@ If extensive structural changes are required, output the complete corrected \`\`
           chatContainer: aiMessages
         });
         window.activeAutonomousLoop.start(text, fullAssistantText);
-      } else if ((hasCadCode || hasSurgicalEdit) && activePanelContext === 'cad' && window.startCADAutonomousLoop) {
-        window.startCADAutonomousLoop(text, fullAssistantText, aiMessages);
-      } else if ((hasDesmosCode || hasSurgicalEdit) && activePanelContext === 'desmos' && window.startDesmosAutonomousLoop) {
-        window.startDesmosAutonomousLoop(text, fullAssistantText, aiMessages);
       } else {
         setAIWorking(false);
       }

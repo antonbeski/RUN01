@@ -1254,70 +1254,47 @@ def run_code():
 # before content â€” this causes blank/delayed responses when streaming.
 # We pass thinking=disabled to force immediate content streaming.
 MODEL_PARAMS = {
-    # GPT-OSS series â€” thinking disabled for immediate content streaming
-    "openai/gpt-oss-120b":                        {"max_tokens": 32768, "temperature": 0.6, "top_p": 0.95},
-    "openai/gpt-oss-20b":                         {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
-    "openai/gpt-oss-safeguard-20b":               {"max_tokens": 4096,  "temperature": 0.6, "top_p": 0.95},
-    # Llama series â€” reliable, fast, general-purpose
-    "llama-3.3-70b-versatile":                    {"max_tokens": 32768, "temperature": 0.7, "top_p": 0.95},
-    "llama-3.1-8b-instant":                       {"max_tokens": 8192,  "temperature": 0.7, "top_p": 0.95},
-    # Qwen series
-    "qwen/qwen3.8-27b":                           {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95},
-    # MiniMax
-    "minimaxai/minimax-m2.7":                     {"max_tokens": 16384, "temperature": 0.6, "top_p": 0.95},
-    # Specialized / safety
-    "allam-2-7b":                                 {"max_tokens": 4096,  "temperature": 0.7, "top_p": 0.95},
-    "meta-llama/llama-prompt-guard-2-86m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
-    "meta-llama/llama-prompt-guard-2-22m":        {"max_tokens": 512,   "temperature": 0.1, "top_p": 0.95},
+    # Groq Free Tier optimized (4,096 max completion tokens to stay strictly within 6,000-8,000 TPM limit)
+    "llama-3.3-70b-versatile":                    {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95},
+    "llama-3.1-8b-instant":                       {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95},
+    "qwen/qwen3.8-27b":                           {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95},
+    "openai/gpt-oss-120b":                        {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95},
+    "openai/gpt-oss-20b":                         {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95},
+    "openai/gpt-oss-safeguard-20b":               {"max_tokens": 2048, "temperature": 0.6, "top_p": 0.95},
+    "allam-2-7b":                                 {"max_tokens": 2048, "temperature": 0.6, "top_p": 0.95},
+    "meta-llama/llama-prompt-guard-2-86m":        {"max_tokens": 512,  "temperature": 0.1, "top_p": 0.95},
+    "meta-llama/llama-prompt-guard-2-22m":        {"max_tokens": 512,  "temperature": 0.1, "top_p": 0.95},
 }
-# Fallback params for any model not explicitly listed above
-_DEFAULT_PARAMS = {"max_tokens": 16384, "temperature": 0.7, "top_p": 0.95}
+_DEFAULT_PARAMS = {"max_tokens": 4096, "temperature": 0.6, "top_p": 0.95}
 
-# â”€â”€ GPT-OSS thinking suppression payload extras â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# Sending thinking={"type":"disabled"} prevents GPT-OSS from emitting
-# reasoning/thinking tokens before the answer, which caused blank responses.
-_GPT_OSS_EXTRA = {"thinking": {"type": "disabled"}}
-GPT_OSS_THINKING_OVERRIDE = {
-    "openai/gpt-oss-120b":          _GPT_OSS_EXTRA,
-    "openai/gpt-oss-20b":           _GPT_OSS_EXTRA,
-    "openai/gpt-oss-safeguard-20b": _GPT_OSS_EXTRA,
-}
-
-# â”€â”€ Model catalog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# Verified Groq free-tier models (Oct 24, 2026).
-# ORDER = display order in dropdown; first primary model = default.
 MODEL_CATALOG = [
-    # â”€â”€ Primary Chat/Code Models (Groq LPU) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    {"id": "llama-3.3-70b-versatile",      "name": "Llama 3.3 70B Versatile â­",      "provider": "Groq",  "ctx": "128K", "max_out": 32768, "tier": "primary"},
-    {"id": "openai/gpt-oss-120b",          "name": "GPT-OSS 120B (~500 tok/s)",       "provider": "Groq",  "ctx": "128K", "max_out": 32768, "tier": "primary"},
-    {"id": "openai/gpt-oss-20b",           "name": "GPT-OSS 20B",                     "provider": "Groq",  "ctx": "128K", "max_out": 16384, "tier": "primary"},
-    {"id": "qwen/qwen3.8-27b",             "name": "Qwen 3.8 27B (Multimodal)",       "provider": "Groq",  "ctx": "128K", "max_out": 16384, "tier": "primary"},
-    {"id": "llama-3.1-8b-instant",         "name": "Llama 3.1 8B Instant (Fast)",     "provider": "Groq",  "ctx": "128K", "max_out": 8192,  "tier": "primary"},
-    {"id": "minimaxai/minimax-m2.7",       "name": "MiniMax M2.7 (196K ctx)",         "provider": "Groq",  "ctx": "196K", "max_out": 16384, "tier": "primary"},
-    # â”€â”€ Specialized / Safety (NOT for general chat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    {"id": "allam-2-7b",                              "name": "ALLAM 2 7B [Arabic/Multilingual]",  "provider": "Groq", "ctx": "128K", "max_out": 4096, "tier": "specialized"},
-    {"id": "openai/gpt-oss-safeguard-20b",            "name": "GPT-OSS Safeguard 20B [Safety]",    "provider": "Groq", "ctx": "128K", "max_out": 4096, "tier": "safety"},
-    {"id": "meta-llama/llama-prompt-guard-2-86m",     "name": "Llama Prompt Guard 2 86M [Guard]",  "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
-    {"id": "meta-llama/llama-prompt-guard-2-22m",     "name": "Llama Prompt Guard 2 22M [Guard]",  "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
+    # Primary Chat/Code Models (Groq LPU Free Tier - Live Oct 24, 2026)
+    {"id": "llama-3.3-70b-versatile",      "name": "Groq - Llama 3.3 70B Versatile",   "provider": "Groq",  "ctx": "128K", "max_out": 4096, "tier": "primary"},
+    {"id": "llama-3.1-8b-instant",         "name": "Groq - Llama 3.1 8B Instant",      "provider": "Groq",  "ctx": "128K", "max_out": 4096, "tier": "primary"},
+    {"id": "qwen/qwen3.8-27b",             "name": "Groq - Qwen 3.8 27B (Multimodal)", "provider": "Groq",  "ctx": "128K", "max_out": 4096, "tier": "primary"},
+    {"id": "openai/gpt-oss-120b",          "name": "Groq - GPT-OSS 120B",              "provider": "Groq",  "ctx": "128K", "max_out": 4096, "tier": "primary"},
+    {"id": "openai/gpt-oss-20b",           "name": "Groq - GPT-OSS 20B",               "provider": "Groq",  "ctx": "128K", "max_out": 4096, "tier": "primary"},
+    # Specialized / Safety Models
+    {"id": "allam-2-7b",                              "name": "Groq - ALLAM 2 7B",                     "provider": "Groq", "ctx": "128K", "max_out": 2048, "tier": "specialized"},
+    {"id": "openai/gpt-oss-safeguard-20b",            "name": "Groq - GPT-OSS Safeguard 20B",           "provider": "Groq", "ctx": "128K", "max_out": 2048, "tier": "safety"},
+    {"id": "meta-llama/llama-prompt-guard-2-86m",     "name": "Groq - Llama Prompt Guard 2 86M",        "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
+    {"id": "meta-llama/llama-prompt-guard-2-22m",     "name": "Groq - Llama Prompt Guard 2 22M",        "provider": "Groq", "ctx": "8K",   "max_out": 512,  "tier": "safety"},
 ]
 
-# â”€â”€ Provider connection details + fallback chains â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 PROVIDER_CONFIG = {
     "Groq": {
         "base_url": "https://api.groq.com/openai/v1/chat/completions",
         "key_env":  ["GROQ_API_KEY", "GROQ_API_KEY_2"],
-        # Fallback order: most reliable â†’ fastest â†’ smallest
+        # Automatic fallback: Llama 3.3 70B -> Llama 3.1 8B (fastest/highest TPM) -> Qwen 3.8 27B -> GPT-OSS
         "fallback_chain": [
             "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "qwen/qwen3.8-27b",
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
-            "qwen/qwen3.8-27b",
-            "minimaxai/minimax-m2.7",
-            "llama-3.1-8b-instant",
         ],
     },
 }
-
 
 def _model_provider(model_id):
     """Look up which provider a model id belongs to. Currently only Groq is active."""
@@ -1358,19 +1335,11 @@ def _call_chat_provider(base_url, api_key, model, messages, payload_extra=None):
     }
     # Retrieve model-specific tuned parameters (or sensible safe default)
     params = dict(MODEL_PARAMS.get(model, _DEFAULT_PARAMS))
-
-    # Inject thinking=disabled for GPT-OSS models to prevent blank/delayed responses.
-    # GPT-OSS reasoning tokens appear as a separate stream delta type ("thinking")
-    # which the frontend does not render â€” suppressing them ensures content flows
-    # immediately when the response begins streaming.
-    thinking_override = GPT_OSS_THINKING_OVERRIDE.get(model, {})
-
     payload = {
         "model": model,
         "messages": messages,
         "stream": True,
         **params,
-        **thinking_override,
     }
     if payload_extra:
         payload.update(payload_extra)
@@ -1613,36 +1582,11 @@ def ai_chat():
 
         # Stream the response - GPT-OSS thinking token fix
         def generate():
-            import json as _json
-            content_emitted = False
-
-            def _has_content_delta(raw_bytes):
-                try:
-                    for line in raw_bytes.decode("utf-8", errors="ignore").splitlines():
-                        if line.startswith("data: ") and line.strip() != "data: [DONE]":
-                            parsed = _json.loads(line[6:].strip())
-                            delta = parsed.get("choices", [{}])[0].get("delta", {})
-                            if delta.get("content"):
-                                return True
-                except Exception:
-                    pass
-                return False
-
             if active_first_chunk:
-                if _has_content_delta(active_first_chunk):
-                    content_emitted = True
                 yield active_first_chunk
-
-            for chunk in res.iter_content(chunk_size=512):
-                if not chunk:
-                    continue
-                if not content_emitted and _has_content_delta(chunk):
-                    content_emitted = True
-                yield chunk
-
-            if not content_emitted:
-                fallback_msg = "data: {\"choices\":[{\"delta\":{\"content\":\"I am ready to help! Please type your request.\"},\"finish_reason\":null}]}\n\ndata: [DONE]\n\n"
-                yield fallback_msg.encode("utf-8")
+            for chunk in res.iter_content(chunk_size=1024):
+                if chunk:
+                    yield chunk
 
         return Response(stream_with_context(generate()), content_type="text/event-stream")
 
