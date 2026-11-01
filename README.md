@@ -128,9 +128,7 @@ The server layer (Flask / Vercel) is intentionally thin: it serves static assets
 | Seaborn | ✅ | Installed via micropip |
 | Plotly interactive charts | ✅ | `fig.show()` patched to emit JSON → rendered with Plotly.js |
 | Data Explorer (FRED & Yahoo Finance) | ✅ | Macroeconomic time-series (930k+ FRED series) & live market metrics |
-| AI Parametric CAD Studio | ✅ | In-browser OpenSCAD WASM CSG 3D modeling, dynamic UI sliders, STL export |
-| Desmos Graphing Calculator | ✅ | Embedded 2D/3D graphing calculator, LaTeX math proofs, parametric sliders |
-| Dynamic Panel AI Assistant | ✅ | Panel-aware context switching (`cad`, `desmos`, `data`, `editor`) with surgical edits |
+| Dynamic Panel AI Assistant | ✅ | Panel-aware context switching (`data`, `editor`) with surgical edits |
 | Streaming stdout | ✅ | Each `print()` renders immediately |
 | C++ / C# / Rust | ✅ | Via `/api/run` → Piston |
 | Dark / Light theme | ✅ | Persisted in `localStorage` |
@@ -173,9 +171,7 @@ SW caching       Service Worker (Cache API)  —             Browser
 run01/
 ├── .agents/
 │   └── skills/
-│       ├── cad-studio/           # OpenSCAD WASM & CSG geometry AI skill
 │       ├── data-explorer/        # FRED & Yahoo Finance API ingestion AI skill
-│       ├── desmos/               # Desmos LaTeX math modeling AI skill
 │       └── python-data-science/  # Pyodide scientific computing AI skill
 │
 ├── api/
@@ -188,12 +184,12 @@ run01/
 │   ├── requirements.txt          # flask, yfinance, pymongo, pyjwt
 │   │
 │   ├── static/
-│   │   ├── app.js                # Monaco, Pyodide, CAD Studio, Desmos, Data Explorer
+│   │   ├── app.js                # Monaco, Pyodide, Data Explorer
 │   │   ├── style.css             # Monochrome glassmorphic design system
 │   │   └── sw.js                 # Service Worker: cache-first CDN strategy
 │   │
 │   └── templates/
-│       └── index.html            # Shell HTML: nav, split panes, CAD & Desmos modals
+│       └── index.html            # Shell HTML: nav, split panes, Data Explorer & Vision panels
 │
 ├── tests/
 │   ├── test_panel_skills.py      # Panel skill isolation and dynamic loading tests
@@ -211,7 +207,7 @@ run01/
 Core server application:
 1. **Static serving & templates** — Serves `index.html` and Service Worker (`/sw.js` with `Service-Worker-Allowed: /`).
 2. **Yahoo Finance & FRED Proxies** — Bypasses browser CORS restrictions to deliver live ticks, option chains, financials, and FRED economic series directly into Pandas.
-3. **Dynamic AI Chat Dispatch** — `/api/ai/chat` inspects the active panel context (`cad`, `desmos`, `data`, `editor`) and dynamically injects only its respective domain skill prompt.
+3. **Dynamic AI Chat Dispatch** — `/api/ai/chat` inspects the active panel context (`data`, `editor`) and dynamically injects only its respective domain skill prompt.
 4. **Skills Catalog API** — `GET /api/ai/skills` returns metadata for all registered panel skills.
 5. **Multi-language Compiler Proxy** — `POST /api/run` routes compiled language workloads (C++, C#, Rust) via Piston execution engine.
 

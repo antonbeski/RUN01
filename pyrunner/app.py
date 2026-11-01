@@ -1,11 +1,11 @@
-﻿from flask import Flask, render_template, jsonify, request, send_from_directory, session
+from flask import Flask, render_template, jsonify, request, send_from_directory, session
 import json
 import os
 import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load local .env for NVIDIA_API_KEY / GROQ_API_KEY* without requiring python-dotenv.
-# Existing process env (e.g. Vercel) always wins â€” never overwrite.
+# Existing process env (e.g. Vercel) always wins — never overwrite.
 def _load_dotenv():
     candidates = [
         os.path.join(os.path.dirname(__file__), "..", ".env"),
@@ -36,14 +36,14 @@ app = Flask(__name__)
 app.name = "run01"
 app.secret_key = os.environ.get("SECRET_KEY", "run01-dev-secret-key-change-in-prod")
 
-# â”€â”€ Session Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Session Configuration ──────────────────────────────────────────────────────
 # Critical for Vercel (HTTPS, cross-origin, serverless cold starts).
 app.config['SESSION_COOKIE_SECURE'] = True           # Only send over HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True         # Prevent JS access
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'       # Allow cross-site requests
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=30)
 
-# â”€â”€ MongoDB & Authentication Modules (pyrunner.db & pyrunner.auth) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── MongoDB & Authentication Modules (pyrunner.db & pyrunner.auth) ─────────────
 from pyrunner.db import (
     get_db,
     ensure_indexes,
@@ -61,7 +61,7 @@ from pyrunner.auth import (
     log_audit_event
 )
 
-# â”€â”€ Auth Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Auth Endpoints ────────────────────────────────────────────────────────────
 
 def get_google_client_id():
     cid = (os.environ.get("GOOGLE_CLIENT_ID") or "").strip().strip('"').strip("'")
@@ -73,18 +73,6 @@ def get_google_client_id():
 def auth_config():
     return jsonify({
         "google_client_id": get_google_client_id()
-    })
-
-def get_desmos_api_key():
-    key = (os.environ.get("DESMOS_API_KEY") or "").strip().strip('"').strip("'")
-    if not key or "your_desmos_api_key" in key.lower():
-        return "dca3170180db492b4eb4508460839bad"
-    return key
-
-@app.route("/api/desmos/config", methods=["GET"])
-def desmos_config():
-    return jsonify({
-        "apiKey": get_desmos_api_key()
     })
 
 @app.route("/api/auth/me", methods=["GET"])
@@ -357,7 +345,7 @@ def auth_logout():
     return jsonify({"success": True})
 
 
-# â”€â”€ Strict User Data Isolation & CRUD (User-Owned Snippets Collection) â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Strict User Data Isolation & CRUD (User-Owned Snippets Collection) ────────
 @app.route("/api/snippets", methods=["GET"])
 @token_required
 def list_snippets():
@@ -529,7 +517,7 @@ def delete_snippet(snippet_id):
     return jsonify({"success": True, "deleted": True})
 
 
-# â”€â”€ Role-Based Authorization Route (Rule 16-18) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Role-Based Authorization Route (Rule 16-18) ───────────────────────────────
 @app.route("/api/admin/metrics", methods=["GET"])
 @require_role("admin")
 def admin_metrics():
@@ -544,7 +532,7 @@ def admin_metrics():
     })
 
 
-# â”€â”€ MongoDB Health Check Route (Rule 31) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── MongoDB Health Check Route (Rule 31) ──────────────────────────────────────
 @app.route("/api/health/db", methods=["GET"])
 def db_health_check():
     """Monitoring endpoint for DB connection status and metrics."""
@@ -555,7 +543,7 @@ def db_health_check():
 def index():
     return render_template("index.html")
 
-# â”€â”€ Service Worker - must be served from / scope â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Service Worker - must be served from / scope ──────────────────────────────
 # Service Workers can only control pages within their scope. A SW at /static/sw.js
 # can only control /static/*, which excludes our root page at /. Serving it at /sw.js
 # gives it full-origin scope so it can cache Pyodide, Monaco, and Plotly CDN assets.
@@ -567,7 +555,7 @@ def service_worker():
     resp.headers["Cache-Control"] = "no-cache"  # SW itself must not be cached
     return resp
 
-# â”€â”€ Static file fallback for root-level assets (/app.js, /style.css, /ort/*, /models/*) â”€â”€
+# ── Static file fallback for root-level assets (/app.js, /style.css, /ort/*, /models/*) ──
 @app.route("/<path:filename>")
 def serve_static_root(filename):
     # First check pyrunner/static
@@ -584,7 +572,7 @@ def serve_static_root(filename):
         return render_template("index.html")
     return jsonify({"error": "File not found"}), 404
 
-# â”€â”€ Yahoo Finance server-side proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Yahoo Finance server-side proxy ───────────────────────────────────────────
 # Pyodide runs inside the browser sandbox; direct HTTP requests to Yahoo Finance
 # are blocked by CORS policy. This endpoint fetches stock data server-side
 # (no CORS restrictions) and returns clean JSON that Pyodide can consume via
@@ -641,7 +629,7 @@ def json_clean(obj):
     else:
         return str(obj)
 
-# â”€â”€ Yahoo Finance category proxies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Yahoo Finance category proxies ────────────────────────────────────────────
 @app.route("/api/yf/<ticker>/<category>")
 def yf_category_proxy(ticker, category):
     try:
@@ -720,7 +708,7 @@ def yf_options_chain_proxy(ticker, expiry):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â”€â”€ Yahoo Finance sector, industry, market, tickers, search, lookup proxies â”€â”€â”€
+# ── Yahoo Finance sector, industry, market, tickers, search, lookup proxies ───
 @app.route("/api/yf/sector/<key>/<category>")
 @app.route("/api/yf/sector/<category>")
 def yf_sector_proxy(category, key="technology"):
@@ -847,7 +835,7 @@ def yf_lookup_proxy():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â”€â”€ Yahoo Finance predefined screener proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Yahoo Finance predefined screener proxy ──────────────────────────────────
 # yf.screen() runs a *predefined* Yahoo query (day_gainers, most_actives, etc.)
 # - no ticker/user input needed, so it's served as a static, downloadable
 # dataset in the Data Explorer instead of an example the user has to edit.
@@ -882,7 +870,7 @@ def yf_screen_proxy(preset):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â”€â”€ FRED (Federal Reserve) data proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── FRED (Federal Reserve) data proxy ────────────────────────────────────────
 # The FRED REST API requires a free API key. We proxy it server-side to avoid
 # CORS restrictions and keep the key out of the browser.
 FRED_BASE = "https://api.stlouisfed.org/fred"
@@ -953,7 +941,7 @@ def fred_proxy(series_id):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â”€â”€ FRED global metadata proxy (releases / sources / tags / categories / series) â”€â”€
+# ── FRED global metadata proxy (releases / sources / tags / categories / series) ──
 FRED_META_ENDPOINTS = {
     "releases", "releases/dates", "release", "release/dates", "release/series",
     "release/sources", "release/tags", "release/related_tags", "release/tables",
@@ -1019,14 +1007,14 @@ def fred_meta_proxy(endpoint):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â”€â”€ Computer Vision Python Execution Proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Computer Vision Python Execution Proxy ────────────────────────────────────
 # Executes Python code server-side with full cv2 / ultralytics / PIL / skimage
 # available. Results (stdout + images) are returned as JSON so the browser
 # Pyodide runner can display them identically to native Pyodide output.
 #
 # Security: Runs inside a subprocess with a strict timeout. No shell=True.
 # Images are returned as base64 PNG so no files need to persist.
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─────────────────────────────────────────────────────────────────────────────
 import subprocess
 import sys
 import tempfile
@@ -1036,14 +1024,14 @@ _CV_RUNNER_PRELUDE = textwrap.dedent("""\
 import sys, io, os, base64, warnings
 warnings.filterwarnings('ignore')
 
-# â”€â”€ Pillow / PIL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Pillow / PIL ──────────────────────────────────────────────────────────
 try:
     from PIL import Image as _PIL_Image
     import PIL
 except ImportError:
     PIL = None
 
-# â”€â”€ OpenCV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── OpenCV ────────────────────────────────────────────────────────────────
 try:
     import cv2
     # Monkey-patch cv2.imshow so it encodes the frame and prints a sentinel
@@ -1060,7 +1048,7 @@ try:
 except ImportError:
     cv2 = None
 
-# â”€â”€ Matplotlib â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Matplotlib ────────────────────────────────────────────────────────────
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -1079,7 +1067,7 @@ try:
 except ImportError:
     pass
 
-# â”€â”€ PIL Image.show() patch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── PIL Image.show() patch ────────────────────────────────────────────────
 try:
     from PIL import Image as _PIL_Image
     import io as _io
@@ -1093,7 +1081,7 @@ try:
 except Exception:
     pass
 
-# â”€â”€ scikit-image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── scikit-image ──────────────────────────────────────────────────────────
 try:
     import skimage
     from skimage import io as skio, transform, filters, feature, color, measure
@@ -1112,10 +1100,10 @@ try:
 except ImportError:
     pass
 
-# â”€â”€ numpy is always available â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── numpy is always available ──────────────────────────────────────────────
 import numpy as np
 
-# â”€â”€ ultralytics (YOLO) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── ultralytics (YOLO) ────────────────────────────────────────────────────
 try:
     from ultralytics import YOLO
     import supervision as sv
@@ -1187,7 +1175,7 @@ def cv_run():
         return jsonify({"stdout": "", "stderr": str(exc), "images": [], "error": str(exc)}), 500
 
 
-# â”€â”€ Piston code execution proxy (C++, C#, Rust) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Piston code execution proxy (C++, C#, Rust) ──────────────────────────────
 # Routes compilation requests to the Piston API (https://emkc.org) which runs
 # code server-side. This avoids needing to install gcc/mono/rustc locally and
 # works perfectly on Vercel serverless.
@@ -1231,27 +1219,27 @@ def run_code():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ══════════════════════════════════════════════════════════════════════════
 # AI Coding Assistant - multi-provider model catalog + dual-key fallback
 #
 # Two OpenAI-compatible providers are supported:
-#   â€¢ NVIDIA NIM  (https://integrate.api.nvidia.com/v1) â€” env: NVIDIA_API_KEY[_2]
-#   â€¢ Groq        (https://api.groq.com/openai/v1)      â€” env: GROQ_API_KEY[_2]
+#   • NVIDIA NIM  (https://integrate.api.nvidia.com/v1) — env: NVIDIA_API_KEY[_2]
+#   • Groq        (https://api.groq.com/openai/v1)      — env: GROQ_API_KEY[_2]
 #
 # Model IDs are verified against build.nvidia.com and console.groq.com/docs
 # as of Oct 2026. Each model has individually tuned inference parameters.
-# â˜… = completely free on the provider's no-credit-card free tier.
-# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ★ = completely free on the provider's no-credit-card free tier.
+# ══════════════════════════════════════════════════════════════════════════
 
-# â”€â”€ Per-model inference parameters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Per-model inference parameters ────────────────────────────────────────
 # These are injected into every API call to guarantee substantive, non-empty
 # output. Tuned individually per model architecture:
-#  â€¢ General dense models: temp=0.7 balanced between creativity and coherence
-#  â€¢ max_tokens: set to each model's verified max completion limit
-#  â€¢ top_p=0.95: standard nucleus sampling across all models
+#  • General dense models: temp=0.7 balanced between creativity and coherence
+#  • max_tokens: set to each model's verified max completion limit
+#  • top_p=0.95: standard nucleus sampling across all models
 #
 # NOTE: GPT-OSS models have a "thinking" mode that emits reasoning tokens
-# before content â€” this causes blank/delayed responses when streaming.
+# before content — this causes blank/delayed responses when streaming.
 # We pass thinking=disabled to force immediate content streaming.
 MODEL_PARAMS = {
     # Groq Free Tier optimized (4,096 max completion tokens to stay strictly within 6,000-8,000 TPM limit)
@@ -1471,7 +1459,7 @@ def ai_skill_detail(panel_key):
 def ai_chat():
     """Chat endpoint with automatic dual-provider, dual-key fallback.
     Dynamically injects ONLY the respective skill corresponding to the
-    active panel context ('cad', 'desmos', 'data', 'editor').
+    active panel context ('data', 'editor').
     """
     try:
         import os
@@ -1482,13 +1470,11 @@ def ai_chat():
         messages = body.get("messages", [])
         model    = body.get("model", "llama-3.3-70b-versatile")
         
-        # â”€â”€ Dynamic Panel Skill Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Dynamic Panel Skill Loading ─────────────────────────────────────────
         # Resolves active panel context and loads ONLY its respective SKILL.md,
         # fine-tuned individually for the selected model and its token parameters:
-        #   â€¢ "cad"     -> OpenSCAD 3D Modeling & CSG Skill
-        #   â€¢ "desmos"  -> Desmos LaTeX Math & Analysis Skill
-        #   â€¢ "data"    -> FRED & Yahoo Finance Data Explorer Skill
-        #   â€¢ "editor"  -> Pyodide Scientific Python & Visualization Skill
+        #   • "data"    -> FRED & Yahoo Finance Data Explorer Skill
+        #   • "editor"  -> Pyodide Scientific Python & Visualization Skill
         context = (body.get("context") or "editor").strip().lower()
         panel_sys_prompt = build_panel_system_prompt(context, model=model)
 
@@ -1497,7 +1483,7 @@ def ai_chat():
         else:
             messages[0]["content"] = panel_sys_prompt + "\n\n" + messages[0]["content"]
 
-        # â”€â”€ Resolve which provider each candidate model belongs to â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Resolve which provider each candidate model belongs to ────────
         requested_provider = _model_provider(model)
         provider_order = [requested_provider] + [p for p in PROVIDER_CONFIG if p != requested_provider]
 
@@ -1615,7 +1601,7 @@ def ai_chat():
 
 
 
-# â”€â”€ Computer Vision Studio Routes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Computer Vision Studio Routes ─────────────────────────────────────────────
 import uuid
 import threading
 import tempfile
@@ -1810,19 +1796,6 @@ def cv_cleanup(job_id: str):
                     pass
     return jsonify({"deleted": bool(job)})
 
-
-@app.route("/api/cad/dataset")
-def cad_dataset():
-    """Return the curated CAD engineering dataset catalog."""
-    import json as _json_mod
-    catalog_path = _os.path.join(_os.path.dirname(__file__), 'static', 'cad_dataset', 'models.json')
-    try:
-        with open(catalog_path, 'r', encoding='utf-8') as f:
-            return jsonify(_json_mod.load(f))
-    except FileNotFoundError:
-        return jsonify({"error": "Dataset catalog not found"}), 404
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
 
 
 if __name__ == "__main__":

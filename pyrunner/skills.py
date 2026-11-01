@@ -7,8 +7,6 @@ Loads, parses, and injects authoritative panel-specific skills
 into the AI chat completion pipeline, ensuring the AI operates
 at its peak with exact prompt engineering for the active panel:
   - Code Editor (Python Data Science / Pyodide WASM)
-  - AI Parametric CAD Studio (OpenSCAD WASM)
-  - Desmos Mathematical Graphing Calculator
   - Macroeconomic & Financial Data Explorer (FRED / yfinance)
 ============================================================
 """
@@ -26,10 +24,6 @@ _SKILLS_DIR = os.path.join(_BASE_DIR, ".agents", "skills")
 
 # Mapping of active panel context keys to their respective skill definition files
 PANEL_SKILL_MAP = {
-    "cad": os.path.join(_SKILLS_DIR, "cad-studio", "SKILL.md"),
-    "cad-studio": os.path.join(_SKILLS_DIR, "cad-studio", "SKILL.md"),
-    "desmos": os.path.join(_SKILLS_DIR, "desmos", "SKILL.md"),
-    "math": os.path.join(_SKILLS_DIR, "desmos", "SKILL.md"),
     "data": os.path.join(_SKILLS_DIR, "data-explorer", "SKILL.md"),
     "financial": os.path.join(_SKILLS_DIR, "data-explorer", "SKILL.md"),
     "editor": os.path.join(_SKILLS_DIR, "python-data-science", "SKILL.md"),
@@ -97,7 +91,7 @@ def load_skill_file(file_path: str) -> Optional[Dict[str, Any]]:
 
 def resolve_panel_skill(panel_key: Optional[str]) -> Dict[str, Any]:
     """
-    Resolves a panel context key (e.g. 'cad', 'desmos', 'editor') to its skill.
+    Resolves a panel context key (e.g. 'data', 'editor') to its skill.
     Defaults to 'editor' if unrecognized or empty.
     """
     key = (panel_key or "editor").strip().lower()
@@ -183,9 +177,8 @@ def build_panel_system_prompt(panel_key: Optional[str], model: Optional[str] = N
         "\n\n--- GENERAL RUN01 PROTOCOL & CODE EXECUTION RULES ---\n"
         "1. STRICT: NEVER WRITE 'import yfinance' or 'import yf'! yfinance is NOT installed in Pyodide WASM and causes ModuleNotFoundError.\n"
         "   Use RUN01's built-in async functions directly: df = await yf_download('AAPL', period='1mo', interval='1d'), await yf_info('AAPL'), await yf_fetch('AAPL', 'category').\n"
-        "2. For Desmos interactive math: use desmos.plot('y = sin(x)') or show_desmos(...).\n"
-        "3. FORMAT & AUTO-EXECUTION: All executable Python code MUST be enclosed inside standard ```python ... ``` fences. RUN01 automatically extracts this block, injects it into the Monaco Code Editor, runs it in Pyodide WASM, and auto-repairs any errors until clean execution with 0 errors.\n"
-        "4. ZERO PLACEHOLDERS: Never use '# TODO' or '...'. Always provide 100% complete, runnable code from imports to final output/plot.\n"
+        "2. FORMAT & AUTO-EXECUTION: All executable Python code MUST be enclosed inside standard ```python ... ``` fences. RUN01 automatically extracts this block, injects it into the Monaco Code Editor, runs it in Pyodide WASM, and auto-repairs any errors until clean execution with 0 errors.\n"
+        "3. ZERO PLACEHOLDERS: Never use '# TODO' or '...'. Always provide 100% complete, runnable code from imports to final output/plot.\n"
         "5. Matplotlib plots must end with plt.show(); Plotly charts must end with fig.show()."
     )
 

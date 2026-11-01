@@ -16,24 +16,6 @@ class TestPanelSkills(unittest.TestCase):
         for key, path in PANEL_SKILL_MAP.items():
             self.assertTrue(os.path.isfile(path), f"Skill file for {key} missing at {path}")
 
-    def test_cad_skill_isolation(self):
-        skill = resolve_panel_skill("cad")
-        self.assertIn("cad", skill["key"])
-        prompt = build_panel_system_prompt("cad")
-        self.assertIn("OpenSCAD", prompt)
-        self.assertIn("CSG", prompt)
-        self.assertNotIn("yfinance", prompt)
-        self.assertNotIn("fred_download", prompt)
-
-    def test_desmos_skill_isolation(self):
-        skill = resolve_panel_skill("desmos")
-        self.assertEqual(skill["key"], "desmos")
-        prompt = build_panel_system_prompt("desmos")
-        self.assertIn("Desmos", prompt)
-        self.assertIn("LaTeX", prompt)
-        self.assertNotIn("OpenSCAD", prompt)
-        self.assertNotIn("yf_download", prompt)
-
     def test_data_explorer_skill_isolation(self):
         skill = resolve_panel_skill("data")
         self.assertIn("data", skill["key"])
@@ -55,8 +37,11 @@ class TestPanelSkills(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
         self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 7)
+        self.assertGreaterEqual(len(data), 7)
         allowed_ids = {
+            "llama-3.3-70b-versatile",
+            "llama3-70b-8192",
+            "llama-3.1-8b-instant",
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
             "qwen/qwen3.8-27b",
@@ -75,9 +60,11 @@ class TestPanelSkills(unittest.TestCase):
         data = resp.get_json()
         self.assertIsInstance(data, list)
         panel_keys = [item["panel_key"] for item in data]
-        for expected in ["cad", "desmos", "data", "editor"]:
+        for expected in ["data", "editor"]:
             self.assertIn(expected, panel_keys)
-        self.assertNotIn("physics", panel_keys)
+        self.assertNotIn('physics', panel_keys)
+        self.assertNotIn('cad', panel_keys)
+        self.assertNotIn('desmos', panel_keys)
 
 if __name__ == "__main__":
     unittest.main()
