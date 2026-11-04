@@ -5150,6 +5150,12 @@ window.ViewManager = (function() {
     if (landingView) landingView.classList.add('hidden');
     if (ideView) ideView.classList.remove('hidden');
     window.location.hash = 'ide';
+    // Show loading overlay when entering IDE
+    const _ov = document.getElementById('initOverlay');
+    if (_ov) {
+      _ov.style.display = 'flex';
+      _ov.classList.remove('hiding');
+    }
     if (typeof startPyodideInit === 'function') {
       startPyodideInit();
     }
