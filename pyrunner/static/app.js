@@ -889,6 +889,7 @@ let pyodide        = null;
 let currentLang    = 'python';
 let isRunning      = false;
 let runCount       = 0;
+let pyodideIsReady = false;  // true once Pyodide + Monaco have both loaded
 
 //  DOM refs 
 const statusDot      = document.getElementById('statusDot');
@@ -1329,6 +1330,7 @@ function startPyodideInit() {
   });
 
   Promise.all([monacoReady, pyodideInitPromise]).then(([_, pySuccess]) => {
+    pyodideIsReady = true;
     if (pySuccess) {
       setStatus('ready', 'Ready');
       btnRun.disabled = false;
@@ -1338,6 +1340,7 @@ function startPyodideInit() {
     appendWelcome();
   }).catch((err) => {
     console.error('Startup error:', err);
+    pyodideIsReady = true;
     hideOverlay();
     setStatus('ready', 'Ready');
   });
@@ -4652,7 +4655,7 @@ If extensive structural changes are required, output the complete corrected \`\`
         codeActionBar.classList.add('visible');
       }
 
-      } else if (hasCode || hasSurgicalEdit) {
+      if (hasCode || hasSurgicalEdit) {
         if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
           window.activeAutonomousLoop.abort();
         }
@@ -4938,18 +4941,28 @@ document.addEventListener('click', (e) => {
 
   //  Check server session (background verification) 
   async function checkSession() {
+    const _sessionAc = new AbortController();
+    const _sessionTimeout = setTimeout(() => _sessionAc.abort(), 8000);
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch('/api/auth/me', { signal: _sessionAc.signal });
+      clearTimeout(_sessionTimeout);
+      // Only clear auth state on explicit 401/403 from server, never on 5xx or network errors
+      if (!res.ok && res.status >= 500) {
+        console.warn('[Auth] Server error on session check - keeping cached state');
+        return; // keep locally cached user
+      }
       const data = await res.json();
       if (data.authenticated && data.user) {
         setAuthState(data.user);  // Refresh with latest data from DB
-      } else {
-        // Server session expired; clear local cache to force re-login
+      } else if (res.status === 401 || res.status === 403) {
+        // Genuine expired session - clear local cache to force re-login
         setAuthState(null);
       }
+      // For any other status (200 with no user), do nothing - keep cached state
     } catch (err) {
-      console.warn('[Auth] Session check failed (network?):', err);
-      // Keep the locally cached user - don't log them out on network error
+      clearTimeout(_sessionTimeout);
+      console.warn('[Auth] Session check failed (network/timeout) - keeping cached state:', err.message);
+      // Keep the locally cached user - never log out on network/timeout errors
     }
   }
 
@@ -5046,12 +5059,16 @@ document.addEventListener('click', (e) => {
       btn.disabled = true;
       btn.textContent = 'Signing in';
 
+      const _loginAc = new AbortController();
+      const _loginTimeout = setTimeout(() => _loginAc.abort(), 12000);
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
+          signal: _loginAc.signal,
         });
+        clearTimeout(_loginTimeout);
         const data = await res.json();
         if (res.ok && data.success) {
           setAuthState(data.user);
@@ -5061,7 +5078,12 @@ document.addEventListener('click', (e) => {
           showAlert(data.error || 'Invalid credentials.');
         }
       } catch (err) {
-        showAlert('Network error during login: ' + err.message);
+        clearTimeout(_loginTimeout);
+        if (err.name === 'AbortError') {
+          showAlert('Sign-in timed out. Check your connection and try again.');
+        } else {
+          showAlert('Network error during login: ' + err.message);
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = 'Sign In';
@@ -5082,12 +5104,16 @@ document.addEventListener('click', (e) => {
       btn.disabled = true;
       btn.textContent = 'Creating account';
 
+      const _signupAc = new AbortController();
+      const _signupTimeout = setTimeout(() => _signupAc.abort(), 12000);
       try {
         const res = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password }),
+          signal: _signupAc.signal,
         });
+        clearTimeout(_signupTimeout);
         const data = await res.json();
         if (res.ok && data.success) {
           setAuthState(data.user);
@@ -5097,7 +5123,12 @@ document.addEventListener('click', (e) => {
           showAlert(data.error || 'Failed to create account.');
         }
       } catch (err) {
-        showAlert('Network error during signup: ' + err.message);
+        clearTimeout(_signupTimeout);
+        if (err.name === 'AbortError') {
+          showAlert('Sign-up timed out. Check your connection and try again.');
+        } else {
+          showAlert('Network error during signup: ' + err.message);
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = 'Create Account';
@@ -5150,14 +5181,29 @@ window.ViewManager = (function() {
     if (landingView) landingView.classList.add('hidden');
     if (ideView) ideView.classList.remove('hidden');
     window.location.hash = 'ide';
-    // Show loading overlay when entering IDE
+    // Show loading overlay when entering IDE (only if Pyodide hasn't loaded yet)
     const _ov = document.getElementById('initOverlay');
-    if (_ov) {
-      _ov.style.display = 'flex';
-      _ov.classList.remove('hiding');
-    }
-    if (typeof startPyodideInit === 'function') {
-      startPyodideInit();
+    if (pyodideIsReady) {
+      // Already done - hide overlay immediately so user isn't stuck on spinner
+      if (_ov) { _ov.style.display = 'none'; }
+    } else {
+      if (_ov) {
+        _ov.style.display = 'flex';
+        _ov.classList.remove('hiding');
+      }
+      if (typeof startPyodideInit === 'function') {
+        // Attach a fresh .then() so the overlay hides when loading completes
+        const _p = startPyodideInit();
+        if (_p && typeof _p.then === 'function') {
+          Promise.all([monacoReady, _p]).then(() => {
+            pyodideIsReady = true;
+            hideOverlay();
+          }).catch(() => {
+            pyodideIsReady = true;
+            hideOverlay();
+          });
+        }
+      }
     }
     if (window.monacoEditor) {
       setTimeout(() => {
