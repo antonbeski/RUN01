@@ -4204,171 +4204,55 @@ If extensive structural changes are required, output the complete corrected \`\`
 
   function renderMarkdown(element, text) {
     // Split on code fences, python blocks, AND surgical edit blocks
-    const parts = text.split(/(`python[\s\S]*?`|`[\s\S]*?`|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
+    const parts = text.split(/(```python[\s\S]*?```|```[\s\S]*?```|<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>)/g);
     element.innerHTML = '';
     parts.forEach(part => {
-      //  Surgical edit diff block 
+      //  Surgical edit — silently apply to Monaco, show status chip only 
       if (part.startsWith('<<<SURGICAL_EDIT>>>')) {
         const findMatch  = part.match(/<<<FIND>>>([\s\S]*?)<<<REPLACE>>>/);
         const replMatch  = part.match(/<<<REPLACE>>>([\s\S]*?)<<<END_EDIT>>>/);
-        if (!findMatch || !replMatch) return;
-        const findText  = findMatch[1].trim();
-        const replText  = replMatch[1].trim();
-
-        const diffCard = document.createElement('div');
-        diffCard.className = 'ai-diff-card';
-
-        const diffHeader = document.createElement('div');
-        diffHeader.className = 'ai-diff-header';
-        diffHeader.innerHTML = '<span class="ai-diff-title">&#9998; Surgical Edit</span>';
-
-        const diffActions = document.createElement('div');
-        diffActions.className = 'ai-diff-actions';
-
-        const acceptBtn = document.createElement('button');
-        acceptBtn.className = 'ai-diff-btn ai-diff-accept';
-        acceptBtn.textContent = '[DONE] Accept';
-
-        const rejectBtn = document.createElement('button');
-        rejectBtn.className = 'ai-diff-btn ai-diff-reject';
-        rejectBtn.textContent = ' Reject';
-
-        diffActions.appendChild(acceptBtn);
-        diffActions.appendChild(rejectBtn);
-        diffHeader.appendChild(diffActions);
-        diffCard.appendChild(diffHeader);
-
-        // Visual diff lines
-        const diffBody = document.createElement('div');
-        diffBody.className = 'ai-diff-body';
-        findText.split('\n').forEach(l => {
-          const row = document.createElement('div');
-          row.className = 'ai-diff-line ai-diff-remove';
-          row.textContent = ' ' + l;
-          diffBody.appendChild(row);
-        });
-        replText.split('\n').forEach(l => {
-          const row = document.createElement('div');
-          row.className = 'ai-diff-line ai-diff-add';
-          row.textContent = '+ ' + l;
-          diffBody.appendChild(row);
-        });
-        diffCard.appendChild(diffBody);
-        element.appendChild(diffCard);
-
-        // Highlight the target lines in Monaco immediately
-        let pendingDecorations = [];
-        if (monacoEditor) {
-          const model = monacoEditor.getModel();
-          if (model) {
-            const matches = model.findMatches(findText, true, false, true, null, true);
-            if (matches.length > 0) {
-              pendingDecorations = monacoEditor.deltaDecorations([], matches.map(m => ({
-                range: m.range,
-                options: {
-                  isWholeLine: false,
-                  className: 'monaco-pending-edit-line',
-                  glyphMarginClassName: 'monaco-pending-edit-glyph',
-                  overviewRuler: { color: 'rgba(255,202,40,0.6)', position: 1 }
-                }
-              })));
-            }
-          }
-        }
-
-        // Accept: apply the surgical replacement
-        acceptBtn.addEventListener('click', () => {
+        if (findMatch && replMatch) {
+          const findText  = findMatch[1].trim();
+          const replText  = replMatch[1].trim();
+          // Silently apply to Monaco
           if (monacoEditor) {
             applySurgicalEditToMonaco(findText, replText);
-            monacoEditor.deltaDecorations(pendingDecorations, []);
           }
-          diffCard.classList.add('ai-diff-accepted');
-          acceptBtn.textContent = '[DONE] Applied';
-          acceptBtn.disabled = true;
-          rejectBtn.disabled = true;
-
-          if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-            window.activeAutonomousLoop.abort();
-          }
-          window.activeAutonomousLoop = new AutonomousRepairLoop({
-            maxIterations: 3,
-            model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
-            chatContainer: aiMessages
-          });
-          window.activeAutonomousLoop.start('Verify clean execution after surgical edit', part);
-        });
-
-        // Reject: clear decorations
-        rejectBtn.addEventListener('click', () => {
-          if (monacoEditor) monacoEditor.deltaDecorations(pendingDecorations, []);
-          diffCard.classList.add('ai-diff-rejected');
-          acceptBtn.disabled = true;
-          rejectBtn.textContent = ' Rejected';
-          rejectBtn.disabled = true;
-        });
-
+          // Show compact status chip
+          const chip = document.createElement('div');
+          chip.className = 'ai-ide-inject-chip';
+          chip.innerHTML = '<span class="ai-ide-inject-icon">✎</span><span class="ai-ide-inject-label">Surgical fix applied to IDE — re-running...</span>';
+          element.appendChild(chip);
+        }
         return;
       }
 
-      //  Python / generic code block 
+      //  Python / generic code block — silently inject into IDE, only show status 
       if (part.startsWith('```')) {
-        const isPython = part.startsWith('```python');
-        const codeLines = part.replace(/^```(python)?\n/, '').replace(/\n```$/, '');
+        const isPython = part.startsWith('```python') || part.startsWith('```py');
+        const codeLines = part.replace(/^```(python|py)?\n/, '').replace(/\n```$/, '').trim();
         
-        const container = document.createElement('div');
-        container.className = 'ai-code-block-container';
-        
-        const header = document.createElement('div');
-        header.className = 'ai-code-block-header';
-        header.innerHTML = `<span>${isPython ? 'python' : 'code'}</span>`;
-        
-        const actions = document.createElement('div');
-        actions.className = 'ai-code-block-actions';
-        
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'ai-code-btn';
-        copyBtn.textContent = 'Copy';
-        copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(codeLines);
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => copyBtn.textContent = 'Copy', 2000);
-        });
-        actions.appendChild(copyBtn);
-        
-        if (isPython) {
-          const runBtn = document.createElement('button');
-          runBtn.className = 'ai-code-btn';
-          runBtn.textContent = ' Run';
-          runBtn.style.color = '#4ade80';
-          runBtn.style.fontWeight = 'bold';
-          runBtn.addEventListener('click', () => {
-            if (monacoEditor) {
-              monacoEditor.setValue(codeLines);
-              runBtn.textContent = 'Running...';
-              if (window.activeAutonomousLoop && window.activeAutonomousLoop.isActive) {
-                window.activeAutonomousLoop.abort();
-              }
-              window.activeAutonomousLoop = new AutonomousRepairLoop({
-                maxIterations: 3,
-                model: aiModelSelect ? aiModelSelect.value : DEFAULT_MODEL,
-                chatContainer: aiMessages
-              });
-              window.activeAutonomousLoop.start('Run and verify python program', '```python\n' + codeLines + '\n```');
-              setTimeout(() => runBtn.textContent = ' Run', 2000);
-            }
-          });
-          actions.appendChild(runBtn);
+        if (isPython && codeLines) {
+          // Silently inject into Monaco IDE — do NOT display code in AI panel
+          if (monacoEditor) {
+            monacoEditor.setValue(codeLines);
+          }
+          // Show a compact IDE-injection status chip (no code shown here)
+          const chip = document.createElement('div');
+          chip.className = 'ai-ide-inject-chip';
+          chip.innerHTML = '<span class="ai-ide-inject-icon">⟳</span><span class="ai-ide-inject-label">Code written to IDE — auto-running now...</span>';
+          element.appendChild(chip);
+        } else if (!isPython && codeLines) {
+          // Non-python code blocks: show as read-only display
+          const container = document.createElement('div');
+          container.className = 'ai-code-block-container';
+          const pre = document.createElement('pre');
+          const code = document.createElement('code');
+          code.textContent = codeLines;
+          pre.appendChild(code);
+          container.appendChild(pre);
+          element.appendChild(container);
         }
-        
-        header.appendChild(actions);
-        container.appendChild(header);
-        
-        const pre = document.createElement('pre');
-        const code = document.createElement('code');
-        code.textContent = codeLines;
-        pre.appendChild(code);
-        container.appendChild(pre);
-        element.appendChild(container);
       } else if (part.trim() !== '') {
         //  Self-contained Markdown renderer 
         const mdWrapper = document.createElement('div');
@@ -4379,7 +4263,19 @@ If extensive structural changes are required, output the complete corrected \`\`
     });
   }
 
-  //  parseMarkdown 
+  function renderMarkdownTextOnly(element, text) {
+    // Strip code blocks and show text-only preview during streaming
+    const textOnly = text
+      .replace(/```[\s\S]*?```/g, '...')
+      .replace(/<<<SURGICAL_EDIT>>>[\s\S]*?<<<END_EDIT>>>/g, '...');
+    const mdWrapper = document.createElement('div');
+    mdWrapper.className = 'ai-md-body';
+    mdWrapper.innerHTML = parseMarkdown(textOnly);
+    element.innerHTML = '';
+    element.appendChild(mdWrapper);
+  }
+
+    //  parseMarkdown 
   // Zero-dependency Markdown  HTML converter.
   // Handles: headings, tables (GFM), bold, italic, inline code,
   //          blockquotes, unordered/ordered lists, horizontal rules, paragraphs.
@@ -4625,7 +4521,8 @@ If extensive structural changes are required, output the complete corrected \`\`
                             parsed.choices?.[0]?.text || '';
               if (token) {
                 fullAssistantText += token;
-                renderMarkdown(assistantBubble, fullAssistantText);
+                // During streaming: render only text parts, skip code injection
+                renderMarkdownTextOnly(assistantBubble, fullAssistantText);
                 aiMessages.scrollTop = aiMessages.scrollHeight;
               }
             } catch (err) {
@@ -4639,6 +4536,9 @@ If extensive structural changes are required, output the complete corrected \`\`
         fullAssistantText = "Hello! I am your AI assistant embedded in RUN01. Ask me to write Python code, analyze datasets, or build models!";
         renderMarkdown(assistantBubble, fullAssistantText);
       }
+
+      // Final render: injects code into Monaco, shows status chips
+      renderMarkdown(assistantBubble, fullAssistantText);
 
       messagesHistory.push({ role: 'user', content: text });
       messagesHistory.push({ role: 'assistant', content: fullAssistantText });

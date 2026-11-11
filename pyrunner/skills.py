@@ -177,9 +177,11 @@ def build_panel_system_prompt(panel_key: Optional[str], model: Optional[str] = N
         "\n\n--- GENERAL RUN01 PROTOCOL & CODE EXECUTION RULES ---\n"
         "1. STRICT: NEVER WRITE 'import yfinance' or 'import yf'! yfinance is NOT installed in Pyodide WASM and causes ModuleNotFoundError.\n"
         "   Use RUN01's built-in async functions directly: df = await yf_download('AAPL', period='1mo', interval='1d'), await yf_info('AAPL'), await yf_fetch('AAPL', 'category').\n"
-        "2. FORMAT & AUTO-EXECUTION: All executable Python code MUST be enclosed inside standard ```python ... ``` fences. RUN01 automatically extracts this block, injects it into the Monaco Code Editor, runs it in Pyodide WASM, and auto-repairs any errors until clean execution with 0 errors.\n"
+        "2. FORMAT & AUTO-EXECUTION: All executable Python code MUST be enclosed inside standard ```python ... ``` fences. RUN01 automatically extracts this block, injects it DIRECTLY into the Monaco IDE Code Editor (the user does NOT see it in the AI chat panel), runs it in Pyodide WASM, and auto-repairs any errors until clean execution with 0 errors.\n"
         "3. ZERO PLACEHOLDERS: Never use '# TODO' or '...'. Always provide 100% complete, runnable code from imports to final output/plot.\n"
-        "5. Matplotlib plots must end with plt.show(); Plotly charts must end with fig.show()."
+        "4. PANEL SEPARATION RULE — CRITICAL: The AI chat panel shows ONLY English text explanations. Code blocks (```python...```) go DIRECTLY to the IDE and are NEVER shown in the AI chat panel as text. Write your explanation BEFORE the code block: explain what the code does in plain English, then provide ONE single ```python...``` fence. NEVER repeat or paraphrase code in the explanation text.\n"
+        "5. Matplotlib plots must end with plt.show(); Plotly charts must end with fig.show().\n"
+        "6. AGENTIC IDE CONTROL: You have full autonomous control over the IDE. You write code into the IDE, it auto-executes, you receive error feedback, and you auto-fix until it runs clean. The user only needs to describe the goal — you handle all code writing, execution, and error repair autonomously."
     )
 
     return header + skill_content + model_tuning + footer

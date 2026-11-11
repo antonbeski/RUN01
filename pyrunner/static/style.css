@@ -2040,6 +2040,28 @@ body::after {
 }
 
 /* -- Surgical Diff Edit Card ---------------------------------------- */
+.ai-ide-inject-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #38bdf8;
+  margin: 4px 0;
+  font-family: var(--font-mono, monospace);
+}
+.ai-ide-inject-icon {
+  font-size: 13px;
+  animation: ai-ide-spin 1s linear infinite;
+}
+@keyframes ai-ide-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .ai-diff-card {
   margin: 8px 0;
   border-radius: 8px;
