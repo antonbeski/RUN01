@@ -35,6 +35,7 @@ Thumbs.db
 !.agents/skills/cad-studio/
 !.agents/skills/data-explorer/
 !.agents/skills/python-data-science/
+!.agents/skills/vision-studio/
 temp_skill/
 
 # CAD Model Binaries (>100MB exceeds GitHub limits)

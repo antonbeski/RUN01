@@ -696,6 +696,73 @@ class _SupervisionModule(types.ModuleType):
 _sv_inst = _SupervisionModule()
 sys.modules['supervision'] = _sv_inst
 
+#  Prebuilt vision_studio Python Module 
+class _VisionStudioModule(types.ModuleType):
+    """Programmatic interface to RUN01 Vision Studio in Pyodide WASM."""
+    def __init__(self):
+        super().__init__('vision_studio')
+
+    def open(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.open()
+        return True
+
+    def close(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.close()
+        return True
+
+    def start(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.start()
+        return True
+
+    def stop(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.stop()
+        return True
+
+    def use_camera(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.useCamera()
+        return True
+
+    def filter_color(self, color_name="yellow", hsv_lower=None, hsv_upper=None):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.filterColor(
+                str(color_name),
+                list(hsv_lower) if hsv_lower is not None else None,
+                list(hsv_upper) if hsv_upper is not None else None
+            )
+            print(f"[DONE] Vision Studio configured: {str(color_name).upper()} objects only.")
+        return True
+
+    def filter_classes(self, class_list):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            import json
+            items = list(class_list) if isinstance(class_list, (list, tuple, set)) else [str(class_list)]
+            js.window.VisionStudio.filterClasses(js.JSON.parse(json.dumps(items)))
+            print(f"[DONE] Vision Studio class filter: {items}")
+        return True
+
+    def reset(self):
+        import js
+        if hasattr(js.window, 'VisionStudio'):
+            js.window.VisionStudio.reset()
+            print("[DONE] Vision Studio reset to default full-spectrum YOLOv8 detection.")
+        return True
+
+_vision_studio_inst = _VisionStudioModule()
+sys.modules['vision_studio'] = _vision_studio_inst
+vision_studio = _vision_studio_inst
+
 `;
 
 //  Data Source Example Codes 
@@ -4431,7 +4498,11 @@ If extensive structural changes are required, output the complete corrected \`\`
     return `\n\n[CONTEXT: User's Current Python Code]\n\`\`\`python\n${codeContent}\n\`\`\`\n\n[CONTEXT: Last Console Output]\n\`\`\`\n${consoleOutput}\n\`\`\``;
   }
 
-  function getActivePanelContext() {
+  function getActivePanelContext(queryText = '') {
+    // Priority: query keyword matching for vision requests
+    if (queryText && /\b(vision|camera|webcam|yolo|detect|color|yellow|opencv|cv2|contour|hsv|video)\b/i.test(queryText)) {
+      return 'vision';
+    }
     // Detect if Vision modal is open
     const visionOverlay = document.getElementById('visionModalOverlay');
     if (visionOverlay && !visionOverlay.classList.contains('hidden')) {
@@ -4465,7 +4536,7 @@ If extensive structural changes are required, output the complete corrected \`\`
     const model = aiModelSelect.value;
     const indicator = appendLoadingIndicator();
     const context = getContextPrompt();
-    const activePanelContext = getActivePanelContext();
+    const activePanelContext = getActivePanelContext(text);
     
     const messages = [
       ...messagesHistory,
@@ -5308,6 +5379,195 @@ window.ViewManager = (function() {
     }
   }
 
+    // ============================================================
+  // RUN01 Vision Studio Programmatic Extension Bridge
+  // Exposes complete reactive control over Vision Studio for Python & AI
+  // ============================================================
+  const VISION_CUSTOM_STATE = {
+    colorFilter: null,      // e.g. { name: 'yellow', hMin: 18, hMax: 38, sMin: 80, sMax: 255, vMin: 80, vMax: 255 }
+    classFilter: null,      // Set or Array of allowed class names
+    customProcessor: null,  // Custom JS or Pyodide callback fn(imageData, width, height) -> detections
+    confidence: 0.25,
+    lastFrameDetections: [],
+  };
+
+  const COLOR_PRESETS = {
+    yellow: { hMin: 18,  hMax: 38,  sMin: 70,  sMax: 255, vMin: 70,  vMax: 255, color: '#facc15' },
+    red:    { hMin: 170, hMax: 10,  sMin: 90,  sMax: 255, vMin: 90,  vMax: 255, color: '#ef4444' },
+    green:  { hMin: 35,  hMax: 85,  sMin: 70,  sMax: 255, vMin: 70,  vMax: 255, color: '#22c55e' },
+    blue:   { hMin: 95,  hMax: 140, sMin: 80,  sMax: 255, vMin: 80,  vMax: 255, color: '#3b82f6' },
+    orange: { hMin: 10,  hMax: 24,  sMin: 90,  sMax: 255, vMin: 90,  vMax: 255, color: '#f97316' },
+    purple: { hMin: 130, hMax: 165, sMin: 70,  sMax: 255, vMin: 70,  vMax: 255, color: '#a855f7' }
+  };
+
+  function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, v = max;
+    const d = max - min;
+    s = max === 0 ? 0 : d / max;
+    if (max === min) {
+      h = 0;
+    } else {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return [Math.round(h * 180), Math.round(s * 255), Math.round(v * 255)];
+  }
+
+  // Segment connected components to produce bounding boxes for colored objects
+  function detectColorBlobs(imgData, targetW, targetH, cfg) {
+    if (!imgData) return [];
+    const { data, width, height } = imgData;
+    const { hMin, hMax, sMin, sMax, vMin, vMax } = cfg;
+    const isWrap = hMin > hMax; // for red wrap-around
+
+    // Downsampled grid for 60fps real-time blob detection
+    const step = 4;
+    const gridW = Math.floor(width / step);
+    const gridH = Math.floor(height / step);
+    const mask = new Uint8Array(gridW * gridH);
+
+    for (let gy = 0; gy < gridH; gy++) {
+      const y = gy * step;
+      for (let gx = 0; gx < gridW; gx++) {
+        const x = gx * step;
+        const idx = (y * width + x) * 4;
+        const [h, s, v] = rgbToHsv(data[idx], data[idx + 1], data[idx + 2]);
+        const matchH = isWrap ? (h >= hMin || h <= hMax) : (h >= hMin && h <= hMax);
+        if (matchH && s >= sMin && s <= sMax && v >= vMin && v <= vMax) {
+          mask[gy * gridW + gx] = 1;
+        }
+      }
+    }
+
+    // Connected components bounding boxes
+    const visited = new Uint8Array(gridW * gridH);
+    const blobs = [];
+    const minBlobPixels = 12; // Minimum blob mass
+
+    for (let gy = 0; gy < gridH; gy++) {
+      for (let gx = 0; gx < gridW; gx++) {
+        const idx = gy * gridW + gx;
+        if (!mask[idx] || visited[idx]) continue;
+
+        let minX = gx, maxX = gx, minY = gy, maxY = gy;
+        let count = 0;
+        const q = [idx];
+        visited[idx] = 1;
+
+        while (q.length > 0) {
+          const curr = q.pop();
+          count++;
+          const cy = Math.floor(curr / gridW);
+          const cx = curr % gridW;
+          if (cx < minX) minX = cx;
+          if (cx > maxX) maxX = cx;
+          if (cy < minY) minY = cy;
+          if (cy > maxY) maxY = cy;
+
+          // 4-neighborhood
+          const neighbors = [
+            (cy > 0) ? curr - gridW : -1,
+            (cy < gridH - 1) ? curr + gridW : -1,
+            (cx > 0) ? curr - 1 : -1,
+            (cx < gridW - 1) ? curr + 1 : -1,
+          ];
+          for (let n of neighbors) {
+            if (n >= 0 && mask[n] && !visited[n]) {
+              visited[n] = 1;
+              q.push(n);
+            }
+          }
+        }
+
+        if (count >= minBlobPixels) {
+          const bw = (maxX - minX + 1) * step;
+          const bh = (maxY - minY + 1) * step;
+          const bx = minX * step;
+          const by = minY * step;
+          blobs.push({
+            classId: 999,
+            className: `${(cfg.name || 'target').toUpperCase()} OBJECT`,
+            confidence: Math.min(0.99, 0.60 + (count / (gridW * gridH)) * 20),
+            bbox: [bx, by, bw, bh],
+            color: cfg.color || '#facc15',
+            pixelCount: count
+          });
+        }
+      }
+    }
+
+    // Sort by largest blob first, top 10
+    blobs.sort((a, b) => b.pixelCount - a.pixelCount);
+    return blobs.slice(0, 10);
+  }
+
+  window.VisionStudio = {
+    open: () => openVisionModal(),
+    close: () => closeVisionModal(),
+    start: async () => {
+      openVisionModal();
+      if (!isProcessing) {
+        if (!videoEl.src && !cameraStream) {
+          if (btnCamera) await btnCamera.click();
+        }
+        await startProcessing();
+      }
+    },
+    stop: () => stopProcessing(),
+    useCamera: async () => {
+      openVisionModal();
+      if (btnCamera && !isCameraActive) {
+        await btnCamera.click();
+      }
+    },
+    filterColor: (colorNameOrCfg, hsvLower, hsvUpper) => {
+      if (typeof colorNameOrCfg === 'string') {
+        const key = colorNameOrCfg.toLowerCase().trim();
+        const preset = COLOR_PRESETS[key] || COLOR_PRESETS.yellow;
+        VISION_CUSTOM_STATE.colorFilter = {
+          name: key,
+          ...preset,
+          ...(hsvLower ? { hMin: hsvLower[0], sMin: hsvLower[1], vMin: hsvLower[2] } : {}),
+          ...(hsvUpper ? { hMax: hsvUpper[0], sMax: hsvUpper[1], vMax: hsvUpper[2] } : {})
+        };
+      } else if (typeof colorNameOrCfg === 'object' && colorNameOrCfg) {
+        VISION_CUSTOM_STATE.colorFilter = { name: 'custom', color: '#facc15', ...colorNameOrCfg };
+      }
+      setStatus('ready', `FILTER ACTIVE: ${VISION_CUSTOM_STATE.colorFilter.name.toUpperCase()} ONLY`);
+      console.log('[VisionStudio] Color filter applied:', VISION_CUSTOM_STATE.colorFilter);
+      return true;
+    },
+    filterClasses: (classList) => {
+      if (Array.isArray(classList)) {
+        VISION_CUSTOM_STATE.classFilter = new Set(classList.map(c => String(c).toLowerCase().trim()));
+      } else if (classList) {
+        VISION_CUSTOM_STATE.classFilter = new Set([String(classList).toLowerCase().trim()]);
+      } else {
+        VISION_CUSTOM_STATE.classFilter = null;
+      }
+      return true;
+    },
+    setProcessor: (fn) => {
+      VISION_CUSTOM_STATE.customProcessor = fn;
+      return true;
+    },
+    reset: () => {
+      VISION_CUSTOM_STATE.colorFilter = null;
+      VISION_CUSTOM_STATE.classFilter = null;
+      VISION_CUSTOM_STATE.customProcessor = null;
+      setStatus('ready', 'READY (YOLOv8 Full Spectrum)');
+      return true;
+    },
+    getState: () => ({ ...VISION_CUSTOM_STATE }),
+    getDetections: () => [...VISION_CUSTOM_STATE.lastFrameDetections]
+  };
+
   window.btnVision = btnOpen;
   window.openVisionModal = openVisionModal;
   window.closeVisionModal = closeVisionModal;
@@ -5956,8 +6216,20 @@ window.ViewManager = (function() {
             continue;
           }
 
-          let detections = await runFrameInference(session, imgData);
+          let detections = [];
+          if (VISION_CUSTOM_STATE.colorFilter) {
+            detections = detectColorBlobs(imgData.imageData, imgData.srcW, imgData.srcH, VISION_CUSTOM_STATE.colorFilter);
+          } else {
+            detections = await runFrameInference(session, imgData);
+            if (VISION_CUSTOM_STATE.classFilter) {
+              detections = detections.filter(d => VISION_CUSTOM_STATE.classFilter.has(d.className.toLowerCase()));
+            }
+          }
+          if (VISION_CUSTOM_STATE.customProcessor && typeof VISION_CUSTOM_STATE.customProcessor === 'function') {
+            try { detections = VISION_CUSTOM_STATE.customProcessor(detections, imgData) || detections; } catch(e) { console.warn(e); }
+          }
           detections = assignTracks(detections);
+          VISION_CUSTOM_STATE.lastFrameDetections = detections;
 
           totalDetections += detections.length;
           renderDetections(detections);
@@ -5983,12 +6255,26 @@ window.ViewManager = (function() {
         if (abortController.signal.aborted) break;
         await seekVideoAsync(frame / fps);
         const imgData = extractFrameImageData(640);
-        let detections = imgData ? await runFrameInference(session, imgData) : [];
+        let detections = [];
+        if (imgData) {
+          if (VISION_CUSTOM_STATE.colorFilter) {
+            detections = detectColorBlobs(imgData.imageData, imgData.srcW, imgData.srcH, VISION_CUSTOM_STATE.colorFilter);
+          } else {
+            detections = await runFrameInference(session, imgData);
+            if (VISION_CUSTOM_STATE.classFilter) {
+              detections = detections.filter(d => VISION_CUSTOM_STATE.classFilter.has(d.className.toLowerCase()));
+            }
+          }
+          if (VISION_CUSTOM_STATE.customProcessor && typeof VISION_CUSTOM_STATE.customProcessor === 'function') {
+            try { detections = VISION_CUSTOM_STATE.customProcessor(detections, imgData) || detections; } catch(e) { console.warn(e); }
+          }
+        }
 
         const task = taskSelect ? taskSelect.value : 'detect';
         if (task === 'track' || task === 'detect') {
           detections = assignTracks(detections);
         }
+        VISION_CUSTOM_STATE.lastFrameDetections = detections;
 
         const result = { frameIndex: frame, timestamp: frame / fps, detections };
         allResults.push(result);

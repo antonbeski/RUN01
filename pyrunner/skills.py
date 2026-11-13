@@ -28,6 +28,8 @@ PANEL_SKILL_MAP = {
     "financial": os.path.join(_SKILLS_DIR, "data-explorer", "SKILL.md"),
     "editor": os.path.join(_SKILLS_DIR, "python-data-science", "SKILL.md"),
     "python": os.path.join(_SKILLS_DIR, "python-data-science", "SKILL.md"),
+    "vision": os.path.join(_SKILLS_DIR, "vision-studio", "SKILL.md"),
+    "cv": os.path.join(_SKILLS_DIR, "vision-studio", "SKILL.md"),
 }
 
 # Cache structure: { file_path: { "mtime": float, "metadata": dict, "content": str } }
